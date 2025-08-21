@@ -6,30 +6,54 @@ config_file := "{{ source_dir() }}/config.yaml"
 container_bin := env("CONTAINER_BIN", which('podman'))
 
 [doc("Deploys an environment")]
-deploy environment: (confirm_environment environment)
+deploy environment: (_confirm_environment environment) \
+    (precheck environment)
 
+[doc("Runs preflight checks defined in an environment, if any.")]
+precheck environment:
+  test -f "$(just _get_environment_directory_file '{{ environment }}' 'preflight.sh')" && \
+    { "$(just _get_environment_directory_file '{{ environment }}' 'preflight.sh')"; exit $?; }
+  just _log info "{{ environment }} does not have any preflight checks; continuing."
 
-[private]
-confirm_environment environment: \
-    ( confirm_environment_in_directory environment ) \
-    ( confirm_environment_in_config environment )
+_confirm_environment environment: \
+    ( _confirm_environment_directory_exists environment ) \
+    ( _confirm_environment_in_config environment )
 
-[private]
-confirm_environment_in_config environment:
+_confirm_environment_in_config environment:
   {{ container_bin }} run --rm -v "$PWD/config.yaml:/config.yaml" \
       mikefarah/yq -r '.environments | to_entries[] | .key' \
       /config.yaml | grep -q "^{{ environment }}$" && exit 0; \
   >&2 echo "{{ style("error") }}Environment not in config: {{ environment }}"; \
   exit 1
 
-[private]
-confirm_environment_in_directory environment:
-  find "{{ source_dir() }}" -type d -maxdepth 1 | \
-    grep -Eq '/{{ environment }}$' && exit 0; \
+_confirm_environment_directory_exists environment:
+  test -d "$(just _get_environment_directory)" && exit 0; \
   >&2 echo "{{ style("error") }}Environment directory doesn't exist: {{ environment }}"; \
   exit 1
 
-[private]
-get_environment_config environment:
+_get_environment_directory environment:
+  echo "{{ source_dir() }}/{{ environment }}"
+
+_get_environment_directory_file environment fp:
+  printf "%s/%s" $(just _get_environment_directory "{{ environment }}") "{{ fp }}"
+
+_get_environment_config environment:
   sops --extract '["environments"]["{{ environment }}"]' {{ config_file }}
 
+[positional-arguments]
+_log level *message="No message?":
+  case "${1,,}" in \
+  error) \
+    >&2 echo "{{ BOLD + UNDERLINE + RED }}${1^^}{{ NORMAL }}: ${@:2}"; \
+    ;; \
+  warn|warning) \
+    >&2 echo "{{ BOLD + UNDERLINE + CYAN }}${1^^}{{ NORMAL }}: ${@:2}"; \
+    ;; \
+  info) \
+    >&2 echo "{{ BOLD + UNDERLINE + GREEN }}${1^^}{{ NORMAL }}: ${@:2}"; \
+    ;; \
+  *) \
+    >&2 echo "FATAL: invalid log level: $1"; \
+    exit 1; \
+    ;; \
+  esac
