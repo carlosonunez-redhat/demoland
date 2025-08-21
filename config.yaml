@@ -1,0 +1,37 @@
+environments:
+    ocp:
+        cloud_config:
+            aws:
+                access_key_id: AKIA3GLDO2FYL2DKEONC
+                # encrypted
+                secret_access_key: ENC[AES256_GCM,data:yGkj86rKA+U7/SzFhYGLc5VXMg+5wh0dhwiar48KltyHWTL6TdOvRg==,iv:7UjTdXIuduDmOsMZ3MfUoYrhBsnkEys7DWHdi8kqV+4=,tag:XPkN1UxoOzDb2m3oR7aNFg==,type:str]
+                role_arn: arn:aws:iam::769544606064:role/admin-role
+                # encrypted
+                external_id: ENC[AES256_GCM,data:6WeXE/WFHCJnTM86efvO9cifuPDdu+IDQ+JaDLii,iv:QYOFOBtJm1cB5kZD/n2HITCA0M5ZL1Yv56fJNg/Oreo=,tag:mTRr6csgCNzCT/urY1RVpg==,type:str]
+        terraform_config:
+            backend: s3
+            backend_config:
+                state_dir: fdjxlfdl-carlos-demo-env-tfstate
+sops:
+    kms: []
+    gcp_kms: []
+    azure_kv: []
+    hc_vault: []
+    age: []
+    lastmodified: "2025-08-21T19:30:52Z"
+    mac: ENC[AES256_GCM,data:26yegQdCrZXYI/1YC2c8m0buZWGGIFmFwIrzUalEHyuppNNHmAcxARVKDL3jmWyXgsX/eP1nkR0XIJmcGtO0vgal74OJ252mYVTL+C9QX6WDEim4Z9XEdzWaa1EiBBb/geLVw7gEcCjj+AgQ6nHNcyjuA6NO4Jb8txJeH55Wog8=,iv:ik8USrCnFwU2V8zpKsbibR/qWeE4AQ2f23g/e5guVmU=,tag:oouK4XxPeyTp7N/Flf9wmA==,type:str]
+    pgp:
+        - created_at: "2025-08-21T19:30:47Z"
+          enc: |-
+            -----BEGIN PGP MESSAGE-----
+
+            hF4DYyNh9fWacSISAQdAh1/D/6CIXWPHdZTNp0ZI2lXpcWcYvSQCewb9uwaDJnQw
+            ipjRcoFwW+yp4GHfMJcW0j0HE9AMaA2I9rMO0I8uq49axieaTe3ILpfpFrV4ThP7
+            1GYBCQIQrc+2di+Am+TGhRxvmQfECHp7X7+ZUwk/TSjKRU8UOdXICAOkhiVVfJuW
+            jafsv5O9xj4G1pGPkljda5ej3Ny7Gn25b8WuazE7IMDq7K9u/cheoCWDf9Wln7J7
+            QIRW4e2GQ+w=
+            =Jv7T
+            -----END PGP MESSAGE-----
+          fp: E7645036F453F0DA44BED49F49949A5572BF2AE4
+    encrypted_comment_regex: ^[ ]{0,}encrypted$
+    version: 3.9.3
