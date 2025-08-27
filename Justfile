@@ -24,10 +24,46 @@ precheck environment:
 provision environment:
   just _execute_containerized '{{ environment }}' 'provision.sh';
 
+[doc("Creates a new environment")]
+create_new_environment environment:
+  env=$(echo '{{ environment }}' | tr ' ' '_'); \
+  if test -d "$(just _get_environment_directory '{{ environment }}')"; \
+  then \
+    just _log error "Environment already exists; delete to recreate it: $env"; \
+    exit 1; \
+  fi; \
+  just _create_new_env_dir_structure "$env" && just _add_env_to_config "$env";
+
+[doc("Deletes an environment (CAREFUL!!!!)")]
+delete_environment environment: (_confirm_environment environment)
+  delete_magic='confirm delete - {{ environment }}'; \
+  read -p "Type '$delete_magic' to continue deleting this environment: " input; \
+  if test "$delete_magic" != "$input"; \
+  then \
+    just _log info "Deletion cancelled."; \
+    exit 0; \
+  fi; \
+  just _delete_env_dir '{{ environment }}' && just _delete_env_from_config '{{ environment }}';
+
 [doc("Destroys an environment")]
 destroy environment:
   just _execute_containerized '{{ environment }}' 'destroy.sh';
 
+
+_create_new_env_dir_structure environment:
+  cp -r "$(just _get_environment_directory 'example')" \
+    "$(just _get_environment_directory '{{ environment }}')"
+
+_delete_env_dir environment:
+  rm -r "$(just _get_environment_directory '{{ environment }}')"
+
+_add_env_to_config environment:
+  conf=$(sops --decrypt --extract '["environments"]["example"]' \
+    --output-type json {{ config_file }}); \
+  sops set {{ config_file }} '["environments"]["{{ environment }}"]' "$conf"
+
+_delete_env_from_config environment:
+  sops unset {{ config_file }} '["environments"]["{{ environment }}"]'
 _container_vol environment:
   echo "{{ container_vol }}-{{ environment }}"
 

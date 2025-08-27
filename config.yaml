@@ -1,5 +1,13 @@
 environments:
+    example:
+        version: 20250827
+        deploy:
+            # environment_vars: Set within the container that provisions/destroys the environment.
+            environment_vars:
+                - SOME_KEY=some value
+                - ANOTHER_KEY=another value
     ocp:
+        version: 20250827
         deploy:
             environment_vars:
                 - AWS_ACCESS_KEY_ID=AKIAUZD2QU52MOTFZMIU
@@ -15,8 +23,8 @@ sops:
     azure_kv: []
     hc_vault: []
     age: []
-    lastmodified: "2025-08-27T18:11:21Z"
-    mac: ENC[AES256_GCM,data:Omwur3Q5wbfPZ+iYqu8b/Sr94lvdwlksej0mDrERdCx8DHzWVTQeYO5hfJiplLHwYx5gKW1QsMtXoH43GvGGmxUmxaoqOO8z66n0nnNd7VKQxPma5gsLBZMDwOLj5rEIkzREJyv91AfAkudTIo0iALaDXIuMvma4fHzId5q/bGo=,iv:zlEEZ8YKNkLllhCVyZuKR84xR9DY40RCy6+DvP6o1n8=,tag:cP828BwlPwx/goEtWW/2Iw==,type:str]
+    lastmodified: "2025-08-27T22:10:00Z"
+    mac: ENC[AES256_GCM,data:2ji9ShnxFrfgDKTim4PtpxSkY03zjqyxIcTiyWyowRw3KCtXh3yVE/oA5PS0/e8MgbSDM8eO7as1VRs+LAA1Yn2MRK1TYuS1IHr3J5lcEoWuY9QuhlRB7MY1PnAd0WWl11wZcBfxuHJQxCw6ic/bUSHhVyM6T9v2bgLQ99NR0aU=,iv:plUzN+inxIrsdt3FmkPDOa/nmxzEv7o7GSQEXKBQ36o=,tag:S7KStjuBeuUWdZY4GhVekQ==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
