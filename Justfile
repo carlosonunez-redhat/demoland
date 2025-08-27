@@ -7,7 +7,12 @@ container_bin := env("CONTAINER_BIN", which('podman'))
 
 [doc("Deploys an environment")]
 deploy environment: (_confirm_environment environment) \
-    (precheck environment)
+    (precheck environment) \
+    (provision environment)
+
+[doc("Provisions an environment")]
+provision environment:
+  $(just _get_environment_directory_file '{{ environment }}' 'provision.sh'
 
 [doc("Runs preflight checks defined in an environment, if any.")]
 precheck environment:
@@ -27,7 +32,7 @@ _confirm_environment_in_config environment:
   exit 1
 
 _confirm_environment_directory_exists environment:
-  test -d "$(just _get_environment_directory)" && exit 0; \
+  test -f "$(just _get_environment_directory_file '{{ environment }}' 'provision.sh')" && exit 0; \
   >&2 echo "{{ style("error") }}Environment directory doesn't exist: {{ environment }}"; \
   exit 1
 
