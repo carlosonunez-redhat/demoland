@@ -65,4 +65,6 @@ confirm_iam_user_has_correct_permissions() {
 }
 
 confirm_route_53_public_zone_available
+# NOTE: You can work around this by creating a short-lived IAM user with an
+# AdministratorAccess policy for the bootstrap node and deleting it after installation completes.
 confirm_iam_user_has_correct_permissions
