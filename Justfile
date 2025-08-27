@@ -121,7 +121,7 @@ _get_property_from_env_config environment key:
   sops --decrypt --extract "$key" "{{ source_dir() }}/config.yaml" 2>/dev/null || true;
 
 _get_environment_directory environment:
-  echo "{{ source_dir() }}/{{ environment }}"
+  echo "{{ source_dir() }}/environments/{{ environment }}"
 
 _get_environment_directory_file environment fp:
   printf "%s/%s" $(just _get_environment_directory "{{ environment }}") "{{ fp }}"
