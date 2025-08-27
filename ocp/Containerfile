@@ -20,4 +20,4 @@ FROM fedora:41 AS final
 COPY --from=ocp_installer /tmp/openshift-install /usr/bin/openshift-install
 COPY --from=oc_client /tmp/oc /usr/bin/oc
 RUN dnf -y update
-RUN dnf -y install yq jq awscli
+RUN dnf -y install yq jq awscli openssh ssh-agent
