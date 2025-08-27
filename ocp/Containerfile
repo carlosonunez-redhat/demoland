@@ -1,0 +1,4 @@
+FROM fedora:41
+
+RUN dnf -y update
+RUN dnf -y install yq jq awscli
