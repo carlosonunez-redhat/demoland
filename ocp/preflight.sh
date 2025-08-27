@@ -67,7 +67,7 @@ confirm_iam_user_has_correct_permissions() {
 
 # won't export correctly if quoted
 # shellcheck disable=SC2046
-export $(log_into_aws)
+export $(log_into_aws) || exit 1
 confirm_route_53_public_zone_available
 # NOTE: You can work around this by creating a short-lived IAM user with an
 # AdministratorAccess policy for the bootstrap node and deleting it after installation completes.
