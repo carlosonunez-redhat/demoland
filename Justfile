@@ -11,8 +11,8 @@ deploy environment: (_confirm_environment environment) \
 
 [doc("Runs preflight checks defined in an environment, if any.")]
 precheck environment:
-  test -f "$(just _get_environment_directory_file '{{ environment }}' 'preflight.sh')" && \
-    { "$(just _get_environment_directory_file '{{ environment }}' 'preflight.sh')"; exit $?; }
+  pfc_file="$(just _get_environment_directory_file '{{ environment }}' 'preflight.sh')"; \
+  test -f "$pfc_file" && { "$pfc_file" ; exit $?; }; \
   just _log info "{{ environment }} does not have any preflight checks; continuing."
 
 _confirm_environment environment: \
