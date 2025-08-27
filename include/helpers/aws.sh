@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 SESSION_FILE=/data/aws_session
-create_new_aws_sts_session() {
+log_into_aws() {
   if test -f "$SESSION_FILE"
   then
     expiry=$(grep 'EXPIRES_ON' "$SESSION_FILE" | awk -F'=' '{print $NF}' | date -f - '+%s')
