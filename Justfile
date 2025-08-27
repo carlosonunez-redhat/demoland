@@ -50,16 +50,16 @@ _ensure_container_volume_exists environment:
   set +u; \
   vol=$(just _container_vol {{ environment }}); \
   {{ container_bin }} volume ls | grep -q "$vol" && \
-    test -z "$RECREATE" && \
+    test -z "$REBUILD_DATA_VOLUME" && \
     exit 0; \
-  test -z "$RECREATE" && {{ container_bin }} volume rm -f "$vol"; \
+  test -n "$REBUILD_DATA_VOLUME" && {{ container_bin }} volume rm -f "$vol"; \
   {{ container_bin }} volume create "$vol" >/dev/null;
 
 _ensure_container_image_exists environment:
   set +u; \
   image_name="$(just _container_image {{ environment }})";  \
   {{ container_bin }} images  | grep -q "$image_name" && \
-    test -z "$RECREATE" && \
+    test -z "$REBUILD_IMAGE" && \
     exit 0; \
     container_file=$(just _get_property_from_env_config \
       {{ environment }} \
