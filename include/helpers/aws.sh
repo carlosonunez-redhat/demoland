@@ -1,6 +1,13 @@
 # shellcheck shell=bash
 SESSION_FILE=/data/aws_session
 log_into_aws() {
+  for required in AWS_ROLE_ARN AWS_ROLE_EXTERNAL_ID
+  do
+    test -n "${!required}" && continue
+    error "Please define $required in the environment"
+    echo "AWS_NOT_CONFIGURED=true"
+    return 1
+  done
   if test -f "$SESSION_FILE"
   then
     expiry=$(grep 'EXPIRES_ON' "$SESSION_FILE" | awk -F'=' '{print $NF}' | date -f - '+%s')
@@ -17,6 +24,7 @@ log_into_aws() {
   if test -z "$session_creds"
   then
     error "Couldn't create an AWS STS session."
+    echo "AWS_NOT_CONFIGURED=true"
     return 1
   fi
   jq -r '.Credentials |
