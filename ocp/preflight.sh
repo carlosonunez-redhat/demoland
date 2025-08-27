@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
+set -e
+source "$(dirname "$0")/../include/helpers/aws.sh"
 source "$(dirname "$0")/../include/helpers/logging.sh"
-
 pf_log() {
   eval "$1 '[PREFLIGHT] $2'"
 }
@@ -37,7 +38,7 @@ confirm_iam_user_has_correct_permissions() {
   this_arn=$(aws sts get-caller-identity | jq -r '.Arn')
   if test -z "$this_arn"
   then
-    pf_log error "Couldn't get current AWS user."
+    pf_log error "could not get current AWS user."
     return 1
   fi
   policy_source_arn=$(_get_aws_policy_source_arn "$this_arn") || return 1
@@ -49,7 +50,7 @@ confirm_iam_user_has_correct_permissions() {
       --action-names $(eval "_get_${t}_iam_permissions_from_config")) 
     if test -z "$result"
     then
-      pf_log error "couldn't test ${t} IAM permissions"
+      pf_log error "could not test ${t} IAM permissions"
       return 1
     fi
     denied=$(echo "$result" |
@@ -64,6 +65,9 @@ confirm_iam_user_has_correct_permissions() {
   done
 }
 
+# won't export correctly if quoted
+# shellcheck disable=SC2046
+export $(create_new_aws_sts_session)
 confirm_route_53_public_zone_available
 # NOTE: You can work around this by creating a short-lived IAM user with an
 # AdministratorAccess policy for the bootstrap node and deleting it after installation completes.
