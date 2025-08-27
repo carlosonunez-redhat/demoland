@@ -1,25 +1,22 @@
 environments:
     ocp:
-        cloud_config:
-            aws:
-                access_key_id: AKIA3GLDO2FYL2DKEONC
+        deploy:
+            environment_vars:
+                - AWS_ACCESS_KEY_ID=AKIAUZD2QU52MOTFZMIU
                 # encrypted
-                secret_access_key: ENC[AES256_GCM,data:yGkj86rKA+U7/SzFhYGLc5VXMg+5wh0dhwiar48KltyHWTL6TdOvRg==,iv:7UjTdXIuduDmOsMZ3MfUoYrhBsnkEys7DWHdi8kqV+4=,tag:XPkN1UxoOzDb2m3oR7aNFg==,type:str]
-                role_arn: arn:aws:iam::769544606064:role/admin-role
+                - ENC[AES256_GCM,data:R54DtxU+eOH+dQj7vfa7FFmgnxU3xGMKtoRA8wldSFCyJqvy3coExCzVMMu0W++l+KzH51skD+Dy6cIULwE=,iv:s1DZeU0zOMVv9NEoQWO8vUAgoSHQ5mi2Ztxgzu7zsYM=,tag:5+bjuuc52QuFE5hR+FxNBA==,type:str]
+                - DEFAULT_AWS_REGION=us-east-2
+                - AWS_ROLE_ARN=arn:aws:iam::328821942132:role/admin-access-role
                 # encrypted
-                external_id: ENC[AES256_GCM,data:6WeXE/WFHCJnTM86efvO9cifuPDdu+IDQ+JaDLii,iv:QYOFOBtJm1cB5kZD/n2HITCA0M5ZL1Yv56fJNg/Oreo=,tag:mTRr6csgCNzCT/urY1RVpg==,type:str]
-        terraform_config:
-            backend: s3
-            backend_config:
-                state_dir: fdjxlfdl-carlos-demo-env-tfstate
+                - ENC[AES256_GCM,data:9iKAyOZvWZcUUYCLbrunGEFRi9zI87Pl9YY5vAbOQ+ZVKSl9uhSi09zAxAWtR5oJYH8bres=,iv:cQwQlYTSslJTdP2+7ClTxjPwdAYICmNxPIBz2Gph6Iw=,tag:eyJMEw0SAq5x1MEhokjRFw==,type:str]
 sops:
     kms: []
     gcp_kms: []
     azure_kv: []
     hc_vault: []
     age: []
-    lastmodified: "2025-08-21T19:30:52Z"
-    mac: ENC[AES256_GCM,data:26yegQdCrZXYI/1YC2c8m0buZWGGIFmFwIrzUalEHyuppNNHmAcxARVKDL3jmWyXgsX/eP1nkR0XIJmcGtO0vgal74OJ252mYVTL+C9QX6WDEim4Z9XEdzWaa1EiBBb/geLVw7gEcCjj+AgQ6nHNcyjuA6NO4Jb8txJeH55Wog8=,iv:ik8USrCnFwU2V8zpKsbibR/qWeE4AQ2f23g/e5guVmU=,tag:oouK4XxPeyTp7N/Flf9wmA==,type:str]
+    lastmodified: "2025-08-27T18:11:21Z"
+    mac: ENC[AES256_GCM,data:Omwur3Q5wbfPZ+iYqu8b/Sr94lvdwlksej0mDrERdCx8DHzWVTQeYO5hfJiplLHwYx5gKW1QsMtXoH43GvGGmxUmxaoqOO8z66n0nnNd7VKQxPma5gsLBZMDwOLj5rEIkzREJyv91AfAkudTIo0iALaDXIuMvma4fHzId5q/bGo=,iv:zlEEZ8YKNkLllhCVyZuKR84xR9DY40RCy6+DvP6o1n8=,tag:cP828BwlPwx/goEtWW/2Iw==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
