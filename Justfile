@@ -13,15 +13,20 @@ deploy environment: (_confirm_environment environment) \
     (precheck environment) \
     (provision environment)
 
-[doc("Provisions an environment")]
-provision environment:
-  $(just _get_environment_directory_file '{{ environment }}' 'provision.sh'
-
 [doc("Runs preflight checks defined in an environment, if any.")]
 precheck environment:
-  pfc_file="$(just _get_environment_directory_file '{{ environment }}' 'preflight.sh')"; \
-  test -f "$pfc_file" && { "$pfc_file" ; exit $?; }; \
-  just _log info "{{ environment }} does not have any preflight checks; continuing."
+  just _execute_containerized '{{ environment }}' \
+    'preflight.sh' \
+    'true' \
+    'Environment {{ environment }} does not have preflight checks; skipping.';
+
+[doc("Provisions an environment")]
+provision environment:
+  just _execute_containerized '{{ environment }}' 'provision.sh';
+
+[doc("Destroys an environment")]
+destroy environment:
+  just _execute_containerized '{{ environment }}' 'destroy.sh';
 
 _container_vol environment:
   echo "{{ container_vol }}-{{ environment }}"
@@ -29,9 +34,23 @@ _container_vol environment:
 _container_image environment:
   echo "{{ container_image }}-{{ environment }}"
 
-_execute_containerized environment file: \
+_execute_containerized environment file ignore_not_found='false' custom_message='none': \
     ( _ensure_container_image_exists environment ) \
     ( _ensure_container_volume_exists environment )
+  file=$(just _get_environment_directory_file {{ environment }} {{ file }}); \
+  if ! test -f "$file"; \
+  then \
+    level=error; \
+    message="File not found in environment: {{ file }}"; \
+    test "{{ custom_message }}" != 'none' && message="{{ custom_message }}"; \
+    if test "{{ ignore_not_found }}" != 'false'; \
+    then \
+      level=warning; \
+      message="${message} (skipping)"; \
+    fi; \
+    just _log "$level" "$message"; \
+    test "{{ ignore_not_found }}" == 'false' && exit 1; \
+  fi; \
   command=({{ container_bin }} run --rm \
     -v "$(just _container_vol {{ environment }}):/data" \
     -v $PWD/include:/app/include \
@@ -43,7 +62,6 @@ _execute_containerized environment file: \
     "$(just _get_property_from_env_config {{ environment }} '.deploy.environment_vars')" \
     '.[]'); \
   command+=($(just _container_image {{ environment }}) /app/environment/{{ file }}); \
-  just _log info "Running script in $(just _container_image {{ environment }}): {{ file }}"; \
   "${command[@]}"
 
 _ensure_container_volume_exists environment:
