@@ -13,18 +13,23 @@ environments:
                 - AWS_ACCESS_KEY_ID=AKIAUZD2QU52MOTFZMIU
                 # encrypted
                 - ENC[AES256_GCM,data:R54DtxU+eOH+dQj7vfa7FFmgnxU3xGMKtoRA8wldSFCyJqvy3coExCzVMMu0W++l+KzH51skD+Dy6cIULwE=,iv:s1DZeU0zOMVv9NEoQWO8vUAgoSHQ5mi2Ztxgzu7zsYM=,tag:5+bjuuc52QuFE5hR+FxNBA==,type:str]
-                - DEFAULT_AWS_REGION=us-east-2
+                - AWS_DEFAULT_REGION=us-east-2
                 - AWS_ROLE_ARN=arn:aws:iam::328821942132:role/admin-access-role
                 # encrypted
                 - ENC[AES256_GCM,data:9iKAyOZvWZcUUYCLbrunGEFRi9zI87Pl9YY5vAbOQ+ZVKSl9uhSi09zAxAWtR5oJYH8bres=,iv:cQwQlYTSslJTdP2+7ClTxjPwdAYICmNxPIBz2Gph6Iw=,tag:eyJMEw0SAq5x1MEhokjRFw==,type:str]
+            secrets:
+                ssh_key:
+                    name: ocp-aws-ssh-key
+                    # encrypted
+                    data: ENC[AES256_GCM,data:U2eobbE6upIEWrxHBbiL1zSEMdXQBDwRWpiZyGog9UJMPT/JwpXKdy5pD0wR2O3Gg/QVR2lJH4pZGJum/Xeuccm6/rFfxLP913xX76Ps+W6AP10YowpbOAjcX/bubm+FA5WZnIs0CFr8LUSzmKzrKxv1ITL5vxECbXOseszrMvBnDUoduAj5b8X31/FmPzPJQ1hBIQm66Ko9qB5yY09MpxeWmWOB4ZjR6n2tbsRve886UEq922SdhaldEozb2zq+OC4U1eKBOc4Rq0JoWCam2NnM/Y8vCrgOd9wo5taB+RAR4v+0WqRZlZtFoRxv8L2BAZkuZ3mObqbb5PcH/a/w5HzJ/V82mm5UN3Ie6rBLR1W2SsdWh4ZHE2qhYMpgU/XreRTGwG+/b3hU/z2ik7wgVo7MIXTvDpGqN8tf70IzmMXX2EpHWQMAO4Re+UB8b7GP7xFREbCjC7hnFQoel3AJNUPVdFFsGFdgDHyRa09BamVfnlhWtVfChrY2xl1X5NroZZT7Qn9uOvw6gj7mJhrmbq0JfCaetecTwqY=,iv:/j7qGCxTK0lBUSONjta9cn2A3X4idjk3zamBgFkFLbc=,tag:IR2K25bjQdDe7+KU/OyyCg==,type:str]
 sops:
     kms: []
     gcp_kms: []
     azure_kv: []
     hc_vault: []
     age: []
-    lastmodified: "2025-08-27T22:10:00Z"
-    mac: ENC[AES256_GCM,data:2ji9ShnxFrfgDKTim4PtpxSkY03zjqyxIcTiyWyowRw3KCtXh3yVE/oA5PS0/e8MgbSDM8eO7as1VRs+LAA1Yn2MRK1TYuS1IHr3J5lcEoWuY9QuhlRB7MY1PnAd0WWl11wZcBfxuHJQxCw6ic/bUSHhVyM6T9v2bgLQ99NR0aU=,iv:plUzN+inxIrsdt3FmkPDOa/nmxzEv7o7GSQEXKBQ36o=,tag:S7KStjuBeuUWdZY4GhVekQ==,type:str]
+    lastmodified: "2025-08-28T17:09:33Z"
+    mac: ENC[AES256_GCM,data:j9gzGeA296Z8sWVbmypGIO3bw8kfGIuOzfVCnzgFM6IHaB/jpY18yhen8y6dyS+NcWnecskn0XWZfjhE+4ZuZJXMBiBJrMQQnJi3UXFNpAR1HDDjGWaYRhZxfiHCYLC0B3W41o4dM9WcW+oMoWBlweJjRWajmmvygYIEpLsy1ZY=,iv:9Wnbu4HRrDDPAwiokIlmzTNpRvH1cosgtgau1UnpFSE=,tag:2gGHrCewa/jfWkI4OO0QoA==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
