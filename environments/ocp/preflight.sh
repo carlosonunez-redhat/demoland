@@ -77,7 +77,10 @@ confirm_config_is_correct() {
     'secrets.ssh_key.data' \
     'node_config.bootstrap.quantity_per_zone' \
     'node_config.control_plane.quantity_per_zone' \
-    'node_config.workers.quantity_per_zone'
+    'node_config.workers.quantity_per_zone' \
+    'node_config.bootstrap.instance_type' \
+    'node_config.control_plane.instance_type' \
+    'node_config.workers.instance_type'
   do
     test -n "$(_get_from_config ".deploy.${key}")" && continue
     error "Key not defined in config: .deploy.${key}"
