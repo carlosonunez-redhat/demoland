@@ -6,6 +6,9 @@ environments:
             environment_vars:
                 - SOME_KEY=some value
                 - ANOTHER_KEY=another value
+        # these secrets will get mounted into a folder called /secrets within the
+        # container that builds your cluster.
+        secrets: {}
     ocp:
         version: 20250827
         deploy:
@@ -34,11 +37,17 @@ environments:
                                 - us-east-2b
             node_config:
                 bootstrap:
+                    instance_type: t3.xlarge
+                    spot: false
                     quantity_per_zone: 1
                 control_plane:
                     quantity_per_zone: 1
+                    instance_type: t3.xlarge
+                    spot: false
                 workers:
                     quantity_per_zone: 1
+                    instance_type: t3.xlarge
+                    spot: false
             secrets:
                 ssh_key:
                     name: ocp-aws-ssh-key
@@ -50,8 +59,8 @@ sops:
     azure_kv: []
     hc_vault: []
     age: []
-    lastmodified: "2025-08-28T19:46:56Z"
-    mac: ENC[AES256_GCM,data:FROdNY0KgBafktJka8sMPnq2H+fbuFqwF7jTznW50HYOBp6mnYK/JFlGXQpW1DFv/CohLoujYQj/v+Kd7k/oqkHkuO17+Fn8tXpZoPkElctDl/DMqoeUQWk1AZ2H/Br4Xww6zA6iR667eRJpkvX1Kq/YfqaCz7/sQCK8gF3fGk0=,iv:BOBBJ+hTl8q3043Ba/m5gUGbm+2xfCEgXH+V+W1Yz8g=,tag:AQR2mlaAvt9pEIL48qc4Ig==,type:str]
+    lastmodified: "2025-08-28T20:19:29Z"
+    mac: ENC[AES256_GCM,data:XdqvEdVCen79XD9IOyLrhgo8+5U7UbvaETUHRJnBnPOTvXzm+TZsSH+XMn/kiMuEdW0fk4K56xCCr+NoiNBblaiMd8ytckwHPDO28OlZMePOXb+A4DFbWXnZnfVGwcvmzrf1CHUeXmrpcKkUYtcp/1ceH3zka17BIZ6PPHRUkG0=,iv:l0dS1rC5M03PQWB9H48X8ofA+1sBRV2w9QNGcwtKpWY=,tag:21vWnhPEFtNGFKc7fN6u4A==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-

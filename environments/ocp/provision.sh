@@ -36,11 +36,12 @@ create_ec2_vpc() {
   test -n "$(_vpc_id)" && return 0
   cidr_block=$(_get_from_config '.deploy.cloud_config.aws.networking.cidr_block')
   info "Creating AWS VPC with CIDR '$cidr_block'"
-  aws ec2 create-vpc --cidr-block "$cidr_block"
+  aws ec2 create-vpc --cidr-block "$cidr_block" >/dev/null
 }
 
 create_ec2_subnets() {
   idx=0
+  cidr_block=$(_get_from_config '.deploy.cloud_config.aws.networking.cidr_block')
   for az in $(_all_availability_zones)
   do
     subnet_cidr_block="$(cut -f1-2 -d '.' <<< "$cidr_block").$idx.0/24"
