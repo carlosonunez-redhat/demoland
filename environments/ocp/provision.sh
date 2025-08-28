@@ -19,6 +19,15 @@ _rhcos_ami_id() {
     sed -E 's/.*(ami-.*)`/\1/'
 }
 
+_all_availability_zones() {
+  local az
+  az=""
+  for t in bootstrap control_plane workers
+  do az="${az}$(_get_from_config ".deploy.cloud_config.aws.networking.availability_zones.${t}[]")\n"
+  done
+  echo -e "$az" | grep -Ev '^$' | sort -u
+}
+
 create_ssh_key() {
   f="$(_get_file_from_data_dir 'id_rsa')"
   test -f "$f" && test "$(stat -c %a "$f")" -eq 600 && return 0
@@ -44,16 +53,6 @@ upload_key_into_ec2() {
     --public-key-material "$(base64 -w 0 <<< "$pubkey")"
 }
 
-create_bootstrap_instance() {
-  ami=$(_rhcos_ami_id)
-  if test -z "$ami"
-  then
-    error "Couldn't find an RHCOS AMI in $AWS_DEFAULT_REGION."
-    return 1
-  fi
-  debug "AMI: $ami"
-}
-
 create_ec2_vpc() {
   cidr_block=$(_get_from_config '.deploy.cloud_config.aws.networking.cidr_block')
   vpc_id="$(aws ec2 describe-vpcs |
@@ -69,21 +68,31 @@ create_ec2_subnets() {
     jq --arg cidr "$cidr_block" -r '.Vpcs[] | select(.CidrBlock == $cidr) | .VpcId' |
     grep -v 'null' | cat)"
   cidr_block=$(_get_from_config '.deploy.cloud_config.aws.networking.cidr_block')
-  azs=$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones.nodes[]')
   idx=0
-  for az in $azs
+  for az in $(_all_availability_zones)
   do
     subnet_cidr_block="$(cut -f1-2 -d '.' <<< "$cidr_block").$idx.0/24"
     test -n "$(aws ec2 describe-subnets |
       jq --arg vpc_id "$vpc_id" --arg cidr "$subnet_cidr_block" \
         '.Subnets[] | select(.VpcId == $vpc_id and .CidrBlock == $cidr) | .SubnetId' |
         grep -v null | cat)" && continue
-    info "Creating subnet $subnet_cidr_block in VPC $vpc_id"
+    info "Creating subnet $subnet_cidr_block in VPC $vpc_id and AZ $az"
     aws ec2 create-subnet --vpc-id "$vpc_id" \
       --cidr-block "$subnet_cidr_block" \
       --availability-zone "$az" >/dev/null || return 1
     idx=$((idx+1))
   done
+}
+
+create_bootstrap_instance() {
+  ami=$(_rhcos_ami_id)
+  if test -z "$ami"
+  then
+    error "Couldn't find an RHCOS AMI in $AWS_DEFAULT_REGION."
+    return 1
+  fi
+
+  debug "AMI: $ami"
 }
 
 export $(log_into_aws) || exit 1
