@@ -55,16 +55,40 @@ create_ec2_subnets() {
 
 create_bootstrap_instance() {
   ami=$(_rhcos_ami_id)
-  vpc_id="$(aws ec2 describe-vpcs |
-    jq --arg cidr "$cidr_block" -r '.Vpcs[] | select(.CidrBlock == $cidr) | .VpcId' |
-    grep -v 'null' | cat)"
   if test -z "$ami"
   then
-    error "Couldn't find an RHCOS AMI in $AWS_DEFAULT_REGION."
+    error "Could not find a RHCOS AMI in the region set within the config"
     return 1
   fi
-
+  key_name=$(_get_from_config '.deploy.secrets.ssh_key.name')
+  az="$(_get_from_config '.deploy.cloud_config.aws.networking.bootstrap[0]')"
+  aws ec2 run-instances --image-id "$ami" \
+    --instance-type "$(_get_from_config '.deploy.node_config.bootstrap.instance_type')" \
+    --key-name "$key_name" \
+    --monitoring false \
+    --subnet-ids "$(_vpc_subnet_from_availability_zone "$az")" \
+    --tag-specifications "ResourceType=instance,Tags=[{Key=name,Value=bootstrap-${az}}]"
   debug "AMI: $ami"
+}
+
+create_vpc_internet_gateway() {
+  info "Creating VPC internet gateway"
+  >/dev/null aws ec2 create-internet-gateway \
+    --tag-specifications "ResourceType=internet-gateway,Tags=[{Key=name,Value=ocp-aws-igw}]"
+}
+
+attach_vpc_internet_gateway_to_vpc() {
+  id="$(aws resourcegroupstaggingapi get-resources --tag-filters "Key=name,Values=ocp-aws-igw" |
+    jq -r '.ResourceTagMappingList[0].ResourceARN' |
+    grep -v null |
+    awk -F'/' '{print $NF}' |
+    cat)"
+  test -n "$(aws ec2 describe-internet-gateways --internet-gateway-id "$id" |
+    jq --arg id "$(_vpc_id)" \
+      -r '.InternetGateways[].Attachments[] | select(.VpcId == $id) | .VpcId' |
+    grep -v null | cat)" && return 0
+  info "Attaching Internet Gateway '$id' to VPC '$(_vpc_id)'"
+  aws ec2 attach-internet-gateway --internet-gateway-id "$id" --vpc-id "$(_vpc_id)"
 }
 
 export $(log_into_aws) || exit 1
@@ -73,4 +97,6 @@ load_keys_into_ssh_agent
 upload_key_into_ec2
 create_ec2_vpc
 create_ec2_subnets
-create_bootstrap_instance
+create_vpc_internet_gateway
+attach_vpc_internet_gateway_to_vpc
+#create_bootstrap_instance
