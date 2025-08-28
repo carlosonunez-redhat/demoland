@@ -23,11 +23,22 @@ environments:
                         cidr_block: 10.0.0.0/16
                         region: us-east-2
                         availability_zones:
-                            bootstrap: us-east-2a
-                            nodes:
+                            bootstrap:
+                                - us-east-2a
+                            control_plane:
                                 - us-east-2a
                                 - us-east-2b
                                 - us-east-2c
+                            workers:
+                                - us-east-2a
+                                - us-east-2b
+            node_config:
+                bootstrap:
+                    quantity_per_zone: 1
+                control_plane:
+                    quantity_per_zone: 1
+                workers:
+                    quantity_per_zone: 1
             secrets:
                 ssh_key:
                     name: ocp-aws-ssh-key
@@ -39,8 +50,8 @@ sops:
     azure_kv: []
     hc_vault: []
     age: []
-    lastmodified: "2025-08-28T17:42:38Z"
-    mac: ENC[AES256_GCM,data:5KV6DOwGVPpGqXxXNXTCrseEfzJogqXI4oUYSHEDE/bR8YXEtkE/k+NwLMXPQU6gjZh5jOvQM372wqlt+Suf9Vly6n5Vk7IJFxEYnhFEYVoz27cN1OjCKxTqgWO9Hc8dUkrTJPmyD5OAe2D0OVMum/DHvSG6+xjEWWJxjLL75y8=,iv:0q6M/3zWlxboT9XIwMd7CZOKN2Xk4h3Eay3sC9Cfd9I=,tag:1rmeVCvrHnuoy34pUd6/CA==,type:str]
+    lastmodified: "2025-08-28T19:46:56Z"
+    mac: ENC[AES256_GCM,data:FROdNY0KgBafktJka8sMPnq2H+fbuFqwF7jTznW50HYOBp6mnYK/JFlGXQpW1DFv/CohLoujYQj/v+Kd7k/oqkHkuO17+Fn8tXpZoPkElctDl/DMqoeUQWk1AZ2H/Br4Xww6zA6iR667eRJpkvX1Kq/YfqaCz7/sQCK8gF3fGk0=,iv:BOBBJ+hTl8q3043Ba/m5gUGbm+2xfCEgXH+V+W1Yz8g=,tag:AQR2mlaAvt9pEIL48qc4Ig==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-

@@ -5,6 +5,15 @@ source "$(dirname "$0")/../include/helpers/config.sh"
 source "$(dirname "$0")/../include/helpers/data.sh"
 source "$(dirname "$0")/../include/helpers/logging.sh"
 
+_all_availability_zones() {
+  local az
+  az=""
+  for t in bootstrap control_plane workers
+  do az="${az}$(_get_from_config ".deploy.cloud_config.aws.networking.availability_zones.${t}[]")\n"
+  done
+  echo -e "$az" | grep -Ev '^$' | sort -u
+}
+
 delete_aws_ec2_key_pair() {
   key_name=$(_get_from_config '.deploy.secrets.ssh_key.name')
   test -z "$(aws ec2 describe-key-pairs --key-name "$key_name" 2>/dev/null)" && return 0
@@ -22,8 +31,7 @@ delete_ec2_subnets() {
   vpc_id="$(aws ec2 describe-vpcs |
     jq --arg cidr "$cidr_block" -r '.Vpcs[] | select(.CidrBlock == $cidr) | .VpcId' |
     grep -v 'null' | cat)"
-  azs=$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones.nodes[]')
-  for az in $azs
+  for az in $(_all_availability_zones)
   do
     az_id="$(aws ec2 describe-availability-zones |
       jq --arg name "$az" -r '.AvailabilityZones[] | select(.ZoneName == $name) | .ZoneId' |

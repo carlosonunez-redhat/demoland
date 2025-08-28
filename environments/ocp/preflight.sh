@@ -71,9 +71,13 @@ confirm_config_is_correct() {
   for key in 'cloud_config.aws.networking.region' \
     'cloud_config.aws.networking.cidr_block' \
     'cloud_config.aws.networking.availability_zones.bootstrap' \
-    'cloud_config.aws.networking.availability_zones.nodes' \
+    'cloud_config.aws.networking.availability_zones.control_plane' \
+    'cloud_config.aws.networking.availability_zones.workers' \
     'secrets.ssh_key.name' \
-    'secrets.ssh_key.data'
+    'secrets.ssh_key.data' \
+    'node_config.bootstrap.quantity_per_zone' \
+    'node_config.control_plane.quantity_per_zone' \
+    'node_config.workers.quantity_per_zone'
   do
     test -n "$(_get_from_config ".deploy.${key}")" && continue
     error "Key not defined in config: .deploy.${key}"
