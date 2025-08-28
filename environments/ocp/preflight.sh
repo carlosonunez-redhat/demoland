@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -e
 source "$(dirname "$0")/../include/helpers/aws.sh"
+source "$(dirname "$0")/../include/helpers/config.sh"
 source "$(dirname "$0")/../include/helpers/logging.sh"
 pf_log() {
   eval "$1 '[PREFLIGHT] $2'"
@@ -65,9 +66,25 @@ confirm_iam_user_has_correct_permissions() {
   done
 }
 
+confirm_config_is_correct() {
+  pf_log info "Checking environment config"
+  for key in 'cloud_config.aws.networking.region' \
+    'cloud_config.aws.networking.cidr_block' \
+    'cloud_config.aws.networking.availability_zones.bootstrap' \
+    'cloud_config.aws.networking.availability_zones.nodes' \
+    'secrets.ssh_key.name' \
+    'secrets.ssh_key.data'
+  do
+    test -n "$(_get_from_config ".deploy.${key}")" && continue
+    error "Key not defined in config: .deploy.${key}"
+    exit 1
+  done
+}
+
 # won't export correctly if quoted
 # shellcheck disable=SC2046
 export $(log_into_aws) || exit 1
+confirm_config_is_correct
 confirm_route_53_public_zone_available
 # NOTE: You can work around this by creating a short-lived IAM user with an
 # AdministratorAccess policy for the bootstrap node and deleting it after installation completes.

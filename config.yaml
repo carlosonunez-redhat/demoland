@@ -17,6 +17,17 @@ environments:
                 - AWS_ROLE_ARN=arn:aws:iam::328821942132:role/admin-access-role
                 # encrypted
                 - ENC[AES256_GCM,data:9iKAyOZvWZcUUYCLbrunGEFRi9zI87Pl9YY5vAbOQ+ZVKSl9uhSi09zAxAWtR5oJYH8bres=,iv:cQwQlYTSslJTdP2+7ClTxjPwdAYICmNxPIBz2Gph6Iw=,tag:eyJMEw0SAq5x1MEhokjRFw==,type:str]
+            cloud_config:
+                aws:
+                    networking:
+                        cidr_block: 10.0.0.0/16
+                        region: us-east-2
+                        availability_zones:
+                            bootstrap: us-east-2a
+                            nodes:
+                                - us-east-2a
+                                - us-east-2b
+                                - us-east-2c
             secrets:
                 ssh_key:
                     name: ocp-aws-ssh-key
@@ -28,8 +39,8 @@ sops:
     azure_kv: []
     hc_vault: []
     age: []
-    lastmodified: "2025-08-28T17:09:33Z"
-    mac: ENC[AES256_GCM,data:j9gzGeA296Z8sWVbmypGIO3bw8kfGIuOzfVCnzgFM6IHaB/jpY18yhen8y6dyS+NcWnecskn0XWZfjhE+4ZuZJXMBiBJrMQQnJi3UXFNpAR1HDDjGWaYRhZxfiHCYLC0B3W41o4dM9WcW+oMoWBlweJjRWajmmvygYIEpLsy1ZY=,iv:9Wnbu4HRrDDPAwiokIlmzTNpRvH1cosgtgau1UnpFSE=,tag:2gGHrCewa/jfWkI4OO0QoA==,type:str]
+    lastmodified: "2025-08-28T17:42:38Z"
+    mac: ENC[AES256_GCM,data:5KV6DOwGVPpGqXxXNXTCrseEfzJogqXI4oUYSHEDE/bR8YXEtkE/k+NwLMXPQU6gjZh5jOvQM372wqlt+Suf9Vly6n5Vk7IJFxEYnhFEYVoz27cN1OjCKxTqgWO9Hc8dUkrTJPmyD5OAe2D0OVMum/DHvSG6+xjEWWJxjLL75y8=,iv:0q6M/3zWlxboT9XIwMd7CZOKN2Xk4h3Eay3sC9Cfd9I=,tag:1rmeVCvrHnuoy34pUd6/CA==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
