@@ -5,6 +5,7 @@ set quiet := true
 container_bin := env("CONTAINER_BIN", which('podman'))
 container_image := 'demo-environment-runner'
 container_vol := 'demo-environment-runner-vol'
+container_secrets_vol := 'demo-environment-runner-secrets-vol'
 config_file := source_dir() + '/config.yaml'
 yq_image := 'mikefarah/yq'
 
@@ -64,15 +65,20 @@ _add_env_to_config environment:
 
 _delete_env_from_config environment:
   sops unset {{ config_file }} '["environments"]["{{ environment }}"]'
+
 _container_vol environment:
   echo "{{ container_vol }}-{{ environment }}"
+
+_container_secrets_vol environment:
+  echo "{{ container_secrets_vol }}-{{ environment }}"
 
 _container_image environment:
   echo "{{ container_image }}-{{ environment }}"
 
 _execute_containerized environment file ignore_not_found='false' custom_message='none': \
     ( _ensure_container_image_exists environment ) \
-    ( _ensure_container_volume_exists environment )
+    ( _ensure_container_volume_exists environment ) \
+    ( _ensure_container_secrets_vol_populated environment )
   file=$(just _get_environment_directory_file {{ environment }} {{ file }}); \
   if ! test -f "$file"; \
   then \
@@ -89,6 +95,7 @@ _execute_containerized environment file ignore_not_found='false' custom_message=
   fi; \
   command=({{ container_bin }} run --rm \
     -v "$(just _container_vol {{ environment }}):/data" \
+    -v "$(just _container_secrets_vol {{ environment }}):/secrets" \
     -v $PWD/include:/app/include \
     -v "$(just _get_environment_directory {{ environment }}):/app/environment" \
     -w /app); \
@@ -100,13 +107,29 @@ _execute_containerized environment file ignore_not_found='false' custom_message=
   command+=($(just _container_image {{ environment }}) /app/environment/{{ file }}); \
   "${command[@]}"
 
+_ensure_container_secrets_vol_populated environment:
+  set +u; \
+  vol=$(just _container_vol {{ environment }}); \
+  if test -n "$REBUILD_SECRETS_VOLUME" || \
+    test -n "$({{ container_bin }} volume ls | grep -q "$vol")"; \
+  then \
+    test -n "$REBUILD_SECRETS_VOLUME" && {{ container_bin }} volume rm -f "$vol" >/dev/null; \
+    {{ container_bin }} volume create "$vol" >/dev/null; \
+  fi; \
+  env_data=$(sops --decrypt --extract '["environments"]["{{ environment }}"]' \
+    --output-type yaml "{{ config_file }}") || exit 1; \
+  env_data_enc=$(base64 -w 0 <<< "$env_data"); \
+  {{ container_bin }} run --rm \
+    -v "$(just _container_secrets_vol {{ environment }}):/data" \
+    bash:5 -c "echo '$env_data_enc' | base64 -d > /data/config.yaml"
+
 _ensure_container_volume_exists environment:
   set +u; \
   vol=$(just _container_vol {{ environment }}); \
   {{ container_bin }} volume ls | grep -q "$vol" && \
     test -z "$REBUILD_DATA_VOLUME" && \
     exit 0; \
-  test -n "$REBUILD_DATA_VOLUME" && {{ container_bin }} volume rm -f "$vol"; \
+  test -n "$REBUILD_DATA_VOLUME" && {{ container_bin }} volume rm -f "$vol" >/dev/null; \
   {{ container_bin }} volume create "$vol" >/dev/null;
 
 _ensure_container_image_exists environment:
