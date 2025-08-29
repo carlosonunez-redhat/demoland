@@ -93,7 +93,7 @@ _execute_containerized environment file ignore_not_found='false' custom_message=
     just _log "$level" "$message"; \
     test "{{ ignore_not_found }}" == 'false' && exit 1; \
   fi; \
-  command=({{ container_bin }} run --rm \
+  command=({{ container_bin }} run --rm -it \
     -v "$(just _container_vol {{ environment }}):/data" \
     -v "$(just _container_secrets_vol {{ environment }}):/secrets" \
     -v $PWD/include:/app/include \
