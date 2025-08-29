@@ -1,33 +1,11 @@
 # shellcheck shell=bash
-_vpc_id() {
-  cidr_block=$(_get_from_config '.deploy.cloud_config.aws.networking.cidr_block')
-  aws ec2 describe-vpcs |
-    jq --arg cidr "$cidr_block" -r '.Vpcs[] | select(.CidrBlock == $cidr) | .VpcId' |
-    grep -v 'null' | cat
+_hosted_zone_id() {
+  domain_name=$(_get_from_config '.deploy.cloud_config.aws.networking.dns.domain_name')
+  aws route53 list-hosted-zones |
+    jq --arg name "$domain_name" -r '.HostedZones[] | select(.Name == $name + ".") | .Id' |
+    grep -v null |
+    cat
 }
-
-_vpc_subnet_from_cidr_block() {
-  local cidr_block
-  cidr_block="$1"
-  aws ec2 describe-subnets |
-  jq --arg vpc_id "$(_vpc_id)" --arg cidr "$subnet_cidr_block" \
-    '.Subnets[] | select(.VpcId == $vpc_id and .CidrBlock == $cidr) | .SubnetId' |
-  grep -v null |
-  cat
-}
-
-_vpc_subnet_from_availability_zone() {
-  local az
-  az="$1"
-  az_id="$(aws ec2 describe-availability-zones |
-    jq --arg name "$az" -r '.AvailabilityZones[] | select(.ZoneName == $name) | .ZoneId' |
-    grep -v null | cat)"
-  aws ec2 describe-subnets |
-    jq -r --arg vpc_id "$(_vpc_id)" --arg az_id "$az_id" \
-      '.Subnets[] | select(.VpcId == $vpc_id and .AvailabilityZoneId == $az_id) | .SubnetId' |
-      grep -v null | cat
-}
-
 
 _all_availability_zones() {
   local az
@@ -36,6 +14,35 @@ _all_availability_zones() {
   do az="${az}$(_get_from_config ".deploy.cloud_config.aws.networking.availability_zones.${t}[]")\n"
   done
   echo -e "$az" | grep -Ev '^$' | sort -u
+}
+
+_get_param_from_aws_cfn_stack() {
+  local stack_name param
+  stack_name="$1"
+  param="$2"
+  resolved_stack_name="$(_aws_cf_stack_name "$1")"
+  results=$(aws cloudformation describe-stacks --stack-name "$resolved_stack_name" |
+    jq -r '.Stacks[0]' |
+    grep -v null |
+    cat)
+  if test -z "$results"
+  then
+    error "Stack does not exist: $resolved_stack_name"
+    return 1
+  fi
+  stack_state=$(jq -r '.StackStatus' <<< "$result")
+  if ! grep -Eiq '^(create|update)_complete$' <<< "$stack_state"
+  then
+    error "Can't get params right now; stack '$resolved_stack_name' is in state '$stack_state'"
+    return 1
+  fi
+  echo "$result" | jq --arg k "$param" -r '.Outputs[] | select(.OutputKey == $k) | .OutputValue' |
+    grep -v null |
+    cat
+}
+
+_cfn_list_param() {
+  printf '[%s]' "$1"
 }
 
 _create_aws_cf_params_json() {
@@ -126,7 +133,7 @@ _delete_aws_resources_from_cfn_stack() {
       error "Stack file not found: $stack_file"
       return 1
     fi
-    aws cloudformation delete-stack --stack-name "$(_aws_cf_stack_name "$1")"
+    aws cloudformation delete-stack --stack-name "$(_aws_cf_stack_name "$1")" >/dev/null
   }
   _wait() {
     _wait_for_cf_stack_until_state "$1" \
@@ -140,7 +147,7 @@ _delete_aws_resources_from_cfn_stack() {
   _wait  "$1"
 }
 
-_create_aws_resources_from_cfn_stack() {
+_create() {
   _exists() {
     test -n "$(2>/dev/null aws cloudformation describe-stacks \
       --stack-name "$(_aws_cf_stack_name "$1")")"
@@ -157,7 +164,8 @@ _create_aws_resources_from_cfn_stack() {
       --stack-name "$(_aws_cf_stack_name "$1")"
       --template-body "file://$stack_file")
     test -n "$2" && cmd+=(--parameters "$2")
-    "${cmd[@]}"
+    test -n "$3" && cmd+=(--capabilities "$3")
+    "${cmd[@]}" >/dev/null
   }
   _wait() {
     _wait_for_cf_stack_until_state "$1" \
@@ -165,9 +173,16 @@ _create_aws_resources_from_cfn_stack() {
       'create_in_progress' \
       'create_failed'
   }
-  info_msg="$3"
+  info_msg="$4"
   test -z "$info_msg" && info_msg="Creating resources in stack '$1'..."
-  _exists "$1" || { info "$info_msg" && _run "$1" "$2"; }
+  _exists "$1" || { info "$info_msg" && _run "$1" "$2" "$3"; }
   _wait "$1"
 }
 
+_create_aws_resources_from_cfn_stack() {
+  _create "$1" "$2" "$3"
+}
+
+_create_aws_resources_from_cfn_stack_with_caps() {
+  _create "$1" "$2" "$3" "$4"
+}
