@@ -32,6 +32,16 @@ upload_key_into_ec2() {
     --public-key-material "$(base64 -w 0 <<< "$pubkey")"
 }
 
+create_ignition_files() {
+  openshift-install create ignition-configs --dir /data/ignition || return 1
+  for file in bootstrap master worker
+  do
+    test -f "/data/ignition/${file}" && continue
+    error "Couldn't find ignition file: /data/ignition/${file}"
+    return 1
+  done
+}
+
 create_vpc() {
   local subnet_size subnet_bits params params_json
 	subnet_size=$(_get_from_config '.deploy.cloud_config.aws.networking.subnet_size')
@@ -80,9 +90,99 @@ create_networking_resources() {
     "Creating DNS records, load balancers and target groups..."
 }
 
+create_security_group_rules() {
+  private_subnets=$(_get_param_from_aws_cfn_stack vpc 'PrivateSubnetIds')
+  if test -z "$private_subnets"
+  then
+    error "Private subnets not available."
+    return 1
+  fi
+  vpc_id=$(_get_param_from_aws_cfn_stack vpc 'VpcId')
+  if test -z "$vpc_id"
+  then
+    error "VPC ID not available."
+    return 1
+  fi
+  params=(
+    'InfrastructureName' "$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
+    'VpcId' "$vpc_id"
+    'VpcCidr' "$(_get_from_config '.deploy.cloud_config.aws.networking.cidr_block')"
+    'PrivateSubnets' "$private_subnets"
+  )
+  params_json=$(_create_aws_cf_params_json "${params[@]}")
+  _create_aws_resources_from_cfn_stack_with_caps networking "$params_json" \
+    "CAPABILITY_NAMED_IAM" \
+    "Creating DNS records, load balancers and target groups..."
+}
+
+create_bootstrap_machine() {
+  set -e
+  _bootstrap_subnet() {
+    bootstrap_az=$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones.bootstrap')
+    public_subnets=$(fail_if_nil "$(_get_param_from_aws_cfn_stack vpc 'PublicSubnetIds')" \
+      "Private subnets not found" | tr ',' '\n')
+    aws ec2 describe-subnets --subnet-ids "$(tr ',' ' ' <<< "$public_subnets")" |
+      jq --arg az "$bootstrap_az" '.Subnets[] | select(.AvailabilityZone == $az) | .SubnetId'
+  }
+
+  sg_id=$(fail_if_nil "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId')" \
+    "Master security group ID not found")
+  private_subnets=$(fail_if_nil "$(_get_param_from_aws_cfn_stack vpc 'PrivateSubnetIds')" \
+    "Private subnets not found")
+  vpc_id=$(fail_if_nil "$(_get_param_from_aws_cfn_stack vpc 'VpcId')" "VPC ID not found")
+  lambda_arn=$(fail_if_nil "$(_get_param_from_aws_cfn_stack networking 'RegisterNlbTargetsLambda')" \
+    "NLB registration Lambda ARN not found")
+  ext_api_target_group_arn=$(fail_if_nil \
+    "$(_get_param_from_aws_cfn_stack networking 'ExternalApiTargetGroupArn')" \
+    'External API NLB target group ARN not found')
+  int_api_target_group_arn=$(fail_if_nil \
+    "$(_get_param_from_aws_cfn_stack networking 'InternalApiTargetGroupArn')" \
+    'Internal API NLB target group ARN not found')
+  int_svc_target_group_arn=$(fail_if_nil \
+    "$(_get_param_from_aws_cfn_stack networking 'InternalServiceTargetGroupArn')" \
+    'Internal service NLB target group ARN not found')
+  params=(
+    'InfrastructureName' "$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
+    'RhcosAmi' "$(fail_if_nil "$(_rhcos_ami_id)" "CoreOS AMI ID not found")"
+    'AllowedBootstrapSshCidr' "$(fail_if_nil "$(_this_ip)" "Couldn't resolve IP address")"
+    'PublicSubnet' "$(_bootstrap_subnet)"
+    'MasterSecurityGroupId' "$sg_id"
+    'HostedZoneId' "$(_hosted_zone_id)"
+    'BootstrapInstanceType' "$(_get_from_config '.deploy.node_config.bootstrap.instance_type')"
+    'BootstrapIgnitionLocation' '/data/ignition/bootstrap.ign'
+    'AutoRegisterELB' 'yes'
+    'RegisterNlbIpTargetsLambdaArn' "$lambda_arn"
+    'ExternalApiTargetGroupArn' "$ext_api_target_group_arn"
+    'InternalApiTargetGroupArn' "$int_api_target_group_arn"
+    'InternalServiceTargetGroupArn' "$int_svc_target_group_arn"
+  )
+  params_json=$(_create_aws_cf_params_json "${params[@]}")
+  _create_aws_resources_from_cfn_stack_with_caps networking "$params_json" \
+    "CAPABILITY_NAMED_IAM" \
+    "Creating bootstrap node..."
+}
+
+create_ignition_bucket_in_s3() {
+  test -n "$(2>/dev/null aws s3api head-bucket \
+    --bucket "$(_get_from_config '.deploy.node_config.common.ignition_file_s3_bucket')")" &&
+    return 0
+  info "Creating S3 bucket for ignition files..."
+  aws s3 mb "s3://$(_get_from_config '.deploy.node_config.common.ignition_file_s3_bucket')"
+}
+
+sync_ignition_files_with_s3_bucket() {
+  info "Syncing ignition files with ignition S3 bucket"
+  aws s3 sync /data/ignition "s3://$(_get_from_config '.deploy.node_config.common.ignition_file_s3_bucket')"
+}
+
 export $(log_into_aws) || exit 1
 create_ssh_key
 load_keys_into_ssh_agent
 upload_key_into_ec2
+create_ignition_bucket_in_s3
+create_ignition_files
+sync_bootstrap_ignition_files_with_s3_bucket
 create_vpc
 create_networking_resources
+create_security_groups
+create_bootstrap_machine

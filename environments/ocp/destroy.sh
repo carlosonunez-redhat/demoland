@@ -29,9 +29,38 @@ delete_networking_resources() {
     "Deleting DNS records, load balancers and target groups..."
 }
 
+delete_bootstrap_machine() {
+  _delete_aws_resources_from_cfn_stack bootstrap_machine \
+    "Deleting the bootstrap machine..."
+}
+
+delete_security_groups() {
+  _delete_aws_resources_from_cfn_stack security \
+    "Deleting security groups..."
+}
+
+delete_ignition_files() {
+  rm -rf /data/ignition
+}
+
+delete_ignition_bucket_from_s3() {
+  test -z "$(2>/dev/null aws s3api head-bucket \
+    --bucket "$(_get_from_config '.deploy.node_config.common.ignition_file_s3_bucket')")" &&
+    return 0
+
+  info "Deleting S3 bucket for ignition files..."
+  aws s3 rm --recursive "s3://$(_get_from_config '.deploy.node_config.common.ignition_file_s3_bucket')" &&
+    aws s3 rb "s3://$(_get_from_config '.deploy.node_config.common.ignition_file_s3_bucket')"
+}
+
+
 
 export $(log_into_aws) || exit 1
+delete_bootstrap_machine
 delete_aws_ec2_key_pair
-delete_ssh_key
+delete_security_groups
+delete_ignition_bucket_from_s3
 delete_networking_resources
 delete_aws_vpc
+delete_ssh_key
+delete_ignition_files
