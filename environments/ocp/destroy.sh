@@ -12,7 +12,7 @@ delete_aws_ec2_key_pair() {
   test -z "$(aws ec2 describe-key-pairs --key-name "$key_name" 2>/dev/null)" && return 0
 
   info "Deleting EC2 key pair '$key_name'"
-  aws ec2 delete-key-pair --key-name "$key_name"
+  aws ec2 delete-key-pair --key-name "$key_name" >/dev/null
 }
 
 delete_ssh_key() {
