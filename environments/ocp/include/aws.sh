@@ -101,10 +101,19 @@ _wait_for_cf_stack_until_state() {
   do
     result=$(aws cloudformation describe-stacks --stack-name "$stack_name" |
         jq -r '.Stacks[0]')
-    if test -z "$result" && grep 'delete' <<< "$desired_state"
+    if test -z "$result"
     then
-      info "[iteration #${iterations}] '$stack_name': $desired_state achieved!"
-      return 0
+      if test -z "$(aws sts get-caller-identity)"
+      then
+        info "[iteration #${iterations}] '$stack_name': credentials expired while waiting. refreshing"
+        eval $(log_into_aws) || return 1
+        continue
+      fi
+      if grep -q 'delete' <<< "$desired_state"
+      then
+        info "[iteration #${iterations}] '$stack_name': $desired_state achieved!"
+        return 0
+      fi
     fi
     stack_state="$(jq -r '.StackStatus' <<< "$result" | tr '[:upper:]' '[:lower:]')"
     reason="$(jq -r '.StackStatusReason' <<< "$result" | grep -v null | cat)"
