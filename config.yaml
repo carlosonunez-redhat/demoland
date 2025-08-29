@@ -45,7 +45,10 @@ environments:
                     cluster: demoland-ocp-aws
                     infrastructure: demoland-ocp-aws-infra
             node_config:
+                common:
+                    ignition_file_s3_bucket: s1gdf449ohge-demoland-ocp-ignition-files
                 bootstrap:
+                    ignition_file_s3_key: bootstrap.ign
                     instance_type: t3.xlarge
                     spot: false
                     quantity_per_zone: 1
@@ -68,8 +71,8 @@ sops:
     azure_kv: []
     hc_vault: []
     age: []
-    lastmodified: "2025-08-29T17:07:38Z"
-    mac: ENC[AES256_GCM,data:RO4dTfVwXJMDL4jvDIYO6VtQRmQfkRDB+c4RtCJi+JwbiH1IFMTVb7sjqUBu7AHwG3x90PplysolksitysJmI8ytU/UM0MVT4gFPyr6nQgDeKBTZejcYcoDB1UDEeAIJj9tN3Yzb3jA9+o0ttbYeY1u0o/OUmd7mob6BUYJ9h0s=,iv:FPKo0W5snlTiGKc8HJbMtx7XomoySmYXjGJuF9H6kDM=,tag:qeVg0XP8OghsoGDGg7TFcw==,type:str]
+    lastmodified: "2025-08-29T23:31:02Z"
+    mac: ENC[AES256_GCM,data:FTFVxyfykAc1+ZB8RTlO6PZ0JKxHlCXXCOlFuOWhS8u64ajmc5L91DPKzbar7+e8hDVHof48BWXYNxMtt006kBySdmADU4SYbCJPP5mxiLv+SELvNp+ChjTzrtMLsbmkliW+hclUL/LUP5n5zfiytLKVWycXKtNGPbkCTuqbPC0=,iv:0G8Bgn7ICFKjsLgfAX32Gk+KIT78cMZLzchUV8UjvZg=,tag:0Lit0gEm0WwHoIB6Wv/Y/Q==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
