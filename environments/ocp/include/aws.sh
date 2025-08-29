@@ -7,6 +7,14 @@ _hosted_zone_id() {
     cat
 }
 
+_hosted_zone_name() {
+  domain_name=$(_get_from_config '.deploy.cloud_config.aws.networking.dns.domain_name')
+  aws route53 list-hosted-zones |
+    jq --arg name "$domain_name" -r '.HostedZones[] | select(.Name == $name + ".") | .Name' |
+    grep -v null |
+    sed -E 's/\.$//' | cat
+}
+
 _all_availability_zones() {
   local az
   az=""
