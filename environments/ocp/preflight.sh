@@ -73,6 +73,7 @@ confirm_config_is_correct() {
     'cloud_config.aws.networking.availability_zones.bootstrap' \
     'cloud_config.aws.networking.availability_zones.control_plane' \
     'cloud_config.aws.networking.availability_zones.workers' \
+    'cloud_config.aws.cloudformation.stack_name' \
     'secrets.ssh_key.name' \
     'secrets.ssh_key.data' \
     'node_config.bootstrap.quantity_per_zone' \
