@@ -3,15 +3,17 @@ set -e
 source "$(dirname "$0")/../include/helpers/aws.sh"
 source "$(dirname "$0")/../include/helpers/config.sh"
 source "$(dirname "$0")/../include/helpers/logging.sh"
+source "$(dirname "$0")/include/aws.sh"
 pf_log() {
   eval "$1 '[PREFLIGHT] $2'"
 }
 
 confirm_route_53_public_zone_available() {
-  pf_log info "Checking that at least one public Route53 hosted zone is available."
-  test -n "$(aws route53 list-hosted-zones |
-    jq -r '.HostedZones[].Name' |
-    grep -v null)"
+  domain_name=$(_get_from_config '.deploy.cloud_config.aws.networking.dns.domain_name')
+  pf_log info "Checking that Route53 hosted zone for domain $domain_name is available."
+  test -n "$(_hosted_zone_id)" && return 0
+  pf_log error "Hosted zone not available for domain '$domain_name'"
+  return 1
 }
 
 confirm_iam_user_has_correct_permissions() {
@@ -68,7 +70,8 @@ confirm_iam_user_has_correct_permissions() {
 
 confirm_config_is_correct() {
   pf_log info "Checking environment config"
-  for key in 'cloud_config.aws.networking.region' \
+  for key in 'cloud_config.aws.networking.dns.domain_name' \
+    'cloud_config.aws.networking.region' \
     'cloud_config.aws.networking.cidr_block' \
     'cloud_config.aws.networking.availability_zones.bootstrap' \
     'cloud_config.aws.networking.availability_zones.control_plane' \
@@ -76,6 +79,8 @@ confirm_config_is_correct() {
     'cloud_config.aws.cloudformation.stack_name' \
     'secrets.ssh_key.name' \
     'secrets.ssh_key.data' \
+    'cluster_config.names.cluster' \
+    'cluster_config.names.infrastructure' \
     'node_config.bootstrap.quantity_per_zone' \
     'node_config.control_plane.quantity_per_zone' \
     'node_config.workers.quantity_per_zone' \

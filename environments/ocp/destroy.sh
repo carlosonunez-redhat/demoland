@@ -21,12 +21,17 @@ delete_ssh_key() {
 }
 
 delete_aws_vpc() {
-  info "Deleting VPC"
   _delete_aws_resources_from_cfn_stack 'vpc' "Deleting VPC..."
+}
+
+delete_networking_resources() {
+  _delete_aws_resources_from_cfn_stack networking \
+    "Deleting DNS records, load balancers and target groups..."
 }
 
 
 export $(log_into_aws) || exit 1
 delete_aws_ec2_key_pair
 delete_ssh_key
+delete_networking_resources
 delete_aws_vpc

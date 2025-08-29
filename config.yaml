@@ -23,7 +23,11 @@ environments:
                 - AWS_PAGER=""
             cloud_config:
                 aws:
+                    cloudformation:
+                        stack_name: demoland-ocp-aws-cfn
                     networking:
+                        dns:
+                            domain_name: sandbox587.opentlc.com
                         cidr_block: 10.0.0.0/16
                         region: us-east-2
                         availability_zones:
@@ -36,6 +40,10 @@ environments:
                             workers:
                                 - us-east-2a
                                 - us-east-2b
+            cluster_config:
+                names:
+                    cluster: demoland-ocp-aws
+                    infrastructure: demoland-ocp-aws-infra
             node_config:
                 bootstrap:
                     instance_type: t3.xlarge
@@ -60,8 +68,8 @@ sops:
     azure_kv: []
     hc_vault: []
     age: []
-    lastmodified: "2025-08-29T16:16:34Z"
-    mac: ENC[AES256_GCM,data:+uDHrBiaigKmPXAD10V5Ee9K0nzVDDL1CNHfMEmCi0en0K4fXg8fXPoPK/o8JAJLG/TNOa4THpNn45Oc9tf9slPGq9HtG+7nvxsrkJLSPYMugDdDL8ML/DJzR5TF/Tg/SbO70RqZpliTcp3geI3aPtq+ibl4u019KXvSiy5oOXY=,iv:062+F2VwYCJy7m5VCATJXOsV39QoAByvE7w6BuvX5dE=,tag:mTZDqOsFU9PIreQU+c10/Q==,type:str]
+    lastmodified: "2025-08-29T17:07:38Z"
+    mac: ENC[AES256_GCM,data:RO4dTfVwXJMDL4jvDIYO6VtQRmQfkRDB+c4RtCJi+JwbiH1IFMTVb7sjqUBu7AHwG3x90PplysolksitysJmI8ytU/UM0MVT4gFPyr6nQgDeKBTZejcYcoDB1UDEeAIJj9tN3Yzb3jA9+o0ttbYeY1u0o/OUmd7mob6BUYJ9h0s=,iv:FPKo0W5snlTiGKc8HJbMtx7XomoySmYXjGJuF9H6kDM=,tag:qeVg0XP8OghsoGDGg7TFcw==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
