@@ -185,8 +185,8 @@ _delete_aws_resources_from_cfn_stack() {
 }
 
 _create() {
-  _exists() {
-    test -n "$(2>/dev/null aws cloudformation describe-stacks \
+  _not_exists() {
+    test -z "$(2>/dev/null aws cloudformation describe-stacks \
       --stack-name "$(_aws_cf_stack_name "$1")")"
   }
   _run() {
@@ -210,9 +210,15 @@ _create() {
       'create_in_progress' \
       'create_failed'
   }
-  info_msg="$4"
+  info_msg="$3"
+  test "$#" -eq 4 && info_msg="$4"
   test -z "$info_msg" && info_msg="Creating resources in stack '$1'..."
-  _exists "$1" || { info "$info_msg" && _run "$1" "$2" "$3"; }
+  if _not_exists "$1"
+  then
+    info "$info_msg"
+    test "$#" -eq 3 && _run "$1" "$2"
+    test "$#" -eq 4 && _run "$1" "$2" "$3"
+  fi
   _wait "$1"
 }
 
