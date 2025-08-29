@@ -82,6 +82,15 @@ _wait_for_cf_stack_until_state() {
     test "$((idx % 5))" -eq 0 && "$@"
     return 0
   }
+  _aws_cfn_failure_reasons() {
+    aws cloudformation describe-stack-events --stack-name "$1" |
+      jq -r '.StackEvents[] |
+        select(
+          .ResourceStatus == "CREATE_FAILED" and
+          (.ResourceStatusReason|contains("Resource creation cancelled")|not))
+        | "  - " + .LogicalResourceId + ": [" + .ResourceType + "] " + .ResourceStatusReason'
+  }
+
   local stack_name
   iterations=0
   stack_name="$(_aws_cf_stack_name "$1")"
@@ -119,8 +128,19 @@ _wait_for_cf_stack_until_state() {
         _print_every_five "$iterations" \
           info "[iteration #${iterations}] '$stack_name': Failed; rolling back..."
         ;;
-      rollback_complete|"$failed_state")
+      rollback_complete)
+        manual_delete_command=(aws cloudformation delete-stack
+          --stack-name "$stack_name")
+        error "'$stack_name' CloudFormation stack rolled back; destroy the stack and re-deploy \
+or run this manually: ${manual_delete_command[*]}. Reasons why this failed:"
+        while read -r line
+        do error "$line"
+        done < <(_aws_cfn_failure_reasons "$stack_name")
+        return 1
+        ;;
+      "$failed_state")
         error "'$stack_name' CloudFormation stack did not achieve ${desired_state^^}: $reason"
+        return 1
         ;;
     esac
     iterations=$((iterations+1))
