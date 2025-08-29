@@ -20,6 +20,7 @@ environments:
                 - AWS_ROLE_ARN=arn:aws:iam::328821942132:role/admin-access-role
                 # encrypted
                 - ENC[AES256_GCM,data:9iKAyOZvWZcUUYCLbrunGEFRi9zI87Pl9YY5vAbOQ+ZVKSl9uhSi09zAxAWtR5oJYH8bres=,iv:cQwQlYTSslJTdP2+7ClTxjPwdAYICmNxPIBz2Gph6Iw=,tag:eyJMEw0SAq5x1MEhokjRFw==,type:str]
+                - AWS_PAGER=""
             cloud_config:
                 aws:
                     networking:
@@ -59,8 +60,8 @@ sops:
     azure_kv: []
     hc_vault: []
     age: []
-    lastmodified: "2025-08-28T20:19:29Z"
-    mac: ENC[AES256_GCM,data:XdqvEdVCen79XD9IOyLrhgo8+5U7UbvaETUHRJnBnPOTvXzm+TZsSH+XMn/kiMuEdW0fk4K56xCCr+NoiNBblaiMd8ytckwHPDO28OlZMePOXb+A4DFbWXnZnfVGwcvmzrf1CHUeXmrpcKkUYtcp/1ceH3zka17BIZ6PPHRUkG0=,iv:l0dS1rC5M03PQWB9H48X8ofA+1sBRV2w9QNGcwtKpWY=,tag:21vWnhPEFtNGFKc7fN6u4A==,type:str]
+    lastmodified: "2025-08-29T16:16:34Z"
+    mac: ENC[AES256_GCM,data:+uDHrBiaigKmPXAD10V5Ee9K0nzVDDL1CNHfMEmCi0en0K4fXg8fXPoPK/o8JAJLG/TNOa4THpNn45Oc9tf9slPGq9HtG+7nvxsrkJLSPYMugDdDL8ML/DJzR5TF/Tg/SbO70RqZpliTcp3geI3aPtq+ibl4u019KXvSiy5oOXY=,iv:062+F2VwYCJy7m5VCATJXOsV39QoAByvE7w6BuvX5dE=,tag:mTZDqOsFU9PIreQU+c10/Q==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
