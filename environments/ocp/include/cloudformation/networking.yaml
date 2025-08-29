@@ -22,7 +22,6 @@ Parameters:
   HostedZoneName:
     Description: The Route53 zone to register the targets with, such as example.com. Omit the trailing period.
     Type: String
-    Default: "example.com"
   PublicSubnets:
     Description: The internet-facing subnets.
     Type: List<AWS::EC2::Subnet::Id>

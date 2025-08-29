@@ -69,6 +69,7 @@ create_networking_resources() {
     'ClusterName' "$(_get_from_config '.deploy.cluster_config.names.cluster')"
     'InfrastructureName' "$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
     'HostedZoneId' "$(_hosted_zone_id)"
+    'HostedZoneName' "$(_hosted_zone_name)"
     'PublicSubnets' "$public_subnets"
     'PrivateSubnets' "$private_subnets"
     'VpcId' "$vpc_id"
