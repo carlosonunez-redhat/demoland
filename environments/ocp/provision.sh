@@ -46,8 +46,42 @@ create_vpc() {
   _create_aws_resources_from_cfn_stack 'vpc' "$params_json" "Creating VPC..."
 }
 
+create_networking_resources() {
+  public_subnets=$(_get_param_from_aws_cfn_stack vpc 'PublicSubnetIds')
+  if test -z "$public_subnets"
+  then
+    error "Public subnets not available."
+    return 1
+  fi
+  private_subnets=$(_get_param_from_aws_cfn_stack vpc 'PrivateSubnetIds')
+  if test -z "$private_subnets"
+  then
+    error "Private subnets not available."
+    return 1
+  fi
+  vpc_id=$(_get_param_from_aws_cfn_stack vpc 'VpcId')
+  if test -z "$vpc_id"
+  then
+    error "VPC ID not available."
+    return 1
+  fi
+  params=(
+    'ClusterName' "$(_get_from_config '.deploy.cluster_config.names.cluster')"
+    'InfrastructureName' "$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
+    'HostedZoneId' "$(_hosted_zone_id)"
+    'PublicSubnets' "$public_subnets"
+    'PrivateSubnets' "$private_subnets"
+    'VpcId' "$vpc_id"
+  )
+  params_json=$(_create_aws_cf_params_json "${params[@]}")
+  _create_aws_resources_from_cfn_stack_with_caps networking "$params_json" \
+    "CAPABILITY_NAMED_IAM" \
+    "Creating DNS records, load balancers and target groups..."
+}
+
 export $(log_into_aws) || exit 1
 create_ssh_key
 load_keys_into_ssh_agent
 upload_key_into_ec2
 create_vpc
+create_networking_resources
