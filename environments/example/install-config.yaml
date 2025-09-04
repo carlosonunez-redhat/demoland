@@ -1,0 +1,9 @@
+#@ load("@ytt:data", "data")
+config:
+  sshKey: #@ data.values.ssh_key
+  baseDomain: #@ data.values.base_domain
+  controlPlane: # cloud-specific
+  compute: # cloud-specific
+  pullSecret: #@ data.values.pull_secret
+  # add additional parameters here; see https://github.com/openshift/installer/blob/release-4.19/pkg/types/installconfig.go
+  # for the complete definition
