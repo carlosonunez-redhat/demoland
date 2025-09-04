@@ -53,6 +53,10 @@ delete_ignition_bucket_from_s3() {
     aws s3 rb "s3://$(_get_from_config '.deploy.node_config.common.ignition_file_s3_bucket')"
 }
 
+delete_cluster_iam_user() {
+  _delete_aws_resources_from_cfn_stack cluster_user "Deleting cluster user..."
+}
+
 
 
 export $(log_into_aws) || exit 1
@@ -62,5 +66,6 @@ delete_security_groups
 delete_ignition_bucket_from_s3
 delete_networking_resources
 delete_aws_vpc
+delete_cluster_iam_user
 delete_ssh_key
 delete_ignition_files

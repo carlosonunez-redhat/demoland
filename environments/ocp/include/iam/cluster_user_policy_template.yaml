@@ -1,0 +1,13 @@
+#@ load("ytt:data", "data")
+Version: 2012-10-17
+Statement:
+  #@ for action in data.value.iam.permission.required
+  - Effect: Allow
+    Action: #@ action
+    Resource: "*"
+  #@ end
+  #@ for action in data.value.iam.permission.optional
+  - Effect: Allow
+    Action: #@ action
+    Resource: "*"
+  #@ end

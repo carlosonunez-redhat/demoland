@@ -3,7 +3,9 @@ set -e
 source "$(dirname "$0")/../include/helpers/aws.sh"
 source "$(dirname "$0")/../include/helpers/config.sh"
 source "$(dirname "$0")/../include/helpers/data.sh"
+source "$(dirname "$0")/../include/helpers/errors.sh"
 source "$(dirname "$0")/../include/helpers/logging.sh"
+source "$(dirname "$0")/../include/helpers/yaml.sh"
 source "$(dirname "$0")/include/aws.sh"
 source "$(dirname "$0")/include/ocp.sh"
 
@@ -33,11 +35,15 @@ upload_key_into_ec2() {
 }
 
 create_ignition_files() {
-  openshift-install create ignition-configs --dir /data/ignition || return 1
+  local dir
+  dir=$(_get_file_from_data_dir 'openshift-install')
+  test -d "$dir" || mkdir -p "$dir"
+  info "Creating Red Hat CoreOS Ignition files"
+  openshift-install create ignition-configs --dir "$dir" || return 1
   for file in bootstrap master worker
   do
-    test -f "/data/ignition/${file}" && continue
-    error "Couldn't find ignition file: /data/ignition/${file}"
+    test -f "${dir}/${file}.ign" && continue
+    error "Couldn't find ignition file: ${dir}/${file}.ign"
     return 1
   done
 }
@@ -110,21 +116,13 @@ create_security_group_rules() {
     'PrivateSubnets' "$private_subnets"
   )
   params_json=$(_create_aws_cf_params_json "${params[@]}")
-  _create_aws_resources_from_cfn_stack_with_caps networking "$params_json" \
+  _create_aws_resources_from_cfn_stack_with_caps security "$params_json" \
     "CAPABILITY_NAMED_IAM" \
-    "Creating DNS records, load balancers and target groups..."
+    "Creating security groups..."
 }
 
 create_bootstrap_machine() {
   set -e
-  _bootstrap_subnet() {
-    bootstrap_az=$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones.bootstrap')
-    public_subnets=$(fail_if_nil "$(_get_param_from_aws_cfn_stack vpc 'PublicSubnetIds')" \
-      "Private subnets not found" | tr ',' '\n')
-    aws ec2 describe-subnets --subnet-ids "$(tr ',' ' ' <<< "$public_subnets")" |
-      jq --arg az "$bootstrap_az" '.Subnets[] | select(.AvailabilityZone == $az) | .SubnetId'
-  }
-
   sg_id=$(fail_if_nil "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId')" \
     "Master security group ID not found")
   private_subnets=$(fail_if_nil "$(_get_param_from_aws_cfn_stack vpc 'PrivateSubnetIds')" \
@@ -170,19 +168,84 @@ create_ignition_bucket_in_s3() {
   aws s3 mb "s3://$(_get_from_config '.deploy.node_config.common.ignition_file_s3_bucket')"
 }
 
-sync_ignition_files_with_s3_bucket() {
+sync_bootstrap_ignition_files_with_s3_bucket() {
   info "Syncing ignition files with ignition S3 bucket"
   aws s3 sync /data/ignition "s3://$(_get_from_config '.deploy.node_config.common.ignition_file_s3_bucket')"
+}
+
+create_openshift_install_config_file() {
+  _subnet_ids_as_yaml_list() {
+    local ids
+    ids=$(tr ',' '\n' <<< "$1" |
+      grep -Ev '^$' |
+      sort -u)
+    grep -q 'Public' <<< "$1" && ids=$(grep -v "$(_bootstrap_subnet)" <<< "$ids")
+    echo "$ids" | as_yaml_list
+  }
+  local dest values file external_subnet_ids internal_subnet_ids
+  dest="$(_get_file_from_data_dir '/openshift-install/install-config.yaml')"
+  test -d "$(dirname "$dest")" || mkdir -p "$(dirname "$dest")"
+  external_subnet_ids=$(_subnet_ids_as_yaml_list "$(_get_param_from_aws_cfn_stack vpc 'PublicSubnetIds')")
+  internal_subnet_ids=$(_subnet_ids_as_yaml_list "$(_get_param_from_aws_cfn_stack vpc 'PrivateSubnetIds')")
+  values=(
+    ssh_key "$(fail_if_nil "$(ssh-keygen -yf "$(_get_file_from_data_dir 'id_rsa')")" \
+      "Couldn't obtain public key from SSH private key.")"
+    base_domain "$(_hosted_zone_name)"
+    aws_hosted_zone_id "$(_hosted_zone_id)"
+    rhcos_ami_id "$(_rhcos_ami_id)"
+    cluster_name "$(_get_from_config '.deploy.cluster_config.names.cluster')"
+    aws_region "$(_get_from_config '.deploy.cloud_config.aws.networking.region')"
+    pull_secret "$(_get_from_config '.deploy.node_config.common.pull_secret' | as_json_string)"
+    control_plane_node_azs "$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones.control_plane[]' | as_yaml_list)"
+    control_plane_node_instance_type "$(_get_from_config '.deploy.node_config.control_plane.instance_type')"
+    control_plane_security_groups "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId' | as_yaml_list)"
+    worker_node_azs "$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones.workers[]'|
+      as_yaml_list)"
+    worker_node_instance_type "$(_get_from_config '.deploy.node_config.workers.instance_type')"
+    worker_security_groups "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId' | as_yaml_list)"
+    bootstrap_node_subnet_id "$(_bootstrap_subnet)"
+    control_plane_instance_profile "$(_get_param_from_aws_cfn_stack security 'MasterInstanceProfile')"
+    worker_instance_profile "$(_get_param_from_aws_cfn_stack security 'WorkerInstanceProfile')"
+    external_subnet_ids "$external_subnet_ids"
+    internal_subnet_ids "$internal_subnet_ids"
+  )
+  info "Writing openshift-install file to $dest"
+  yaml=$(fail_if_nil "$(render_yaml_template "$(dirname "$0")/install-config.yaml" "${values[@]}")" \
+    "Couldn't generate AWS install config.")
+  echo "$yaml" > "$dest"
+}
+
+create_cluster_iam_user() {
+  test -n "$(_get_param_from_aws_cfn_stack cluster_user AccessKey)" && return 0
+
+  policy_doc=$(render_yaml_template_with_values_file \
+    "$(dirname "$0")/include/iam/cluster_user_policy_template.yaml" \
+    "$(dirname "$0")/config.yaml")
+  if test -z "$policy_doc"
+  then
+    error "Failed to render policy doc for cluster user"
+    return 1
+  fi
+  params=(
+    UserNameBase "$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
+    PolicyDocument "$(yq -o=j -c '.' <<< "$policy_doc")"
+  )
+  params_json=$(_create_aws_cf_params_json "${params[@]}")
+  _create_aws_resources_from_cfn_stack_with_caps cluster_user "$params_json" \
+    "CAPABILITY_NAMED_IAM" \
+    "Creating cluster user..."
 }
 
 export $(log_into_aws) || exit 1
 create_ssh_key
 load_keys_into_ssh_agent
 upload_key_into_ec2
-create_ignition_bucket_in_s3
-create_ignition_files
 sync_bootstrap_ignition_files_with_s3_bucket
+create_cluster_iam_user
 create_vpc
 create_networking_resources
-create_security_groups
+create_security_group_rules
+create_openshift_install_config_file
+create_ignition_bucket_in_s3
+create_ignition_files
 create_bootstrap_machine
