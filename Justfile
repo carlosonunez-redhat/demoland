@@ -155,7 +155,16 @@ _ensure_container_image_exists environment:
 
 _confirm_environment environment: \
     ( _confirm_environment_directory_exists environment ) \
+    ( _confirm_environment_has_install_config environment ) \
     ( _confirm_environment_in_config environment )
+
+_confirm_environment_has_install_config environment:
+  f="$(just _get_environment_directory '{{ environment }}')/install-config.yaml"; \
+  if ! test -f "$f"; \
+  then \
+    just _log error "{{ environment }} is missing an 'install-config.yaml' file."; \
+    exit 1; \
+  fi;
 
 _confirm_environment_in_config environment:
   just _run_yq "$(cat {{ config_file }})" '.environments | to_entries[] | .key' | \
