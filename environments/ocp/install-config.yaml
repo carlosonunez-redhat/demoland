@@ -1,0 +1,47 @@
+#@ load("@ytt:data", "data")
+apiVersion: v1
+metadata:
+  name: #@ data.values.cluster_name
+sshKey: #@ data.values.ssh_key
+baseDomain: #@ data.values.base_domain
+pullSecret: #@ data.values.pull_secret
+controlPlane:
+  zones: #@ data.values.control_plane_node_azs
+  instanceType: #@ data.values.control_plane_node_instance_type
+  amiID: #@ data.values.rhcos_ami_id
+  additionalSecurityGroupIDs: #@ data.values.control_plane_security_groups
+  iamProfile: #@ data.values.control_plane_instance_profile
+compute:
+  - zones: #@ data.values.worker_node_azs
+    instanceType: #@ data.values.worker_node_instance_type
+    amiID: #@ data.values.rhcos_ami_id
+    additionalSecurityGroupIDs: #@ data.values.worker_security_groups
+    iamProfile: #@ data.values.worker_instance_profile
+    name: worker
+platform:
+  aws:
+    region: #@ data.values.aws_region
+    vpc:
+      subnets:
+        #@ for id in data.values.external_subnet_ids:
+        - id: #@ id
+          roles:
+            - type: ControlPlaneExternalLB
+            - type: IngressControllerLB
+            #@ if id == data.values.bootstrap_node_subnet_id:
+            - type: BootstrapNode
+            #@ end
+        #@ end
+        #@ for id in data.values.internal_subnet_ids:
+        - id: #@ id
+          roles:
+            - type: ClusterNode
+            - type: ControlPlaneInternalLB
+        #@ end
+    hostedZone: #@ data.values.aws_hosted_zone_id
+    defaultMachinePlatform:
+      zones: #@ data.values.worker_node_azs
+      instanceType: #@ data.values.worker_node_instance_type
+      amiID: #@ data.values.rhcos_ami_id
+      additionalSecurityGroupIDs: #@ data.values.worker_security_groups
+      iamProfile: #@ data.values.worker_instance_profile

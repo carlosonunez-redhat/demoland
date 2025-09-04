@@ -82,6 +82,7 @@ confirm_config_is_correct() {
     'cluster_config.names.cluster' \
     'cluster_config.names.infrastructure' \
     'node_config.common.ignition_file_s3_bucket' \
+    'node_config.common.pull_secret' \
     'node_config.bootstrap.quantity_per_zone' \
     'node_config.control_plane.quantity_per_zone' \
     'node_config.workers.quantity_per_zone' \
