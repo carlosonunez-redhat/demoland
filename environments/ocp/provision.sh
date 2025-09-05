@@ -216,8 +216,6 @@ create_openshift_install_config_file() {
 }
 
 create_cluster_iam_user() {
-  test -n "$(_get_param_from_aws_cfn_stack cluster_user AccessKey)" && return 0
-
   policy_doc=$(render_yaml_template_with_values_file \
     "$(dirname "$0")/include/iam/cluster_user_policy_template.yaml" \
     "$(dirname "$0")/config.yaml")
@@ -240,7 +238,6 @@ export $(log_into_aws) || exit 1
 create_ssh_key
 load_keys_into_ssh_agent
 upload_key_into_ec2
-sync_bootstrap_ignition_files_with_s3_bucket
 create_cluster_iam_user
 create_vpc
 create_networking_resources
@@ -248,4 +245,5 @@ create_security_group_rules
 create_openshift_install_config_file
 create_ignition_bucket_in_s3
 create_ignition_files
+sync_bootstrap_ignition_files_with_s3_bucket
 create_bootstrap_machine
