@@ -192,7 +192,7 @@ _delete_aws_resources_from_cfn_stack() {
   _wait  "$1"
 }
 
-_create() {
+_create_cfn_stack() {
   _not_exists() {
     test -z "$(2>/dev/null aws cloudformation describe-stacks \
       --stack-name "$(_aws_cf_stack_name "$1")")"
@@ -231,9 +231,9 @@ _create() {
 }
 
 _create_aws_resources_from_cfn_stack() {
-  _create "$1" "$2" "$3"
+  _create_cfn_stack "$1" "$2" "$3"
 }
 
 _create_aws_resources_from_cfn_stack_with_caps() {
-  _create "$1" "$2" "$3" "$4"
+  _create_cfn_stack "$1" "$2" "$3" "$4"
 }
