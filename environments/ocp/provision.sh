@@ -5,6 +5,7 @@ source "$(dirname "$0")/../include/helpers/config.sh"
 source "$(dirname "$0")/../include/helpers/data.sh"
 source "$(dirname "$0")/../include/helpers/errors.sh"
 source "$(dirname "$0")/../include/helpers/logging.sh"
+source "$(dirname "$0")/../include/helpers/install_config.sh"
 source "$(dirname "$0")/../include/helpers/yaml.sh"
 source "$(dirname "$0")/include/aws.sh"
 source "$(dirname "$0")/include/ocp.sh"
@@ -182,9 +183,7 @@ create_openshift_install_config_file() {
     grep -q 'Public' <<< "$1" && ids=$(grep -v "$(_bootstrap_subnet)" <<< "$ids")
     echo "$ids" | as_yaml_list
   }
-  local dest values file external_subnet_ids internal_subnet_ids
-  dest="$(_get_file_from_data_dir '/openshift-install/install-config.yaml')"
-  test -d "$(dirname "$dest")" || mkdir -p "$(dirname "$dest")"
+  local values file external_subnet_ids internal_subnet_ids
   external_subnet_ids=$(_subnet_ids_as_yaml_list "$(_get_param_from_aws_cfn_stack vpc 'PublicSubnetIds')")
   internal_subnet_ids=$(_subnet_ids_as_yaml_list "$(_get_param_from_aws_cfn_stack vpc 'PrivateSubnetIds')")
   values=(
@@ -209,15 +208,12 @@ create_openshift_install_config_file() {
     external_subnet_ids "$external_subnet_ids"
     internal_subnet_ids "$internal_subnet_ids"
   )
-  info "Writing openshift-install file to $dest"
-  yaml=$(fail_if_nil "$(render_yaml_template "$(dirname "$0")/install-config.yaml" "${values[@]}")" \
-    "Couldn't generate AWS install config.")
-  echo "$yaml" > "$dest"
+  render_and_save_install_config "${values[@]}"
 }
 
 create_cluster_iam_user() {
   policy_doc=$(render_yaml_template_with_values_file \
-    "$(dirname "$0")/include/iam/cluster_user_policy_template.yaml" \
+    'iam/cluster-user' \
     "$(dirname "$0")/config.yaml")
   if test -z "$policy_doc"
   then
