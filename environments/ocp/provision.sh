@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 set -e
-source "$(dirname "$0")/../include/helpers/aws.sh"
-source "$(dirname "$0")/../include/helpers/config.sh"
-source "$(dirname "$0")/../include/helpers/data.sh"
-source "$(dirname "$0")/../include/helpers/errors.sh"
-source "$(dirname "$0")/../include/helpers/logging.sh"
-source "$(dirname "$0")/../include/helpers/install_config.sh"
-source "$(dirname "$0")/../include/helpers/yaml.sh"
-source "$(dirname "$0")/include/aws.sh"
-source "$(dirname "$0")/include/ocp.sh"
+source "$INCLUDE_DIR/helpers/aws.sh"
+source "$INCLUDE_DIR/helpers/config.sh"
+source "$INCLUDE_DIR/helpers/data.sh"
+source "$INCLUDE_DIR/helpers/errors.sh"
+source "$INCLUDE_DIR/helpers/logging.sh"
+source "$INCLUDE_DIR/helpers/install_config.sh"
+source "$INCLUDE_DIR/helpers/yaml.sh"
+source "$ENVIRONMENT_INCLUDE_DIR/aws.sh"
+source "$ENVIRONMENT_INCLUDE_DIR/ocp.sh"
 
 create_ssh_key() {
   f="$(_get_file_from_data_dir 'id_rsa')"

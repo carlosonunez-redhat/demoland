@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -e
-source "$(dirname "$0")/../include/helpers/aws.sh"
-source "$(dirname "$0")/../include/helpers/config.sh"
-source "$(dirname "$0")/../include/helpers/data.sh"
-source "$(dirname "$0")/../include/helpers/logging.sh"
-source "$(dirname "$0")/include/aws.sh"
-source "$(dirname "$0")/include/ocp.sh"
+source "$INCLUDE_DIR/helpers/aws.sh"
+source "$INCLUDE_DIR/helpers/config.sh"
+source "$INCLUDE_DIR/helpers/data.sh"
+source "$INCLUDE_DIR/helpers/logging.sh"
+source "$ENVIRONMENT_INCLUDE_DIR/aws.sh"
+source "$ENVIRONMENT_INCLUDE_DIR/ocp.sh"
 
 delete_aws_ec2_key_pair() {
   key_name=$(_get_from_config '.deploy.secrets.ssh_key.name')
