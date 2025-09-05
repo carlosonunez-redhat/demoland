@@ -58,7 +58,6 @@ delete_cluster_iam_user() {
 }
 
 
-
 export $(log_into_aws) || exit 1
 delete_bootstrap_machine
 delete_aws_ec2_key_pair
