@@ -79,7 +79,7 @@ _create_aws_cf_params_json() {
 _aws_cf_stack_name() {
   printf '%s-%s' \
     "$(_get_from_config '.deploy.cloud_config.aws.cloudformation.stack_name')" \
-    "$1"
+    "$1" | tr -c '[:alnum:]' '-'
 }
 
 _wait_for_cf_stack_until_state() {
