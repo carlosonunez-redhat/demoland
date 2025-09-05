@@ -9,8 +9,8 @@ as_json_string() {
 }
 
 _template_file() {
-  printf "%s/include/templates/%s.yaml" \
-    "$(dirname "$0")" \
+  printf "%s/templates/%s.yaml" \
+    "$ENVIRONMENT_INCLUDE_DIR" \
     "${1//.y*ml/}"
 }
 
