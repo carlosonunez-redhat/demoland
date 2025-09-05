@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -e
-source "$(dirname "$0")/../include/helpers/aws.sh"
-source "$(dirname "$0")/../include/helpers/config.sh"
-source "$(dirname "$0")/../include/helpers/logging.sh"
-source "$(dirname "$0")/include/aws.sh"
+source "$INCLUDE_DIR/helpers/aws.sh"
+source "$INCLUDE_DIR/helpers/config.sh"
+source "$INCLUDE_DIR/helpers/logging.sh"
+source "$ENVIRONMENT_INCLUDE_DIR/aws.sh"
 pf_log() {
   eval "$1 '[PREFLIGHT] $2'"
 }
