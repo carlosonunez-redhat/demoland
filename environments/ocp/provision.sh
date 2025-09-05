@@ -213,8 +213,9 @@ create_openshift_install_config_file() {
 
 create_cluster_iam_user() {
   policy_doc=$(render_yaml_template_with_values_file \
-    'iam/cluster-user' \
-    "$(dirname "$0")/config.yaml")
+    iam-cluster-user \
+    "$ENVIRONMENT_INCLUDE_DIR/iam_permissions.yaml"
+  )
   if test -z "$policy_doc"
   then
     error "Failed to render policy doc for cluster user"
