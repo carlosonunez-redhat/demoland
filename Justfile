@@ -159,10 +159,10 @@ _confirm_environment environment: \
     ( _confirm_environment_in_config environment )
 
 _confirm_environment_has_install_config environment:
-  f="$(just _get_environment_directory '{{ environment }}')/install-config.yaml"; \
+  f="$(just _get_environment_directory '{{ environment }}')/include/templates/install-config.yaml"; \
   if ! test -f "$f"; \
   then \
-    just _log error "{{ environment }} is missing an 'install-config.yaml' file."; \
+    just _log error "{{ environment }} is missing an 'install-config.yaml' file in the include/templates directory."; \
     exit 1; \
   fi;
 
