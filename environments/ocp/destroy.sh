@@ -57,6 +57,23 @@ delete_cluster_iam_user() {
   _delete_aws_resources_from_cfn_stack cluster_user "Deleting cluster user..."
 }
 
+delete_cluster_iam_user_policy() {
+  local infra_name policy_arns
+  infra_name="$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
+  policy_name="${infra_name}-cluster_user-policy"
+  policy_arns=$(aws iam list-policies |
+    jq -r --arg name "$policy_name" '.Policies[] | select(.PolicyName | contains($name)) | .Arn'|
+    grep -v null|
+    cat)
+  test -z "$policy_arns" && return 0
+
+  for arn in $policy_arns
+  do
+    info "Deleting cluster user IAM policy $arn"
+    aws iam delete-policy --policy-arn "$arn"
+  done
+}
+
 
 export $(log_into_aws) || exit 1
 delete_bootstrap_machine
@@ -66,5 +83,6 @@ delete_ignition_bucket_from_s3
 delete_networking_resources
 delete_aws_vpc
 delete_cluster_iam_user
+delete_cluster_iam_user_policy
 delete_ssh_key
 delete_ignition_files

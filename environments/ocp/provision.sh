@@ -211,7 +211,16 @@ create_openshift_install_config_file() {
   render_and_save_install_config "${values[@]}"
 }
 
-create_cluster_iam_user() {
+# The number of IAM permissions we need to grant this user will trigger a PolicySize
+# validation error. The YAML template splits them up into policies with 80 actions each.
+create_cluster_iam_user_policies() {
+  local policy_doc infra_name policy_arn
+  infra_name="$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
+  policy_name="${infra_name}-cluster_user-policy"
+  policy_arn=$(aws iam list-policies |
+    jq --arg name "$policy_name" '.Policies[] | select(.PolicyName == $name) | .Arn')
+  test -n "$policy_arn" && return 0
+
   policy_doc=$(render_yaml_template_with_values_file \
     iam-cluster-user \
     "$ENVIRONMENT_INCLUDE_DIR/iam_permissions.yaml"
@@ -221,9 +230,33 @@ create_cluster_iam_user() {
     error "Failed to render policy doc for cluster user"
     return 1
   fi
+  for idx in $(seq 1 "$(yq length <<< "$policy_doc")")
+  do
+    n="${policy_name}-Part${idx}"
+    test -n "$(aws iam list-policies --query 'Policies[?PolicyName==`'"$n"'`]' --output text)" &&
+      continue
+    info "Creating cluster user IAM policy #$idx"
+    aws iam create-policy --policy-name "$n" \
+      --policy-doc "$(yq -o=j -I=0 ".[$((idx-1))]" <<< "$policy_doc")"
+  done
+}
+
+create_cluster_iam_user() {
+  infra_name="$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
+  policy_name="${infra_name}-cluster_user-policy"
+  policy_arns=$(aws iam list-policies |
+    jq -r --arg name "$policy_name" '.Policies[] | select(.PolicyName|contains($name)) | .Arn'  |
+    grep -v null |
+    cat)
+  if test -z "$policy_arns"
+  then
+    error "Cluster user policy ARN not created."
+    return 0
+  fi
   params=(
+    InfrastructureName "$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
     UserNameBase "$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
-    PolicyDocument "$(yq -o=j -c '.' <<< "$policy_doc")"
+    PolicyArns "$(as_csv <<< "$policy_arns")"
   )
   params_json=$(_create_aws_cf_params_json "${params[@]}")
   _create_aws_resources_from_cfn_stack_with_caps cluster_user "$params_json" \
@@ -235,6 +268,7 @@ export $(log_into_aws) || exit 1
 create_ssh_key
 load_keys_into_ssh_agent
 upload_key_into_ec2
+create_cluster_iam_user_policies
 create_cluster_iam_user
 create_vpc
 create_networking_resources
