@@ -1,13 +1,35 @@
-#@ load("ytt:data", "data")
-Version: 2012-10-17
-Statement:
-  #@ for action in data.value.iam.permission.required
-  - Effect: Allow
-    Action: #@ action
-    Resource: "*"
-  #@ end
-  #@ for action in data.value.iam.permission.optional
-  - Effect: Allow
-    Action: #@ action
-    Resource: "*"
-  #@ end
+#@ load("@ytt:data", "data")
+#@ def partition_actions(perms):
+#@   ls = []
+#@   l = []
+#@   num_perms_per_chunk = 80
+#@   for idx in range(len(perms)):
+#@     if idx != 0 and idx % num_perms_per_chunk == 0:
+#@       ls.append(l)
+#@       l = []
+#@     end
+#@     l.append(perms[idx])
+#@   end
+#@   return ls
+#@ end
+
+#@ for chunk in partition_actions(data.values.iam.permissions.required):
+- Version: 2012-10-17
+  Statement:
+    - Effect: Allow
+      Action:
+      #@ for action in chunk:
+      - #@ action
+      #@ end
+      Resource: "*"
+#@ end
+#@ for chunk in partition_actions(data.values.iam.permissions.optional):
+- Version: 2012-10-17
+  Statement:
+    - Effect: Allow
+      Action:
+      #@ for action in chunk:
+      - #@ action
+      #@ end
+      Resource: "*"
+#@ end

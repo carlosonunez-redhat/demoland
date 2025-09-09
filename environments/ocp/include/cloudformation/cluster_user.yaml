@@ -1,37 +1,36 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: Template for OpenShift Cluster User
 Parameters:
+  InfrastructureName:
+    Description: Name of infrastructure for cluster
+    Type: String
   UserNameBase:
     Description: Prefix for user name.
     Type: String
     MaxLength: 32
     ConstraintDescription: User name must be less than 32 characters.
-  PolicyDocument:
-    Description: Policy to use for the policy that will be attached to this user.
-    AllowedPattern: "^{.*}$"
-    ConstraintDescription: Policy must be in JSON format.
-  Nonce:
-    Default: !Select [2, !Split ['/', !Ref AWS::StackId]]
-  UserName:
-    Default: !Join ["-", !Ref UserNameBase, "-user", !Ref Nonce]
-  PolicyName:
-    Default: !Join ["-", !Ref UserName, "policy"]
+  PolicyArns:
+    Description: Policies to attach to the user.
+    Type: String
 Resources:
-  Policy:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyName: !Ref PolicyName
-      PolicyDocument: !Ref PolicyDocument
   User:
     Type: AWS::IAM::User
     Properties:
-      UserName: !Ref UserName
-      Policies: [ !GetAtt Policy.Id ]
+      UserName: !Join
+        - "-"
+        - - !Ref UserNameBase
+          - user
+          - !Ref InfrastructureName
+      ManagedPolicyArns: !Split
+        - ","
+        - !Ref PolicyArns
   Credentials:
     Type: AWS::IAM::AccessKey
     Properties:
       Status: Active
-      UserName: !Ref UserName
+      UserName: !Ref User
 Outputs:
-  AccessKey: !GetAtt Credentials.Id
-  SecretAccessKey: !GetAtt Credentials.SecretAccessKey
+  AccessKey:
+    Value: !Ref Credentials
+  SecretAccessKey:
+    Value: !GetAtt Credentials.SecretAccessKey
