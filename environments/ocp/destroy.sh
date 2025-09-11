@@ -74,8 +74,14 @@ delete_cluster_iam_user_policy() {
   done
 }
 
+delete_control_plane_machines() {
+  _delete_aws_resources_from_cfn_stack control_plane_machines \
+    "Deleting the control plane machines..."
+}
+
 
 export $(log_into_aws) || exit 1
+delete_control_plane_machines
 delete_bootstrap_machine
 delete_aws_ec2_key_pair
 delete_security_groups
