@@ -268,6 +268,69 @@ create_cluster_iam_user() {
     "Creating cluster user..."
 }
 
+create_control_plane_machines() {
+  set -e
+  sg_id=$(fail_if_nil "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId')" \
+    "Master security group ID not found")
+  private_subnets=$(fail_if_nil "$(_get_param_from_aws_cfn_stack vpc 'PrivateSubnetIds')" \
+    "Private subnets not found")
+  lambda_arn=$(fail_if_nil "$(_get_param_from_aws_cfn_stack networking 'RegisterNlbIpTargetsLambda')" \
+    "NLB registration Lambda ARN not found")
+  ext_api_target_group_arn=$(fail_if_nil \
+    "$(_get_param_from_aws_cfn_stack networking 'ExternalApiTargetGroupArn')" \
+    'External API NLB target group ARN not found')
+  int_api_target_group_arn=$(fail_if_nil \
+    "$(_get_param_from_aws_cfn_stack networking 'InternalApiTargetGroupArn')" \
+    'Internal API NLB target group ARN not found')
+  int_svc_target_group_arn=$(fail_if_nil \
+    "$(_get_param_from_aws_cfn_stack networking 'InternalServiceTargetGroupArn')" \
+    'Internal service NLB target group ARN not found')
+  private_hosted_zone_id=$(fail_if_nil \
+    "$(_get_param_from_aws_cfn_stack networking 'PrivateHostedZoneId')" \
+    "Private hosted zone ID not found.")
+  private_hosted_zone_name=$(aws route53 get-hosted-zone --id "$private_hosted_zone_id" --query 'HostedZone.Name'\
+    --output text)
+  if test -z "$private_hosted_zone_name"
+  then
+    error "Hosted zone name not found from ID $private_hosted_zone_id"
+    return 1
+  fi
+  cert_authority=$(get_data_from_ignition_file master '.ignition.security.tls.certificateAuthorities[0].source')
+  if test -z "$cert_authority"
+  then
+    error "Couldn't get cert authority from ignition file"
+    return 1
+  fi
+  instance_profile_name=$(fail_if_nil \
+    "$(_get_param_from_aws_cfn_stack security MasterInstanceProfile)" \
+    "Couldn't obtain instance profile for primary node.")
+  api_server_fqdn=$(fail_if_nil \
+    "$(_get_param_from_aws_cfn_stack networking 'ApiServerDnsName')" \
+    "Couldn't get API server DNS name.")
+  params=(
+    'InfrastructureName' "$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
+    'RhcosAmi' "$(fail_if_nil "$(_rhcos_ami_id)" "CoreOS AMI ID not found")"
+    'MasterSecurityGroupId' "$sg_id"
+    'MasterInstanceType' "$(_get_from_config '.deploy.node_config.bootstrap.instance_type')"
+    'RegisterNlbIpTargetsLambdaArn' "$lambda_arn"
+    'ExternalApiTargetGroupArn' "$ext_api_target_group_arn"
+    'InternalApiTargetGroupArn' "$int_api_target_group_arn"
+    'InternalServiceTargetGroupArn' "$int_svc_target_group_arn"
+    'PrivateHostedZoneId' "$private_hosted_zone_id"
+    'PrivateHostedZoneName' "$private_hosted_zone_name"
+    'Master0Subnet' "$(cut -f1 -d ',' <<< "$private_subnets")"
+    'Master1Subnet' "$(cut -f2 -d ',' <<< "$private_subnets")"
+    'Master2Subnet' "$(cut -f3 -d ',' <<< "$private_subnets")"
+    'IgnitionLocation' "https://${api_server_fqdn}:22623/config/master"
+    'CertificateAuthorities' "$cert_authority"
+    'MasterInstanceProfileName' "$instance_profile_name"
+  )
+  params_json=$(_create_aws_cf_params_json "${params[@]}")
+  _create_aws_resources_from_cfn_stack_with_caps control_plane_machines "$params_json" \
+    "CAPABILITY_NAMED_IAM" \
+    "Creating control plane nodes..."
+}
+
 export $(log_into_aws) || exit 1
 create_ssh_key
 load_keys_into_ssh_agent
@@ -282,3 +345,4 @@ create_ignition_bucket_in_s3
 create_ignition_files
 sync_bootstrap_ignition_files_with_s3_bucket
 create_bootstrap_machine
+create_control_plane_machines
