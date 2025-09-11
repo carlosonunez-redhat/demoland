@@ -12,3 +12,17 @@ _rhcos_ami_id() {
     sed -E 's/.*(ami-.*)`/\1/'
 }
 
+_exec_openshift_install_aws() {
+  region="$(_get_from_config '.deploy.cloud_config.aws.networking.region')"
+  cluster_user_ak=$(fail_if_nil \
+    "$(_get_param_from_aws_cfn_stack cluster_user AccessKey)" \
+    "Access key not found for cluster user.") || return 1
+  cluster_user_sk=$(fail_if_nil \
+    "$(_get_param_from_aws_cfn_stack cluster_user SecretAccessKey)" \
+    "Secret access key not found for cluster user.") || return 1
+  AWS_ACCESS_KEY_ID="$cluster_user_ak" \
+    AWS_SECRET_ACCESS_KEY="$cluster_user_sk" \
+    AWS_DEFAULT_REGION="$region" \
+    AWS_SESSION_TOKEN="" \
+    openshift-install "$@"
+}

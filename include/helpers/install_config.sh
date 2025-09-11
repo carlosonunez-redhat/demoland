@@ -22,7 +22,7 @@ render_and_save_install_config() {
   _create_install_config_directory_if_not_exists
   info "Writing openshift-install file to $(_config_file_in_data_dir)"
   yaml=$(fail_if_nil \
-    "$(_render_yaml_template "$(_config_file_in_environment)" "$@")" \
+    "$(render_yaml_template install-config "$@")" \
     "Couldn't generate AWS install config.") || return 1
   echo "$yaml" > "$(_config_file_in_data_dir)"
 }

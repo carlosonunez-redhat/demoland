@@ -1,11 +1,15 @@
 # shellcheck shell=bash
-  _bootstrap_subnet() {
-    bootstrap_az=$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones.bootstrap[0]')
-    public_subnets=$(fail_if_nil "$(_get_param_from_aws_cfn_stack vpc 'PublicSubnetIds')" \
-      "Public subnets not found" | tr ',' ' ')
-    aws ec2 describe-subnets --subnet-ids $public_subnets |
-      jq -r --arg az "$bootstrap_az" '.Subnets[] | select(.AvailabilityZone == $az) | .SubnetId'
-  }
+_this_ip() {
+  curl -sSL api.ipify.org
+}
+
+_bootstrap_subnet() {
+  bootstrap_az=$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones.bootstrap[0]')
+  public_subnets=$(fail_if_nil "$(_get_param_from_aws_cfn_stack vpc 'PublicSubnetIds')" \
+    "Public subnets not found" | tr ',' ' ')
+  aws ec2 describe-subnets --subnet-ids $public_subnets |
+    jq -r --arg az "$bootstrap_az" '.Subnets[] | select(.AvailabilityZone == $az) | .SubnetId'
+}
 
 _hosted_zone_id() {
   domain_name=$(_get_from_config '.deploy.cloud_config.aws.networking.dns.domain_name')
