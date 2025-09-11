@@ -40,7 +40,7 @@ create_ignition_files() {
   dir=$(_get_file_from_data_dir 'openshift-install')
   test -d "$dir" || mkdir -p "$dir"
   info "Creating Red Hat CoreOS Ignition files"
-  openshift-install create ignition-configs --dir "$dir" || return 1
+  _exec_openshift_install_aws create ignition-configs --dir "$dir" || return 1
   for file in bootstrap master worker
   do
     test -f "${dir}/${file}.ign" && continue
@@ -129,7 +129,7 @@ create_bootstrap_machine() {
   private_subnets=$(fail_if_nil "$(_get_param_from_aws_cfn_stack vpc 'PrivateSubnetIds')" \
     "Private subnets not found")
   vpc_id=$(fail_if_nil "$(_get_param_from_aws_cfn_stack vpc 'VpcId')" "VPC ID not found")
-  lambda_arn=$(fail_if_nil "$(_get_param_from_aws_cfn_stack networking 'RegisterNlbTargetsLambda')" \
+  lambda_arn=$(fail_if_nil "$(_get_param_from_aws_cfn_stack networking 'RegisterNlbIpTargetsLambda')" \
     "NLB registration Lambda ARN not found")
   ext_api_target_group_arn=$(fail_if_nil \
     "$(_get_param_from_aws_cfn_stack networking 'ExternalApiTargetGroupArn')" \
@@ -143,20 +143,20 @@ create_bootstrap_machine() {
   params=(
     'InfrastructureName' "$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
     'RhcosAmi' "$(fail_if_nil "$(_rhcos_ami_id)" "CoreOS AMI ID not found")"
-    'AllowedBootstrapSshCidr' "$(fail_if_nil "$(_this_ip)" "Couldn't resolve IP address")"
+    'AllowedBootstrapSshCidr' "$(fail_if_nil "$(_this_ip)/32" "Couldn't resolve IP address")"
     'PublicSubnet' "$(_bootstrap_subnet)"
     'MasterSecurityGroupId' "$sg_id"
-    'HostedZoneId' "$(_hosted_zone_id)"
     'BootstrapInstanceType' "$(_get_from_config '.deploy.node_config.bootstrap.instance_type')"
-    'BootstrapIgnitionLocation' '/data/ignition/bootstrap.ign'
+    'BootstrapIgnitionLocation' "$(_get_file_from_data_dir 'openshift-install')/bootstrap.ign"
     'AutoRegisterELB' 'yes'
     'RegisterNlbIpTargetsLambdaArn' "$lambda_arn"
     'ExternalApiTargetGroupArn' "$ext_api_target_group_arn"
     'InternalApiTargetGroupArn' "$int_api_target_group_arn"
     'InternalServiceTargetGroupArn' "$int_svc_target_group_arn"
+    'VpcId' "$vpc_id"
   )
   params_json=$(_create_aws_cf_params_json "${params[@]}")
-  _create_aws_resources_from_cfn_stack_with_caps networking "$params_json" \
+  _create_aws_resources_from_cfn_stack_with_caps bootstrap_machine "$params_json" \
     "CAPABILITY_NAMED_IAM" \
     "Creating bootstrap node..."
 }
@@ -171,7 +171,11 @@ create_ignition_bucket_in_s3() {
 
 sync_bootstrap_ignition_files_with_s3_bucket() {
   info "Syncing ignition files with ignition S3 bucket"
-  aws s3 sync /data/ignition "s3://$(_get_from_config '.deploy.node_config.common.ignition_file_s3_bucket')"
+  aws s3 sync \
+    --exclude '*' \
+    --include '*.ign' \
+    "$(_get_file_from_data_dir 'openshift-install')" \
+    "s3://$(_get_from_config '.deploy.node_config.common.ignition_file_s3_bucket')"
 }
 
 create_openshift_install_config_file() {
