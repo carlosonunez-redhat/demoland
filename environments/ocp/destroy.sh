@@ -79,8 +79,14 @@ delete_control_plane_machines() {
     "Deleting the control plane machines..."
 }
 
+delete_worker_machines() {
+  _delete_aws_resources_from_cfn_stack control_plane_machines \
+    "Deleting the workers..."
+}
+
 
 export $(log_into_aws) || exit 1
+delete_worker_machines
 delete_control_plane_machines
 delete_bootstrap_machine
 delete_aws_ec2_key_pair
