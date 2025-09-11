@@ -311,7 +311,7 @@ create_control_plane_machines() {
     'InfrastructureName' "$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
     'RhcosAmi' "$(fail_if_nil "$(_rhcos_ami_id)" "CoreOS AMI ID not found")"
     'MasterSecurityGroupId' "$sg_id"
-    'MasterInstanceType' "$(_get_from_config '.deploy.node_config.bootstrap.instance_type')"
+    'MasterInstanceType' "$(_get_from_config '.deploy.node_config.control_plane.instance_type')"
     'RegisterNlbIpTargetsLambdaArn' "$lambda_arn"
     'ExternalApiTargetGroupArn' "$ext_api_target_group_arn"
     'InternalApiTargetGroupArn' "$int_api_target_group_arn"
@@ -328,7 +328,40 @@ create_control_plane_machines() {
   params_json=$(_create_aws_cf_params_json "${params[@]}")
   _create_aws_resources_from_cfn_stack_with_caps control_plane_machines "$params_json" \
     "CAPABILITY_NAMED_IAM" \
-    "Creating control plane nodes..."
+    "Creating the control plane nodes..."
+}
+
+create_worker_machines() {
+  set -e
+  sg_id=$(fail_if_nil "$(_get_param_from_aws_cfn_stack security 'WorkerSecurityGroupId')" \
+    "Master security group ID not found")
+  private_subnets=$(fail_if_nil "$(_get_param_from_aws_cfn_stack vpc 'PrivateSubnetIds')" \
+    "Private subnets not found")
+  cert_authority=$(get_data_from_ignition_file worker '.ignition.security.tls.certificateAuthorities[0].source')
+  if test -z "$cert_authority"
+  then
+    error "Couldn't get cert authority from ignition file"
+    return 1
+  fi
+  instance_profile_name=$(fail_if_nil \
+    "$(_get_param_from_aws_cfn_stack security WorkerInstanceProfile)" \
+    "Couldn't obtain instance profile for primary node.")
+  params=(
+    'InfrastructureName' "$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
+    'RhcosAmi' "$(fail_if_nil "$(_rhcos_ami_id)" "CoreOS AMI ID not found")"
+    'Subnet0' "$(cut -f1 -d ',' <<< "$private_subnets")"
+    'Subnet1' "$(cut -f2 -d ',' <<< "$private_subnets")"
+    'Subnet2' "$(cut -f3 -d ',' <<< "$private_subnets")"
+    'WorkerSecurityGroupId' "$sg_id"
+    'WorkerInstanceType' "$(_get_from_config '.deploy.node_config.workers.instance_type')"
+    'CertificateAuthorities' "$cert_authority"
+    'WorkerInstanceProfileName' "$instance_profile_name"
+  )
+  params_json=$(_create_aws_cf_params_json "${params[@]}")
+  _create_aws_resources_from_cfn_stack_with_caps \
+    worker_nodes "$params_json" \
+    "CAPABILITY_NAMED_IAM" \
+    "Creating the workers..."
 }
 
 export $(log_into_aws) || exit 1
@@ -346,3 +379,4 @@ create_ignition_files
 sync_bootstrap_ignition_files_with_s3_bucket
 create_bootstrap_machine
 create_control_plane_machines
+create_worker_machines

@@ -12,7 +12,13 @@ Parameters:
   RhcosAmi:
     Description: Current Red Hat Enterprise Linux CoreOS AMI to use for bootstrap.
     Type: AWS::EC2::Image::Id
-  Subnet:
+  Subnet0:
+    Description: The subnets, recommend private, to launch the worker nodes into.
+    Type: AWS::EC2::Subnet::Id
+  Subnet1:
+    Description: The subnets, recommend private, to launch the worker nodes into.
+    Type: AWS::EC2::Subnet::Id
+  Subnet2:
     Description: The subnets, recommend private, to launch the worker nodes into.
     Type: AWS::EC2::Subnet::Id
   WorkerSecurityGroupId:
@@ -88,7 +94,61 @@ Resources:
         DeviceIndex: "0"
         GroupSet:
         - !Ref "WorkerSecurityGroupId"
-        SubnetId: !Ref "Subnet"
+        SubnetId: !Ref "Subnet0"
+      UserData:
+        Fn::Base64: !Sub
+        - '{"ignition":{"config":{"merge":[{"source":"${SOURCE}"}]},"security":{"tls":{"certificateAuthorities":[{"source":"${CA_BUNDLE}"}]}},"version":"3.1.0"}}'
+        - {
+          SOURCE: !Ref IgnitionLocation,
+          CA_BUNDLE: !Ref CertificateAuthorities,
+        }
+      Tags:
+      - Key: !Join ["", ["kubernetes.io/cluster/", !Ref InfrastructureName]]
+        Value: "shared"
+  Worker1:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref RhcosAmi
+      BlockDeviceMappings:
+      - DeviceName: /dev/xvda
+        Ebs:
+          VolumeSize: "120"
+          VolumeType: "gp2"
+      IamInstanceProfile: !Ref WorkerInstanceProfileName
+      InstanceType: !Ref WorkerInstanceType
+      NetworkInterfaces:
+      - AssociatePublicIpAddress: "false"
+        DeviceIndex: "0"
+        GroupSet:
+        - !Ref "WorkerSecurityGroupId"
+        SubnetId: !Ref "Subnet1"
+      UserData:
+        Fn::Base64: !Sub
+        - '{"ignition":{"config":{"merge":[{"source":"${SOURCE}"}]},"security":{"tls":{"certificateAuthorities":[{"source":"${CA_BUNDLE}"}]}},"version":"3.1.0"}}'
+        - {
+          SOURCE: !Ref IgnitionLocation,
+          CA_BUNDLE: !Ref CertificateAuthorities,
+        }
+      Tags:
+      - Key: !Join ["", ["kubernetes.io/cluster/", !Ref InfrastructureName]]
+        Value: "shared"
+  Worker2:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref RhcosAmi
+      BlockDeviceMappings:
+      - DeviceName: /dev/xvda
+        Ebs:
+          VolumeSize: "120"
+          VolumeType: "gp2"
+      IamInstanceProfile: !Ref WorkerInstanceProfileName
+      InstanceType: !Ref WorkerInstanceType
+      NetworkInterfaces:
+      - AssociatePublicIpAddress: "false"
+        DeviceIndex: "0"
+        GroupSet:
+        - !Ref "WorkerSecurityGroupId"
+        SubnetId: !Ref "Subnet2"
       UserData:
         Fn::Base64: !Sub
         - '{"ignition":{"config":{"merge":[{"source":"${SOURCE}"}]},"security":{"tls":{"certificateAuthorities":[{"source":"${CA_BUNDLE}"}]}},"version":"3.1.0"}}'
