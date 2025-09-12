@@ -80,7 +80,7 @@ delete_control_plane_machines() {
 }
 
 delete_worker_machines() {
-  _delete_aws_resources_from_cfn_stack control_plane_machines \
+  _delete_aws_resources_from_cfn_stack worker_nodes \
     "Deleting the workers..."
 }
 
