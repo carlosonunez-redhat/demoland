@@ -13,6 +13,8 @@ _rhcos_ami_id() {
 }
 
 _exec_openshift_install_aws() {
+  dir=$(_get_file_from_data_dir 'openshift-install')
+  test -d "$dir" || mkdir -p "$dir"
   region="$(_get_from_config '.deploy.cloud_config.aws.networking.region')"
   cluster_user_ak=$(fail_if_nil \
     "$(_get_param_from_aws_cfn_stack cluster_user AccessKey)" \
@@ -24,5 +26,10 @@ _exec_openshift_install_aws() {
     AWS_SECRET_ACCESS_KEY="$cluster_user_sk" \
     AWS_DEFAULT_REGION="$region" \
     AWS_SESSION_TOKEN="" \
-    openshift-install "$@"
+    openshift-install --dir "$dir" "$@"
 }
+
+_exec_oc() {
+  oc --kubeconfig "$(_get_file_from_data_dir 'openshift-install/auth/kubeconfig')" "$@"
+}
+
