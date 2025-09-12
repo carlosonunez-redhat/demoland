@@ -362,6 +362,65 @@ create_worker_machines() {
     "Creating the workers..."
 }
 
+wait_for_bootstrap_complete() {
+  _exec_openshift_install_aws wait-for bootstrap-complete --log-level debug
+}
+
+wait_for_worker_csrs_to_register() {
+  local num_worker_nodes max_attempts num_worker_nodes
+  num_worker_nodes=$(aws ec2 describe-instances \
+    --query 'Reservations[].Instances[?(State.Name == `running`) &&
+(@.Tags[?Key==`aws:cloudformation:logical-id` &&
+contains(Value, `Worker`)])].InstanceId' --output text | wc -l)
+  approved_csrs=$(_exec_oc get csr | grep -E 'node-bootstrapper.*Approved' | wc -l)
+  test "$num_worker_nodes" -eq "$approved_csrs" && return 0
+  num_worker_nodes=$(aws ec2 describe-instances \
+    --query 'Reservations[].Instances[?(State.Name == `running`) && 
+(@.Tags[?Key==`aws:cloudformation:logical-id` &&
+contains(Value, `Worker`)])].InstanceId' --output text | wc -l)
+  max_attempts=100
+  while test "$max_attempts" -ne 0
+  do
+    num_registered=$(_exec_oc get csr |
+      grep -E 'node-bootstrapper.*Pending' |
+      wc -l)
+    test "$num_registered" -ge "$num_worker_nodes" && return 0
+    info "[$((100-max_attempts))/100] Waiting for workers to generate CSRs with control plane ($num_registered registered, want $num_worker_nodes or more)"
+    max_attempts=$((max_attempts-1))
+    sleep 1
+  done
+}
+
+accept_pending_csrs() {
+  csrs=$(_exec_oc get csr | grep -E 'node-bootstrapper.*Pending' | cut -f1 -d ' ')
+  while read -r csr
+  do
+    info "Approving worker node CSR '$csr'"
+    if ! _exec_oc adm certificate approve "$csr"
+    then
+      error "Failed to approve '$csr'"
+      return 1
+    fi
+  done < <(echo "$csrs")
+}
+
+wait_for_workers_to_become_ready() {
+  local num_worker_nodes max_attempts
+  num_worker_nodes=$(aws ec2 describe-instances \
+    --query 'Reservations[].Instances[?(State.Name == `running`) && 
+(@.Tags[?Key==`aws:cloudformation:logical-id` &&
+contains(Value, `Worker`)])].InstanceId' --output text | wc -l)
+  max_attempts=100
+  while test "$max_attempts" -gt 0
+  do
+    ready_workers=$(_exec_oc get node | grep -E ' Ready.*worker ' | wc -l)
+    test "$ready_workers" === "$num_worker_node" && return 0
+    info "[$((100-max_attempts))] Waiting for nodes to become ready (want: $num_worker_nodes, got: $ready_workers)"
+    max_attempts=$((max_attempts-1))
+    sleep 1
+  done
+}
+
 export $(log_into_aws) || exit 1
 create_ssh_key
 load_keys_into_ssh_agent
@@ -378,3 +437,7 @@ sync_bootstrap_ignition_files_with_s3_bucket
 create_bootstrap_machine
 create_control_plane_machines
 create_worker_machines
+wait_for_bootstrap_complete
+wait_for_worker_csrs_to_register
+accept_pending_csrs
+wait_for_workers_to_become_ready
