@@ -144,7 +144,7 @@ create_bootstrap_machine() {
     'PublicSubnet' "$(_bootstrap_subnet)"
     'MasterSecurityGroupId' "$sg_id"
     'BootstrapInstanceType' "$(_get_from_config '.deploy.node_config.bootstrap.instance_type')"
-    'BootstrapIgnitionLocation' "$(_get_file_from_data_dir 'openshift-install')/bootstrap.ign"
+    'BootstrapIgnitionLocation' "s3://$(_get_from_config '.deploy.node_config.common.ignition_file_s3_bucket')/bootstrap.ign"
     'AutoRegisterELB' 'yes'
     'RegisterNlbIpTargetsLambdaArn' "$lambda_arn"
     'ExternalApiTargetGroupArn' "$ext_api_target_group_arn"
@@ -353,6 +353,7 @@ create_worker_machines() {
     'WorkerInstanceType' "$(_get_from_config '.deploy.node_config.workers.instance_type')"
     'CertificateAuthorities' "$cert_authority"
     'WorkerInstanceProfileName' "$instance_profile_name"
+    'IgnitionLocation' "https://${api_server_fqdn}:22623/config/worker"
   )
   params_json=$(_create_aws_cf_params_json "${params[@]}")
   _create_aws_resources_from_cfn_stack_with_caps \
