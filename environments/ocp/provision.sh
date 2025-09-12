@@ -373,7 +373,7 @@ wait_for_worker_csrs_to_register() {
 (@.Tags[?Key==`aws:cloudformation:logical-id` &&
 contains(Value, `Worker`)])].InstanceId' --output text | wc -l)
   approved_csrs=$(_exec_oc get csr | grep -E 'node-bootstrapper.*Approved' | wc -l)
-  test "$num_worker_nodes" -eq "$approved_csrs" && return 0
+  test "$approved_csrs" -ge "$num_worker_nodes" && return 0
   num_worker_nodes=$(aws ec2 describe-instances \
     --query 'Reservations[].Instances[?(State.Name == `running`) && 
 (@.Tags[?Key==`aws:cloudformation:logical-id` &&
