@@ -36,11 +36,8 @@ upload_key_into_ec2() {
 }
 
 create_ignition_files() {
-  local dir
-  dir=$(_get_file_from_data_dir 'openshift-install')
-  test -d "$dir" || mkdir -p "$dir"
   info "Creating Red Hat CoreOS Ignition files"
-  _exec_openshift_install_aws create ignition-configs --dir "$dir" || return 1
+  _exec_openshift_install_aws create ignition-configs || return 1
   for file in bootstrap master worker
   do
     test -f "${dir}/${file}.ign" && continue
