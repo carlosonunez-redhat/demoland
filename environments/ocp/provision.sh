@@ -393,6 +393,7 @@ contains(Value, `Worker`)])].InstanceId' --output text | wc -l)
 
 accept_pending_csrs() {
   csrs=$(_exec_oc get csr | grep -E 'node-bootstrapper.*Pending' | cut -f1 -d ' ')
+  test -z "$csrs" && return 0
   while read -r csr
   do
     info "Approving worker node CSR '$csr'"
@@ -414,7 +415,7 @@ contains(Value, `Worker`)])].InstanceId' --output text | wc -l)
   while test "$max_attempts" -gt 0
   do
     ready_workers=$(_exec_oc get node | grep -E ' Ready.*worker ' | wc -l)
-    test "$ready_workers" === "$num_worker_node" && return 0
+    test "$ready_workers" == "$num_worker_nodes" && return 0
     info "[$((100-max_attempts))] Waiting for nodes to become ready (want: $num_worker_nodes, got: $ready_workers)"
     max_attempts=$((max_attempts-1))
     sleep 1
