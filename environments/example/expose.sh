@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Exposes data and secrets between environments during a deployment run.
 #
 # This adds some functions for working with cloud providers, the config file, and

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Runs tests before deploying an environment with 'provision.sh'.
 #
 # This adds some functions for working with cloud providers, the config file, and

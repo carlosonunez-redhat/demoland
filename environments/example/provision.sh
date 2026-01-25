@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Provisions an environment!
 #
 # This adds some functions for working with cloud providers, the config file, and
