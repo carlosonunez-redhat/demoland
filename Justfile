@@ -187,7 +187,7 @@ _merge_aliased_environment environment:
 
 _ensure_container_secrets_vol_populated environment:
   set +u; \
-  vol=$(just _container_vol {{ environment }}); \
+  vol=$(just _container_secrets_vol {{ environment }}); \
   if test -n "$REBUILD_SECRETS_VOLUME" || \
     test -n "$({{ container_bin }} volume ls | grep -q "$vol")"; \
   then \
@@ -251,8 +251,8 @@ _confirm_environment_has_install_config environment:
   fi;
 
 _confirm_environment_in_config environment:
-  just _run_yq "$(cat {{ config_file }})" '.environments | to_entries[] | .key' | \
-    grep -q '^{{ environment }}$' && exit 0; \
+  grep -q '^{{ environment }}$' <(just _run_yq "$(cat {{ config_file }})" '.environments | to_entries[] | .key') && \
+    exit 0; \
   just _log error "Environment not in config: {{ environment }}"; \
   exit 1
 
