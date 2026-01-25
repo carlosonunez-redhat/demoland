@@ -59,18 +59,24 @@ destroy environment:
   just _execute_containerized '{{ environment }}' 'destroy.sh';
 
 _deploy_with_dependencies environment:
-  set -e; \
-  envs="$(just _get_dependent_environments {{ environment }});{{ environment }}"; \
+  set +u; \
+  if test -n "$SKIP_DEPENDENCIES"; \
+  then envs="{{ environment }}"; \
+  else envs="$(just _get_dependent_environments {{ environment }});{{ environment }}"; \
+  fi; \
+  set -eu; \
   for env in $(echo "$envs" | sed -E 's/^;//' | tr ';' '\n'); \
   do just _confirm_environment "$env" || exit 1; \
   done; \
   for env in $(echo "$envs" | sed -E 's/^;//' | tr ';' '\n'); \
   do \
-    for stage in precheck provision; \
+    for stage in precheck provision expose; \
     do \
-      test "$env" != '{{ environment }}' && \
-        just _log info "Running operation [$stage] on dependent environment [$env]"; \
-        just "$stage" "$env"; \
+      if test "$env" != '{{ environment }}'; \
+      then just _log info "Running operation [$stage] on dependent environment [$env]"; \
+      else just _log info "Running operation [$stage] on environment [$env]"; \
+      fi; \
+      just "$stage" "$env"; \
     done; \
   done
 
