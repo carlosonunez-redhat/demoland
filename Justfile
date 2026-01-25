@@ -230,6 +230,7 @@ _confirm_environment_directory_exists environment:
   exit 1
 
 _get_property_from_env_config environment key:
+  env=$(just _environment_name '{{ environment }}'); \
   key=$(echo {{ key }} | \
     sed -E 's/^\.//' | \
     tr '.[]' '\n' | \
@@ -237,7 +238,7 @@ _get_property_from_env_config environment key:
     sed -E 's;(.*);["\1"];g' | \
     sed -E 's;"([0-9]+)";\1;g' | \
     tr -d '\n'); \
-  key='["environments"]["{{ environment }}"]'"$key"; \
+  key='["environments"]["'"$env"'"]'"$key"; \
   sops --decrypt --extract "$key" "{{ source_dir() }}/config.yaml" 2>/dev/null || true;
 
 _get_environment_directory environment:
