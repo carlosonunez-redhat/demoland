@@ -1,7 +1,10 @@
 FROM curlimages/curl AS rosa_client
 ENV ROSA_VERSION=1.2.60
-ENV ROSA_URL="https://github.com/openshift/rosa/releases/download/v${ROSA_VERSION}/rosa_Linux_arm64.tar.gz"
-RUN curl -Lo /tmp/file.tar.gz "${ROSA_URL}"
+ENV ROSA_URL="https://github.com/openshift/rosa/releases/download/v${ROSA_VERSION}/rosa_Linux_x86_64.tar.gz"
+RUN \
+  url="$ROSA_URL"; \
+  uname -m | grep -Eq 'arm|aarch' && url="$(echo "$ROSA_URL" | sed 's/x86_64/arm64/')"; \
+  curl -Lo /tmp/file.tar.gz "$url";
 RUN tar -xvzf /tmp/file.tar.gz -C /tmp
 RUN chmod +x /tmp/rosa
 
