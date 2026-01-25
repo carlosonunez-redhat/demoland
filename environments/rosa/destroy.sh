@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Destroys resources created within this environment.
 #
 # This adds some functions for working with cloud providers, the config file, and
