@@ -40,6 +40,15 @@ precheck environment:
     'true' \
     'Environment {{ environment }} does not have preflight checks; skipping.';
 
+[doc("Exposes secrets created by the environment, if any.")]
+expose environment:
+  just _execute_containerized '{{ environment }}' \
+    'expose.sh' \
+    'true' \
+    'Environment {{ environment }} does not have anything to expose; skipping.';
+
+
+
 [doc("Provisions an environment")]
 provision environment:
   just _execute_containerized '{{ environment }}' 'provision.sh';
@@ -105,6 +114,14 @@ _container_secrets_vol environment:
   env=$(just _environment_name '{{ environment }}'); \
   echo "{{ container_secrets_vol }}-$env"
 
+_container_vol_shared environment:
+  env=$(just _environment_name '{{ environment }}'); \
+  echo "{{ container_vol }}-shared-$env"
+
+_container_secrets_vol_shared environment:
+  env=$(just _environment_name '{{ environment }}'); \
+  echo "{{ container_secrets_vol }}-shared-$env"
+
 _container_image environment:
   env=$(just _environment_name '{{ environment }}'); \
   echo "{{ container_image }}-$env"
@@ -130,6 +147,8 @@ _execute_containerized environment file ignore_not_found='false' custom_message=
   command=({{ container_bin }} run --rm -it \
     -v "$(just _container_vol {{ environment }}):/data" \
     -v "$(just _container_secrets_vol {{ environment }}):/secrets" \
+    -v "$(just _container_vol_shared {{ environment }}):/shared/data" \
+    -v "$(just _container_secrets_vol_shared {{ environment }}):/shared/secrets" \
     -v $PWD/include:/app/include \
     -v "$(just _get_environment_directory {{ environment }}):/app/environment" \
     -e INCLUDE_DIR=/app/include \
@@ -169,17 +188,21 @@ _ensure_container_secrets_vol_populated environment:
   env_data=$(just _merge_aliased_environment '{{ environment }}'); \
   env_data_enc=$(base64 -w 0 <<< "$env_data"); \
   {{ container_bin }} run --rm \
-    -v "$(just _container_secrets_vol {{ environment }}):/data" \
-    bash:5 -c "echo '$env_data_enc' | base64 -d > /data/config.yaml"
+    -v "$vol:/secrets" \
+    bash:5 -c "echo '$env_data_enc' | base64 -d > /secrets/config.yaml"
 
 _ensure_container_volume_exists environment:
   set +u; \
-  vol=$(just _container_vol {{ environment }}); \
-  {{ container_bin }} volume ls | grep -q "$vol" && \
-    test -z "$REBUILD_DATA_VOLUME" && \
-    exit 0; \
-  test -n "$REBUILD_DATA_VOLUME" && {{ container_bin }} volume rm -f "$vol" >/dev/null; \
-  {{ container_bin }} volume create "$vol" >/dev/null;
+  data=$(just _container_vol {{ environment }}); \
+  shared=$(just _container_vol_shared {{ environment }}); \
+  for vol in "$data" "$shared"; \
+  do \
+    {{ container_bin }} volume ls | grep -q "$vol" && \
+      test -z "$REBUILD_DATA_VOLUME" && \
+      exit 0; \
+    test -n "$REBUILD_DATA_VOLUME" && {{ container_bin }} volume rm -f "$vol" >/dev/null; \
+    {{ container_bin }} volume create "$vol" >/dev/null; \
+  done;
 
 _ensure_container_image_exists environment:
   set +u; \
