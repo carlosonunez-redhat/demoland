@@ -35,6 +35,11 @@ deploy environment: (_deploy_with_dependencies environment )
 
 [doc("Runs preflight checks defined in an environment, if any.")]
 precheck environment:
+  if test -n "$SKIP_PRECHECK"; \
+  then \
+    just _log info "Preflight checks skipped for environment '{{ environment }}'"; \
+    exit 0; \
+  fi; \
   just _execute_containerized '{{ environment }}' \
     'preflight.sh' \
     'true' \
