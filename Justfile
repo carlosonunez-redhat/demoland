@@ -166,6 +166,9 @@ _execute_containerized environment file ignore_not_found='false' custom_message=
     "$(just _get_property_from_env_config {{ environment }} '.deploy.environment_vars')" \
     '.[]'); \
   command+=($(just _container_image {{ environment }}) /app/environment/{{ file }}); \
+  set +u; \
+  test -n "$SHOW_CONTAINER_COMMANDS" && just _log info "Running containerized command: ${command[@]}"; \
+  set -u; \
   "${command[@]}"
 
 _merge_aliased_environment environment:
