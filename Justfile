@@ -9,22 +9,6 @@ container_secrets_vol := 'demo-environment-runner-secrets-vol'
 config_file := source_dir() + '/config.yaml'
 yq_image := 'mikefarah/yq'
 
-[doc("Deploys an environment")]
-deploy environment: (_confirm_environment environment) \
-    (precheck environment) \
-    (provision environment)
-
-[doc("Runs preflight checks defined in an environment, if any.")]
-precheck environment:
-  just _execute_containerized '{{ environment }}' \
-    'preflight.sh' \
-    'true' \
-    'Environment {{ environment }} does not have preflight checks; skipping.';
-
-[doc("Provisions an environment")]
-provision environment:
-  just _execute_containerized '{{ environment }}' 'provision.sh';
-
 [doc("Creates a new environment")]
 create_new_environment environment:
   env=$(echo '{{ environment }}' | tr ' ' '_'); \
@@ -46,10 +30,56 @@ delete_environment environment: (_confirm_environment environment)
   fi; \
   just _delete_env_dir '{{ environment }}' && just _delete_env_from_config '{{ environment }}';
 
+[doc("Deploys an environment")]
+deploy environment: (_deploy_with_dependencies environment )
+
+[doc("Runs preflight checks defined in an environment, if any.")]
+precheck environment:
+  just _execute_containerized '{{ environment }}' \
+    'preflight.sh' \
+    'true' \
+    'Environment {{ environment }} does not have preflight checks; skipping.';
+
+[doc("Provisions an environment")]
+provision environment:
+  just _execute_containerized '{{ environment }}' 'provision.sh';
+
+
 [doc("Destroys an environment")]
 destroy environment:
   just _execute_containerized '{{ environment }}' 'destroy.sh';
 
+_deploy_with_dependencies environment:
+  envs="$(just _get_dependent_environments {{ environment }});{{ environment }}"; \
+  for env in $(echo "$envs" | sed -E 's/^;//' | tr ';' '\n'); \
+  do just _confirm_environment "$env" || exit 1; \
+  done; \
+  for env in $(echo "$envs" | sed -E 's/^;//' | tr ';' '\n'); \
+  do \
+    for stage in precheck provision; \
+    do \
+      test "$env" != '{{ environment }}' && \
+        just _log info "Running operation [$stage] on dependent environment [$env]"; \
+        just "$stage" "$env"; \
+    done; \
+  done
+
+_get_dependent_environments environment:
+  set +u; \
+  env_data=$(sops --decrypt --extract '["environments"]["{{ environment }}"]' \
+    --output-type yaml "{{ config_file }}") || exit 1; \
+  just _run_yq "$env_data" '.depends_on | join(";")' | grep -Ev '^null$'; \
+  exit 0;
+
+_environment_name environment: (_confirm_environment_in_config environment)
+  set +u; \
+  env_data=$(sops --decrypt --extract '["environments"]["{{ environment }}"]' \
+    --output-type yaml "{{ config_file }}") || exit 1; \
+  alias=$(just _run_yq "$env_data" '.alias_of'); \
+  if test -z "$alias" || test "$alias" == 'null'; \
+  then echo '{{ environment }}' && exit 0; \
+  fi; \
+  echo "$alias";
 
 _create_new_env_dir_structure environment:
   cp -r "$(just _get_environment_directory 'example')" \
@@ -67,13 +97,16 @@ _delete_env_from_config environment:
   sops unset {{ config_file }} '["environments"]["{{ environment }}"]'
 
 _container_vol environment:
-  echo "{{ container_vol }}-{{ environment }}"
+  env=$(just _environment_name '{{ environment }}'); \
+  echo "{{ container_vol }}-$env"
 
 _container_secrets_vol environment:
-  echo "{{ container_secrets_vol }}-{{ environment }}"
+  env=$(just _environment_name '{{ environment }}'); \
+  echo "{{ container_secrets_vol }}-$env"
 
 _container_image environment:
-  echo "{{ container_image }}-{{ environment }}"
+  env=$(just _environment_name '{{ environment }}'); \
+  echo "{{ container_image }}-$env"
 
 _execute_containerized environment file ignore_not_found='false' custom_message='none': \
     ( _ensure_container_image_exists environment ) \
@@ -109,6 +142,20 @@ _execute_containerized environment file ignore_not_found='false' custom_message=
   command+=($(just _container_image {{ environment }}) /app/environment/{{ file }}); \
   "${command[@]}"
 
+_merge_aliased_environment environment:
+  set +u; \
+  env_data=$(sops --decrypt --extract '["environments"]["{{ environment }}"]' \
+    --output-type yaml "{{ config_file }}") || exit 1; \
+  env_data_enc=$(base64 -w 0 <<< $env_data); \
+  alias=$(just _run_yq "$env_data" '.alias_of'); \
+  if test -z "$alias" || test "$alias" == 'null'; \
+  then echo "$env_data" && exit 0; \
+  fi; \
+  q=$(printf '["environments"]["%s"]' "$alias"); \
+  target_env_data=$(sops --decrypt --extract "$q" --output-type yaml "{{ config_file }}") || exit 1; \
+  target_env_data_enc=$(base64 -w 0 <<< $target_env_data); \
+  just _do_yq_encoded_merge "$target_env_data_enc" "$env_data_enc"
+
 _ensure_container_secrets_vol_populated environment:
   set +u; \
   vol=$(just _container_vol {{ environment }}); \
@@ -118,8 +165,7 @@ _ensure_container_secrets_vol_populated environment:
     test -n "$REBUILD_SECRETS_VOLUME" && {{ container_bin }} volume rm -f "$vol" >/dev/null; \
     {{ container_bin }} volume create "$vol" >/dev/null; \
   fi; \
-  env_data=$(sops --decrypt --extract '["environments"]["{{ environment }}"]' \
-    --output-type yaml "{{ config_file }}") || exit 1; \
+  env_data=$(just _merge_aliased_environment '{{ environment }}'); \
   env_data_enc=$(base64 -w 0 <<< "$env_data"); \
   {{ container_bin }} run --rm \
     -v "$(just _container_secrets_vol {{ environment }}):/data" \
@@ -156,11 +202,14 @@ _ensure_container_image_exists environment:
       $PWD
 
 _confirm_environment environment: \
+    ( _confirm_environment_in_config environment ) \
     ( _confirm_environment_directory_exists environment ) \
-    ( _confirm_environment_has_install_config environment ) \
-    ( _confirm_environment_in_config environment )
+    ( _confirm_environment_has_install_config environment )
 
 _confirm_environment_has_install_config environment:
+  ignore_installconfig_check=$(just _run_yq "$(cat {{ config_file }})" \
+    '.environments["{{ environment}}"].common_options.ignore_installconfig_check'); \
+  test "${ignore_installconfig_check,,}" == true && exit 0; \
   f="$(just _get_environment_directory '{{ environment }}')/include/templates/install-config.yaml"; \
   if ! test -f "$f"; \
   then \
@@ -176,7 +225,7 @@ _confirm_environment_in_config environment:
 
 _confirm_environment_directory_exists environment:
   test -f "$(just _get_environment_directory_file '{{ environment }}' 'provision.sh')" && exit 0; \
-  _just log error "Environment directory doesn't exist: {{ environment }}"; \
+  just _log error "Environment directory doesn't exist: {{ environment }}"; \
   exit 1
 
 _get_property_from_env_config environment key:
@@ -191,13 +240,21 @@ _get_property_from_env_config environment key:
   sops --decrypt --extract "$key" "{{ source_dir() }}/config.yaml" 2>/dev/null || true;
 
 _get_environment_directory environment:
-  echo "{{ source_dir() }}/environments/{{ environment }}"
+  env=$(just _environment_name '{{ environment }}'); \
+  echo "{{ source_dir() }}/environments/$env"
 
 _get_environment_directory_file environment fp:
   printf "%s/%s" $(just _get_environment_directory "{{ environment }}") "{{ fp }}"
 
 _run_yq input query:
   echo "{{ input }}" | {{ container_bin }} run --rm -i {{ yq_image }} '{{ query }}'
+
+_do_yq_encoded_merge inputA inputB:
+  {{ container_bin }} run --rm --entrypoint sh {{ yq_image }} -c \
+     'yq eval-all ". as \$item ireduce ({}; . * \$item )" \
+      <(echo "{{ inputA }}" | base64 -d) \
+      <(echo "{{ inputB }}" | base64 -d)'
+
 
 [positional-arguments]
 _log level *message="No message?":
