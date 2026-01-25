@@ -50,6 +50,7 @@ destroy environment:
   just _execute_containerized '{{ environment }}' 'destroy.sh';
 
 _deploy_with_dependencies environment:
+  set -e; \
   envs="$(just _get_dependent_environments {{ environment }});{{ environment }}"; \
   for env in $(echo "$envs" | sed -E 's/^;//' | tr ';' '\n'); \
   do just _confirm_environment "$env" || exit 1; \
