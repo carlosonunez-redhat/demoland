@@ -15,7 +15,7 @@ _config_file_in_environment() {
 }
 
 _create_install_config_directory_if_not_exists() {
-  test -d "$(_config_file_dir)" || mdkir -p "$(_config_file_dir)"
+  test -d "$(_config_file_dir)" || mkdir -p "$(_config_file_dir)"
 }
 
 render_and_save_install_config() {
