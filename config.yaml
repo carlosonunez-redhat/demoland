@@ -39,6 +39,10 @@ environments:
                     # encrypted
                     - ENC[AES256_GCM,data:ebmjm55BFsJihm6x2hV7mHu2X5XmbEx2EV0IxzDGF2P0grcOYzTxiK16FyYuQgStf3d49vc=,iv:BKYfwZySznYxaQKe7QJ2s5saVmt47mGDKxnKlDs+mjU=,tag:VCyquvBI27Jqf1fnMNsmRg==,type:str]
                     - AWS_PAGER=""
+                    # encrypted
+                    - ENC[AES256_GCM,data:PSAFBSMwa2is6csVWtv3pfJsBX1oj8hQAgeCJhwuu1kwU92fSONODpeB8cbo2j4iLO9I,iv:42tYGKeN16qsUmjZu4KElBsIzKWar+2XO6j+KeV5DCE=,tag:F3FKz614mvLV++Ns2uvrzg==,type:str]
+                    # encrypted
+                    - ENC[AES256_GCM,data:7P207qz06i5kyVkme51mUWqIwZwBvPOJbmN2bdMTkNXhqpS/k/KD7TaG0iUsUNbWWjpg,iv:VQOCCvXAZQ3fq4PAe7hWQcA1ZR3KZTaL0RS/KWWQoNs=,tag:kyE0CW52giQHnDQ6kA03Ww==,type:str]
             cloud_config:
                 aws:
                     networking:
@@ -121,8 +125,8 @@ environments:
                     # encrypted
                     data: ENC[AES256_GCM,data:U2eobbE6upIEWrxHBbiL1zSEMdXQBDwRWpiZyGog9UJMPT/JwpXKdy5pD0wR2O3Gg/QVR2lJH4pZGJum/Xeuccm6/rFfxLP913xX76Ps+W6AP10YowpbOAjcX/bubm+FA5WZnIs0CFr8LUSzmKzrKxv1ITL5vxECbXOseszrMvBnDUoduAj5b8X31/FmPzPJQ1hBIQm66Ko9qB5yY09MpxeWmWOB4ZjR6n2tbsRve886UEq922SdhaldEozb2zq+OC4U1eKBOc4Rq0JoWCam2NnM/Y8vCrgOd9wo5taB+RAR4v+0WqRZlZtFoRxv8L2BAZkuZ3mObqbb5PcH/a/w5HzJ/V82mm5UN3Ie6rBLR1W2SsdWh4ZHE2qhYMpgU/XreRTGwG+/b3hU/z2ik7wgVo7MIXTvDpGqN8tf70IzmMXX2EpHWQMAO4Re+UB8b7GP7xFREbCjC7hnFQoel3AJNUPVdFFsGFdgDHyRa09BamVfnlhWtVfChrY2xl1X5NroZZT7Qn9uOvw6gj7mJhrmbq0JfCaetecTwqY=,iv:/j7qGCxTK0lBUSONjta9cn2A3X4idjk3zamBgFkFLbc=,tag:IR2K25bjQdDe7+KU/OyyCg==,type:str]
 sops:
-    lastmodified: "2026-01-25T19:48:18Z"
-    mac: ENC[AES256_GCM,data:LS5rhz/u9/naFGi63IuimIYdyMK+gPW45k0ZArmy20A+m/me6SdEvjmupTKqS1/zPkBN9yXBtE8Xr4fmLc8NGI+2vRXlg4OasGBcXDJWJJgZ5E1YG/g0Nn3O4HxGigdnPRyGYd40BxzaAHNMMC0SD/Znrcok476oC+s+9C7Ctrk=,iv:WO2EwFV5u/5Vv14hVdpoli6feTdU88NSdDY4VXjHXuc=,tag:uuwJrNZQC9axgq4zX4PPOw==,type:str]
+    lastmodified: "2026-01-25T20:07:22Z"
+    mac: ENC[AES256_GCM,data:p3dW5hik6QE0ugeBqPXAEQI/mOtrnkT4Wyw6pCrpIqEdkDryBD3JhmuCpqIB/KqnRncQigx3GMXoVuzE8KXY6AqwEkE72yGEknFq/5hGBhLgROJiMXpQHwCQ95UiiHMepcgPBcxAGFRl7mi2H5iucvyx4cASj6mWNL5UBI+D6No=,iv:uUMUR3a9nlpvi7DCCekTmfqxjOYejwqbUn3Q6okmAnk=,tag:u0P0nUjfjWBIenJWqG2P4w==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
