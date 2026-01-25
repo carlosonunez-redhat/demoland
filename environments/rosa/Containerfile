@@ -1,0 +1,10 @@
+FROM curlimages/curl AS rosa_client
+ENV ROSA_VERSION=1.2.53
+ENV OPENSHIFT_BINARIES_URL="https://mirror.openshift.com/pub/openshift-v4/clients/rosa/${ROSA_VERSION}"
+RUN curl -o /tmp/file "${OPENSHIFT_BINARIES_URL}/rosa-linux"
+RUN chmod +x /tmp/file
+
+FROM fedora:41 AS final
+COPY --from=rosa_client /tmp/file /usr/bin/rosa
+RUN dnf -y update
+RUN dnf -y install yq jq awscli openssh ssh-agent
