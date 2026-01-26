@@ -14,25 +14,30 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 # If this environment has includes of its own, use the $ENVIRONMENT_INCLUDE_DIR environment
 # variable, like shown in the comment below.
 #
-# source "$ENVIRONMENT_INCLUDE_DIR/foo.sh"
+source "$ENVIRONMENT_INCLUDE_DIR/rosa.sh"
 
 # The 'delete' command doesn't have a 'network' subcommand, so we
 # have to destroy the network "manually."
 destroy_network() {
   _network_deployed || return 0
 
-  info "Destroying ROSA network for cluster $(_rosa_cluster_name)"
-  if ! aws cloudformation delete-stack --stack-name "$(_rosa_network_stack)"
+  if ! _network_being_destroyed
   then
-    error "Failed to delete ROSA network CFn stack '$(_rosa_network_name)'; delete manually"
-    return 1
+    info "Destroying ROSA network for cluster $(_rosa_cluster_name)"
+    if ! aws cloudformation delete-stack --stack-name "$(_rosa_network_stack)"
+    then
+      error "Failed to delete ROSA network CFn stack '$(_rosa_network_name)'; delete manually"
+      return 1
+    fi
   fi
   status=""
   attempts=0
   max_attempts=300
   while test "$attempts" -lt "$max_attempts"
   do
-    _network_deployed || return 0
+    if ! _network_deployed && ! _network_being_destroyed
+    then return 0
+    fi
 
     status=$(aws cloudformation describe-stacks --stack-name "$(_rosa_network_stack)" --output json | jq '.Stacks[0].StackStatus')
     info "[${attempts}/${max_attempts}] Deleting '$(_rosa_network_stack)', status: $status"
@@ -40,4 +45,70 @@ destroy_network() {
   done
 }
 
+destroy_account_roles() {
+  roles=$(aws iam list-roles | grep "$(_rosa_cluster_name)" | cat)
+  test "$(wc -l <<< "$roles")" -le 1 && return 0
+
+  info "Deleting ROSA account roles"
+  rosa delete account-roles \
+    --classic \
+    --hosted-cp \
+    --prefix "$(_rosa_cluster_name)" \
+    --mode auto \
+    --yes
+}
+
+destroy_oidc_configuration() {
+  _oidc_config_created || return 0
+
+  info "Deleting AWS OIDC config for ROSA"
+  rosa delete oidc-config \
+    --mode auto \
+    --yes
+}
+
+destroy_operator_roles_classic() {
+  _operator_roles_created classic || return 0
+
+  info "Destroying ROSA HCP operator roles"
+  _exec_rosa delete operator-roles \
+    --mode=auto \
+    --prefix="$(_rosa_cluster_name)-classic" \
+    --yes
+}
+
+destroy_operator_roles_hcp() {
+  _operator_roles_created hcp || return 0
+
+  info "Destroying ROSA HCP operator roles"
+  _exec_rosa delete operator-roles \
+    --mode=auto \
+    --prefix="$(_rosa_cluster_name)-hcp" \
+    --yes
+}
+
+
+delete_cluster_classic() {
+  _cluster_created classic || return 0
+
+  rosa delete cluster \
+    --cluster "$(_rosa_cluster_name)-classic" \
+    --yes
+}
+
+delete_cluster_hcp() {
+  _cluster_created hcp || return 0
+
+  rosa delete cluster \
+    --cluster "$(_rosa_cluster_name)-hcp" \
+    --yes
+}
+
+set -e
+destroy_cluster_hcp
+destroy_cluster_classic
+destroy_operator_roles_hcp
+destroy_operator_roles_classic
+destroy_oidc_configuration
+destroy_account_roles
 destroy_network

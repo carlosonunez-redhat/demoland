@@ -14,8 +14,87 @@ _rosa_network_stack() {
   echo "$(_rosa_cluster_name)-network"
 }
 
+_rosa_oidc_id() {
+  aws iam list-open-id-connect-providers |
+    grep openshiftapps |
+    cat |
+    head -1 |
+    awk -F'/' '{print $NF}' |
+    tr -d '"'
+}
+
+_rosa_installer_role_arn() {
+  local type
+  type="$1"
+  prefix="$(_rosa_cluster_name)-Installer-Role"
+  test "${type,,}" == 'hcp' && prefix="$(_rosa_cluster_name)-HCP-ROSA-Installer-Role"
+  aws iam list-roles --output text |
+    grep "$prefix" |
+    cat |
+    head -1 |
+    cut -f2
+}
+
 _network_deployed() {
   local status
   status=$(2>/dev/null aws cloudformation describe-stacks --stack-name "$(_rosa_network_stack)" --output json | jq -r '.Stacks[0].StackStatus')
   test -n "$status" && test "${status,,}" == create_complete
+}
+
+_network_being_destroyed() {
+  local status
+  status=$(2>/dev/null aws cloudformation describe-stacks --stack-name "$(_rosa_network_stack)" --output json | jq -r '.Stacks[0].StackStatus')
+  test -n "$status" && test "${status,,}" == delete_in_progress
+}
+
+_oidc_config_created() {
+  test -n "$(_rosa_oidc_id)"
+}
+
+_operator_roles_created() {
+  local type
+  type="${1?Please provide an operator role (classic, hcp)}"
+  roles=$(aws iam list-roles |
+    grep "$(_rosa_cluster_name)-${type}" |
+    cat |
+    cut -f2)
+  test "$(wc -l <<< "$roles")" -gt 1
+}
+
+_all_clusters() {
+  local type
+  type="${1?Please provide an operator role (classic, hcp)}"
+  _exec_rosa list clusters | grep "$(_rosa_cluster_name)-${type}"
+}
+
+_cluster_created() {
+  _all_clusters "$1" | grep -q ready
+}
+
+_cluster_pending() {
+  _all_clusters "$1" | grep -Eq 'pending|installing'
+}
+
+_cluster_logs() {
+  local type
+  type="${1?Please provide an operator role (classic, hcp)}"
+  _exec_rosa logs install -c "$(_rosa_cluster_name)-${type}"
+}
+
+_wait_for_cluster_created() {
+  attempts=0
+  max_attempts=1200
+  while test "$attempts" -lt "$max_attempts"
+  do
+    _cluster_created "$1" && return 0
+
+    info "[${attempts}/${max_attempts}] Waiting for cluster type '$1' to be created.."
+    sleep 1
+    attempts=$((attempts+1))
+  done
+
+  error "Cluster type '$1' failed to become ready; status and logs below"
+  _all_clusters "$1"
+  _cluster_logs "$1"
+  return 1
 }

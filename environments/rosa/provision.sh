@@ -28,10 +28,102 @@ deploy_network() {
 }
 
 create_account_roles() {
+  roles=$(aws iam list-roles | grep "$(_rosa_cluster_name)" | cat)
+  test "$(wc -l <<< "$roles")" -gt 1 && return 0
   info "Creating AWS account roles for ROSA"
-  rosa create account-roles --yes --hosted-cp --prefix="$(_rosa_cluster_name)-iam"
+  _exec_rosa create account-roles \
+    --classic \
+    --hosted-cp \
+    --prefix "$(_rosa_cluster_name)" \
+    --mode auto \
+    --yes
+}
+
+create_oidc_configuration() {
+  _oidc_config_created && return 0
+
+  info "Creating AWS OIDC config for ROSA"
+  _exec_rosa create oidc-config \
+    --mode auto \
+    --yes
+}
+
+create_operator_roles_classic() {
+  _operator_roles_created classic && return 0
+
+  info "Creating ROSA classic operator roles"
+  _exec_rosa create operator-roles \
+    --mode=auto \
+    --prefix="$(_rosa_cluster_name)-classic" \
+    --oidc-config-id="$(_rosa_oidc_id)" \
+    --installer-role-arn="$(_rosa_installer_role_arn classic)"
+}
+
+create_operator_roles_hcp() {
+  _operator_roles_created hcp && return 0
+
+  info "Creating ROSA HCP operator roles"
+  _exec_rosa create operator-roles \
+    --mode=auto \
+    --hosted-cp \
+    --prefix="$(_rosa_cluster_name)-hcp" \
+    --oidc-config-id="$(_rosa_oidc_id)" \
+    --installer-role-arn="$(_rosa_installer_role_arn hcp)"
+}
+
+create_cluster_classic() {
+  _cluster_created classic && return 0
+
+  if ! _cluster_pending classic
+  then
+    info "Creating classic ROSA cluster"
+    _exec_rosa create cluster \
+      --yes \
+      --cluster-name "$(_rosa_cluster_name)-classic" \
+      --sts \
+      --mode auto \
+      --oidc-config-id "$(_rosa_oidc_id)" \
+      --operator-roles-prefix "$(_rosa_cluster_name)-classic" \
+      --machine-cidr "$(_get_from_config '.deploy.cloud_config.aws.networking.cidr_block')"
+  fi
+
+  _wait_for_cluster_created classic
+}
+
+create_cluster_hcp() {
+  _cluster_created hcp && return 0
+
+  if ! _cluster_pending hcp
+  then
+    info "Creating HCP ROSA cluster"
+    subnets=$(aws ec2 describe-subnets --filters 'Name=tag:Name,Values=rosa-demoland-*' \
+      --query 'Subnets[].SubnetId' \
+      --output text | tr '\t' ',')
+    if test -z "$subnets"
+    then
+      error "Unable to resolve ROSA subnets in VPC; see error message above for more details."
+      return 1
+    fi
+    _exec_rosa create cluster \
+      --yes \
+      --hosted-cp \
+      --cluster-name "$(_rosa_cluster_name)-hcp" \
+      --sts \
+      --mode auto \
+      --oidc-config-id "$(_rosa_oidc_id)" \
+      --operator-roles-prefix "$(_rosa_cluster_name)-hcp" \
+      --machine-cidr "$(_get_from_config '.deploy.cloud_config.aws.networking.cidr_block')" \
+      --subnet-ids "$subnets"
+  fi
+
+  _wait_for_cluster_created hcp
 }
 
 set -e
 deploy_network
 create_account_roles
+create_oidc_configuration
+create_operator_roles_classic
+create_operator_roles_hcp
+create_cluster_classic
+create_cluster_hcp
