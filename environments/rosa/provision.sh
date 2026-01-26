@@ -16,15 +16,12 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 #
 source "$ENVIRONMENT_INCLUDE_DIR/rosa.sh"
 
-deploy_network() {
-  _network_deployed && return 0
+deploy_network_classic() {
+  _deploy_network classic
+}
 
-  info "Deploying ROSA network for cluster $(_rosa_cluster_name)"
-  _exec_rosa create network \
-    --param Region=$AWS_DEFAULT_REGION \
-    --param AvailabilityZoneCount="$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones')" \
-    --param VpcCidr="$(_get_from_config '.deploy.cloud_config.aws.networking.cidr_block')" \
-    --param Name="$(_rosa_network_stack)"
+deploy_network_hcp() {
+  _deploy_network hcp
 }
 
 create_account_roles() {
@@ -84,7 +81,7 @@ create_cluster_classic() {
       --mode auto \
       --oidc-config-id "$(_rosa_oidc_id)" \
       --operator-roles-prefix "$(_rosa_cluster_name)-classic" \
-      --machine-cidr "$(_get_from_config '.deploy.cloud_config.aws.networking.cidr_block')"
+      --machine-cidr "$(_get_from_config '.deploy.cloud_config.aws.networking.cidr_block.classic')"
   fi
 
   _wait_for_cluster_created classic
@@ -96,7 +93,7 @@ create_cluster_hcp() {
   if ! _cluster_pending hcp
   then
     info "Creating HCP ROSA cluster"
-    subnets=$(aws ec2 describe-subnets --filters 'Name=tag:Name,Values=rosa-demoland-*' \
+    subnets=$(aws ec2 describe-subnets --filters "Name=tag:Name,Values=$(_rosa_network_stack hcp)*" \
       --query 'Subnets[].SubnetId' \
       --output text | tr '\t' ',')
     if test -z "$subnets"
@@ -112,7 +109,7 @@ create_cluster_hcp() {
       --mode auto \
       --oidc-config-id "$(_rosa_oidc_id)" \
       --operator-roles-prefix "$(_rosa_cluster_name)-hcp" \
-      --machine-cidr "$(_get_from_config '.deploy.cloud_config.aws.networking.cidr_block')" \
+      --machine-cidr "$(_get_from_config '.deploy.cloud_config.aws.networking.cidr_block.hcp')" \
       --subnet-ids "$subnets"
   fi
 
@@ -120,7 +117,8 @@ create_cluster_hcp() {
 }
 
 set -e
-deploy_network
+deploy_network_classic
+deploy_network_hcp
 create_account_roles
 create_oidc_configuration
 create_operator_roles_classic

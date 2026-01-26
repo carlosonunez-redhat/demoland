@@ -19,30 +19,6 @@ source "$ENVIRONMENT_INCLUDE_DIR/rosa.sh"
 # The 'delete' command doesn't have a 'network' subcommand, so we
 # have to destroy the network "manually."
 destroy_network() {
-  _network_deployed || return 0
-
-  if ! _network_being_destroyed
-  then
-    info "Destroying ROSA network for cluster $(_rosa_cluster_name)"
-    if ! aws cloudformation delete-stack --stack-name "$(_rosa_network_stack)"
-    then
-      error "Failed to delete ROSA network CFn stack '$(_rosa_network_name)'; delete manually"
-      return 1
-    fi
-  fi
-  status=""
-  attempts=0
-  max_attempts=300
-  while test "$attempts" -lt "$max_attempts"
-  do
-    if ! _network_deployed && ! _network_being_destroyed
-    then return 0
-    fi
-
-    status=$(aws cloudformation describe-stacks --stack-name "$(_rosa_network_stack)" --output json | jq '.Stacks[0].StackStatus')
-    info "[${attempts}/${max_attempts}] Deleting '$(_rosa_network_stack)', status: $status"
-    attempts=$((attempts+1))
-  done
 }
 
 destroy_account_roles() {
@@ -88,20 +64,24 @@ destroy_operator_roles_hcp() {
 }
 
 
-delete_cluster_classic() {
-  _cluster_created classic || return 0
+destroy_cluster_classic() {
+  _all_clusters classic >/dev/null || return 0
 
-  rosa delete cluster \
+  _cluster_uninstalling classic || rosa delete cluster \
     --cluster "$(_rosa_cluster_name)-classic" \
     --yes
+
+  _wait_for_cluster_deleted classic
 }
 
-delete_cluster_hcp() {
-  _cluster_created hcp || return 0
+destroy_cluster_hcp() {
+  _all_clusters hcp >/dev/null || return 0
 
-  rosa delete cluster \
+  _cluster_uninstalling hcp || rosa delete cluster \
     --cluster "$(_rosa_cluster_name)-hcp" \
     --yes
+
+  _wait_for_cluster_deleted hcp
 }
 
 set -e

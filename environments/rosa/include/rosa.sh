@@ -11,7 +11,7 @@ _rosa_cluster_name() {
 }
 
 _rosa_network_stack() {
-  echo "$(_rosa_cluster_name)-network"
+  echo "$(_rosa_cluster_name)-network-$1"
 }
 
 _rosa_oidc_id() {
@@ -37,13 +37,13 @@ _rosa_installer_role_arn() {
 
 _network_deployed() {
   local status
-  status=$(2>/dev/null aws cloudformation describe-stacks --stack-name "$(_rosa_network_stack)" --output json | jq -r '.Stacks[0].StackStatus')
+  status=$(2>/dev/null aws cloudformation describe-stacks --stack-name "$(_rosa_network_stack)-$1" --output json | jq -r '.Stacks[0].StackStatus')
   test -n "$status" && test "${status,,}" == create_complete
 }
 
 _network_being_destroyed() {
   local status
-  status=$(2>/dev/null aws cloudformation describe-stacks --stack-name "$(_rosa_network_stack)" --output json | jq -r '.Stacks[0].StackStatus')
+  status=$(2>/dev/null aws cloudformation describe-stacks --stack-name "$(_rosa_network_stack "$1")" --output json | jq -r '.Stacks[0].StackStatus')
   test -n "$status" && test "${status,,}" == delete_in_progress
 }
 
@@ -75,6 +75,10 @@ _cluster_pending() {
   _all_clusters "$1" | grep -Eq 'pending|installing'
 }
 
+_cluster_uninstalling() {
+  _all_clusters "$1" | grep -Eq uninstalling
+}
+
 _cluster_logs() {
   local type
   type="${1?Please provide an operator role (classic, hcp)}"
@@ -97,4 +101,66 @@ _wait_for_cluster_created() {
   _all_clusters "$1"
   _cluster_logs "$1"
   return 1
+}
+
+_wait_for_cluster_deleted() {
+  attempts=0
+  max_attempts=1200
+  while test "$attempts" -lt "$max_attempts"
+  do
+    _all_clusters "$1" >/dev/null || return 0
+
+    if ! _cluster_uninstalling "$1"
+    then
+      error "Cluster type '$1' is in an unknown state; see below. Manual deletion might be required"
+      _all_clusters "$1"
+      return 1
+    fi
+
+    info "[${attempts}/${max_attempts}] Waiting for cluster type '$1' to be deleted.."
+    sleep 1
+    attempts=$((attempts+1))
+  done
+
+  error "Cluster type '$1' failed to delete; see below. Manual deletion might be required."
+  _all_clusters "$1"
+  return 1
+}
+
+_deploy_network() {
+  _network_deployed "$1" && return 0
+
+  info "Deploying ROSA network for cluster $(_rosa_cluster_name) (type: $1)"
+  _exec_rosa create network \
+    --param Region=$AWS_DEFAULT_REGION \
+    --param AvailabilityZoneCount="$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones')" \
+    --param VpcCidr="$(_get_from_config ".deploy.cloud_config.aws.networking.cidr_block.${1,,}")" \
+    --param Name="$(_rosa_network_stack "$1")"
+}
+
+_destroy_network() {
+  _network_deployed "$1" || return 0
+
+  if ! _network_being_destroyed "$1"
+  then
+    info "Destroying ROSA network for cluster $(_rosa_cluster_name) (type: $1)"
+    if ! aws cloudformation delete-stack --stack-name "$(_rosa_network_stack "$1")"
+    then
+      error "Failed to delete ROSA network CFn stack '$(_rosa_network_stack "$1")'; delete manually"
+      return 1
+    fi
+  fi
+  status=""
+  attempts=0
+  max_attempts=300
+  while test "$attempts" -lt "$max_attempts"
+  do
+    if ! _network_deployed "$1" && ! _network_being_destroyed "$1"
+    then return 0
+    fi
+
+    status=$(aws cloudformation describe-stacks --stack-name "$(_rosa_network_stack "$1")" --output json | jq '.Stacks[0].StackStatus')
+    info "[${attempts}/${max_attempts}] Deleting '$(_rosa_network_stack "$1")', status: $status"
+    attempts=$((attempts+1))
+  done
 }
