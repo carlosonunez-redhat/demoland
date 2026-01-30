@@ -18,9 +18,13 @@ source "$ENVIRONMENT_INCLUDE_DIR/rosa.sh"
 
 # The 'delete' command doesn't have a 'network' subcommand, so we
 # have to destroy the network "manually."
-destroy_network() {
+destroy_network_classic() {
+  _destroy_network classic
 }
 
+destroy_network_hcp() {
+  _destroy_network hcp
+}
 destroy_account_roles() {
   roles=$(aws iam list-roles | grep "$(_rosa_cluster_name)" | cat)
   test "$(wc -l <<< "$roles")" -le 1 && return 0
@@ -91,4 +95,5 @@ destroy_operator_roles_hcp
 destroy_operator_roles_classic
 destroy_oidc_configuration
 destroy_account_roles
-destroy_network
+destroy_network_hcp
+destroy_network_classic
