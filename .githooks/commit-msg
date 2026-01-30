@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+if grep -q -- "--- security checks skipped ---" "$1"
+then
+  >&2 echo "[WARN] Security checks skipped!"
+  exit 0
+fi
+GITLEAKS_IMAGE="ghcr.io/gitleaks/gitleaks@sha256:71d3ee5990f2176f763b438298453fc37e87b119122045e176ca9d44ff00b08b"
+for type in 'dir' 'git --platform github'
+do
+  cmd="gitleaks $type -v ."
+  >&2 echo "[PRE-COMMIT] Running gitleaks command: '$cmd'..."
+  docker run --rm -v "$PWD:/work" \
+    -w /work \
+    --entrypoint sh \
+    "$GITLEAKS_IMAGE" \
+    -c "$cmd" || exit "$?"
+done

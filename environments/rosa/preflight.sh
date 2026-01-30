@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Provisions an environment!
+# Runs tests before deploying an environment with 'provision.sh'.
 #
 # This adds some functions for working with cloud providers, the config file, and
 # other useful things.
@@ -14,5 +14,17 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 # If this environment has includes of its own, use the $ENVIRONMENT_INCLUDE_DIR environment
 # variable, like shown in the comment below.
 #
-# source "$ENVIRONMENT_INCLUDE_DIR/foo.sh"
+source "$ENVIRONMENT_INCLUDE_DIR/rosa.sh"
 
+verify_aws_quotas() {
+  info "Checking that AWS quotas are sufficient for ROSA"
+  _exec_rosa verify quota
+}
+
+verify_local_environment() {
+  info "Verifying that local environment is set up properly"
+  _exec_rosa verify openshift-client
+}
+
+verify_local_environment
+verify_aws_quotas
