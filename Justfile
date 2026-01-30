@@ -11,12 +11,13 @@ yq_image := 'mikefarah/yq'
 
 [doc("Creates a new environment")]
 create_new_environment environment:
-  env=$(echo '{{ environment }}' | tr ' ' '_'); \
-  if test -d "$(just _get_environment_directory '{{ environment }}')"; \
+  env=$(just _environment_name '{{ environment }}'); \
+  if just _confirm_environment "$env"; \
   then \
-    just _log error "Environment already exists; delete to recreate it: $env"; \
-    exit 1; \
+    just _log info "Environment already exist: '$env'. Nothing to do."; \
+    exit 0; \
   fi; \
+  just _log info "Creating new environment: '$env'"; \
   just _create_new_env_dir_structure "$env" && just _add_env_to_config "$env";
 
 [doc("Deletes an environment (CAREFUL!!!!)")]
@@ -94,7 +95,10 @@ _get_dependent_environments environment:
   just _run_yq "$env_data" '.depends_on | join(";")' | grep -Ev '^null$'; \
   exit 0;
 
-_environment_name environment: (_confirm_environment_in_config environment)
+_environment_name environment:
+  echo '{{ environment }}' | tr ' ' '_'
+
+_resolved_environment_name environment: (_confirm_environment_in_config environment)
   set +u; \
   env_data=$(sops --decrypt --extract '["environments"]["{{ environment }}"]' \
     --output-type yaml "{{ config_file }}") || exit 1; \
@@ -120,23 +124,23 @@ _delete_env_from_config environment:
   sops unset {{ config_file }} '["environments"]["{{ environment }}"]'
 
 _container_vol environment:
-  env=$(just _environment_name '{{ environment }}'); \
+  env=$(just _resolved_environment_name '{{ environment }}'); \
   echo "{{ container_vol }}-$env"
 
 _container_secrets_vol environment:
-  env=$(just _environment_name '{{ environment }}'); \
+  env=$(just _resolved_environment_name '{{ environment }}'); \
   echo "{{ container_secrets_vol }}-$env"
 
 _container_vol_shared environment:
-  env=$(just _environment_name '{{ environment }}'); \
+  env=$(just _resolved_environment_name '{{ environment }}'); \
   echo "{{ container_vol }}-shared-$env"
 
 _container_secrets_vol_shared environment:
-  env=$(just _environment_name '{{ environment }}'); \
+  env=$(just _resolved_environment_name '{{ environment }}'); \
   echo "{{ container_secrets_vol }}-shared-$env"
 
 _container_image environment:
-  env=$(just _environment_name '{{ environment }}'); \
+  env=$(just _resolved_environment_name '{{ environment }}'); \
   echo "{{ container_image }}-$env"
 
 _execute_containerized environment file ignore_not_found='false' custom_message='none': \
@@ -269,7 +273,7 @@ _confirm_environment_directory_exists environment:
   exit 1
 
 _get_property_from_env_config environment key:
-  env=$(just _environment_name '{{ environment }}'); \
+  env=$(just _resolved_environment_name '{{ environment }}'); \
   key=$(echo {{ key }} | \
     sed -E 's/^\.//' | \
     tr '.[]' '\n' | \
@@ -281,8 +285,7 @@ _get_property_from_env_config environment key:
   sops --decrypt --extract "$key" "{{ source_dir() }}/config.yaml" 2>/dev/null || true;
 
 _get_environment_directory environment:
-  env=$(just _environment_name '{{ environment }}'); \
-  echo "{{ source_dir() }}/environments/$env"
+  echo "{{ source_dir() }}/environments/$(just _environment_name '{{ environment }}')"
 
 _get_environment_directory_file environment fp:
   printf "%s/%s" $(just _get_environment_directory "{{ environment }}") "{{ fp }}"
