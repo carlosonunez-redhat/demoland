@@ -2,6 +2,7 @@
 _exec_tofu() {
   pushd /app/environment/infrastructure || return 1
   export TF_CLI_ARGS_APPLY='-auto-approve'
+  info "Running Tofu command: $*"
   /usr/local/bin/tofu "$@" && return 0
   popd || return 1
 }
