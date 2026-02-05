@@ -1,10 +1,9 @@
 # shellcheck shell=bash
 _exec_tofu() {
-  pushd /app/environment/infrastructure || return 1
-  export TF_CLI_ARGS_APPLY='-auto-approve'
-  info "Running Tofu command: $*"
-  /usr/local/bin/tofu "$@" && return 0
-  popd || return 1
+  >/dev/null pushd /app/environment/infrastructure || return 1
+  export TF_CLI_ARGS_apply='-auto-approve'
+  /usr/local/bin/tofu "$@" || return 1
+  >/dev/null popd || return 1
 }
 
 _delete_tofu_state_s3() {
@@ -14,17 +13,19 @@ _delete_tofu_state_s3() {
 }
 
 _init_tofu() {
-  test -f "$(_get_file_from_data_dir)/tofu_initialized" && return 0
+  test -n "$TOFU_REINIT" && rm -f "$(_get_file_from_data_dir tofu_initialized)"
+  test -f "$(_get_file_from_data_dir tofu_initialized)" && return 0
 
   _exec_tofu init --reconfigure \
     --backend-config="bucket=${TOFU_STATE_S3_BUCKET}" \
     --backend-config="key=${TOFU_STATE_KEY}" \
-    --backend-config="region=${AWS_DEFAULT_REGION}" &&
-    touch "$(_get_file_from_data_dir)/tofu_initialized"
+    --backend-config="region=${AWS_DEFAULT_REGION}" || return 1
+
+    touch "$(_get_file_from_data_dir tofu_initialized)"
 }
 
 tofu() {
-  _init_tofu
+  _init_tofu || return 1
   test "$1" == preflight && return 0
   _exec_tofu "$@" || return 1
   test "$1" == destroy && _delete_tofu_state_s3
@@ -38,7 +39,7 @@ create_tofu_state_s3() {
     error "Tofu couldn't init. Please define: $v"
     return 1
   done
-  2>/dev/null aws s3 ls "s3://${TOFU_STATE_S3_BUCKET}" && return 0
+  >/dev/null aws s3 ls "s3://${TOFU_STATE_S3_BUCKET}" && return 0
   >/dev/null aws s3 mb "s3://${TOFU_STATE_S3_BUCKET}"
 }
 
