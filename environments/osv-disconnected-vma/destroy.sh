@@ -14,5 +14,6 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 # If this environment has includes of its own, use the $ENVIRONMENT_INCLUDE_DIR environment
 # variable, like shown in the comment below.
 #
-# source "$ENVIRONMENT_INCLUDE_DIR/foo.sh"
+source "$ENVIRONMENT_INCLUDE_DIR/tofu.sh"
 
+tofu destroy

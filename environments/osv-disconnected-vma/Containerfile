@@ -1,0 +1,14 @@
+FROM curlimages/curl AS oc_client
+ENV OPENSHIFT_VERSION=4.19.9
+ENV OPENSHIFT_BINARIES_URL="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${OPENSHIFT_VERSION}"
+RUN \
+  url="${OPENSHIFT_BINARIES_URL}/openshift-client-linux"; \
+  uname -m | grep -Eq 'arm|aarch' && url="${url}-arm64"; \
+  curl -o /tmp/file.tar.gz "${url}.tar.gz"
+RUN tar -xvzf /tmp/file.tar.gz -C /tmp
+
+FROM fedora:41 AS final
+COPY --from=oc_client /tmp/oc /usr/bin/oc
+COPY --from=ghcr.io/opentofu/opentofu:1.9.1-minimal /usr/local/bin/tofu /usr/local/bin/tofu
+RUN dnf -y update
+RUN dnf -y install yq jq awscli openssh ssh-agent
