@@ -16,4 +16,3 @@ module "disconnected-sg-bastion-bridge" {
     }
   ]
 }
-
