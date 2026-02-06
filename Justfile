@@ -209,7 +209,16 @@ _ensure_container_secrets_vol_populated environment:
   env_data_enc=$(base64 -w 0 <<< "$env_data"); \
   {{ container_bin }} run --rm \
     -v "$vol:/secrets" \
-    bash:5 -c "echo '$env_data_enc' | base64 -d > /secrets/config.yaml"
+    bash:5 -c "echo '$env_data_enc' | base64 -d > /secrets/config.yaml"; \
+  set -eu; \
+  for secret in "$(echo "$env_data" | yq -r '.secrets | to_entries[]' | grep -Ev '^null$')"; \
+  do \
+    fname=$(yq -r '.value.name' <<< "$secret" | grep -Ev '^null$'); \
+    secret_data_enc=$(yq -r '.value.data | @base64' <<< "$secret"); \
+    {{ container_bin }} run --rm \
+      -v "$vol:/secrets" \
+      bash:5 -c "test -f /secrets/$fname && exit 0; echo '$secret_data_enc' |base64 -d > /secrets/$fname"; \
+  done;
 
 _ensure_container_volume_exists environment:
   set +u; \
