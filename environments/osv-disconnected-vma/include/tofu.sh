@@ -28,9 +28,24 @@ _init_tofu() {
 
 tofu() {
   _init_tofu || return 1
-  test "$1" == preflight && return 0
-  _exec_tofu "$@" || return 1
-  test "$1" == destroy && _delete_tofu_state_s3
+  case "${1,,}" in
+    preflight)
+      return 0
+      ;;
+    apply)
+      action=apply
+      test -n "$DRY_RUN" && action=plan
+      shift
+      _exec_tofu "$action" "$@" || return 1
+      ;;
+    destroy)
+      _exec_tofu "$@" || return 1
+      _delete_tofu_state_s3
+      ;;
+    *)
+      _exec_tofu "$@" || return 1
+      ;;
+  esac
 }
 
 create_tofu_state_s3() {
