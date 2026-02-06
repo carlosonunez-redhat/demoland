@@ -1,6 +1,8 @@
 # shellcheck shell=bash
 _exec_tofu() {
   >/dev/null pushd /app/environment/infrastructure || return 1
+  export TF_DATA_DIR="$(_get_file_from_data_dir 'tofu/data')"
+  export TF_PLUGIN_DIR="$(_get_file_from_data_dir 'tofu/plugins')"
   export TF_CLI_ARGS_apply='-auto-approve'
   /usr/local/bin/tofu "$@" || return 1
   >/dev/null popd || return 1

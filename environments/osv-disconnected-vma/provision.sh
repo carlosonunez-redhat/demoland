@@ -14,6 +14,13 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 # If this environment has includes of its own, use the $ENVIRONMENT_INCLUDE_DIR environment
 # variable, like shown in the comment below.
 #
+source "$ENVIRONMENT_INCLUDE_DIR/networking.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/tofu.sh"
 
+if ! this_ip=$(resolve_this_ip)
+then
+  error "Failed to resolve this machine's IP; cannot continue"
+  exit 1
+fi
+export TF_VAR_ssh_ip="$this_ip"
 tofu apply
