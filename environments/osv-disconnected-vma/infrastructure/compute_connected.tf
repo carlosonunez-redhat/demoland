@@ -9,12 +9,10 @@ module "connected-bastion-vm" {
 }
 
 resource "aws_network_interface" "bastion-bridge" {
-  subnet_id = module.disconnected_network.private_subnet[0]
-  private_ips_enabled = true
-  private_ips = cidrhost( module.disconnected_network.private_subnets[0], 254 )
-}
-
-resource "aws_network_interface_attachment" "bastion-bridge" {
-  instance_id = module.connected-bastion-vm.id
-  network_interface_id = aws_network_interface.bastion-disconnected.id
+  subnet_id = module.disconnected_network.private_subnets[0]
+  private_ips = [cidrhost( module.disconnected_network.private_subnets[0], 254 )]
+  attachment {
+    instance = module.connected-bastion-vm.id
+    device_index = 1
+  }
 }

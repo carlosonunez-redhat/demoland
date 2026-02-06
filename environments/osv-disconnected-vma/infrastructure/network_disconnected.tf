@@ -31,6 +31,7 @@ locals {
       "8080",
       "8443"
     ]
+  }
 }
 
 module "disconnected_network" {
@@ -52,7 +53,7 @@ module "disconnected-sg-bastion" {
   source = "terraform-aws-modules/security-group/aws"
   name = "bastion-nodes-sg-connected"
   description = "OCP control plane and workers"
-  vpc_id = module.connected-network.vpc_id
+  vpc_id = module.disconnected_network.vpc_id
   ingress_with_self = [{
     from_port = 0
     to_port = 0
@@ -79,8 +80,8 @@ module "disconnected-sg-ocp" {
     {
       from_port = 22
       to_port = 22
-      protocol = tcp
-      source_security_group_id = module.disconnected-bastion-sg.this_security_group_id
+      protocol = "tcp"
+      source_security_group_id = module.disconnected-sg-bastion.security_group_id
     }
   ]
 }
@@ -102,8 +103,8 @@ module "disconnected-sg-vsphere" {
     {
       from_port = 22
       to_port = 22
-      protocol = tcp
-      source_security_group_id = module.disconnected-bastion-sg.this_security_group_id
+      protocol = "tcp"
+      source_security_group_id = module.disconnected-sg-bastion.security_group_id
     }
   ]
 }
@@ -125,8 +126,8 @@ module "disconnected-sg-artifactory" {
     {
       from_port = 22
       to_port = 22
-      protocol = tcp
-      source_security_group_id = module.disconnected-bastion-sg.this_security_group_id
+      protocol = "tcp"
+      source_security_group_id = module.disconnected-sg-bastion.security_group_id
     }
   ]
 }
@@ -136,20 +137,20 @@ module "disconnected-sg-ocp-to-artifactory" {
   name = "artifactory-nodes-sg-disconnected"
   description = "Artifactory host"
   vpc_id = module.disconnected_network.vpc_id
-  ingress_with_source_security_group_id = flatten(
+  ingress_with_source_security_group_id = flatten([
     [ for kv in local.allowed_ports.artifactory_nodes : {
-      from_port = element(split(kv, ":"), 0)
-      to_port = element(split(kv, ":"), 0)
-      protocol = len(split(kv, ":")) == 3 ? element(split(kv, ":"), 2) : "tcp"
-      description = len(split(kv, ":")) == 2 ? element(split(kv, ":"), 1) : format("allow port '%d'", element(split(kv, ":"), 0))
-      source_security_group_id = module.disconnected-sg-openshift.this_security_group_id
+      from_port = tonumber(element(split(":", kv), 0))
+      to_port = tonumber(element(split(":", kv), 0))
+      protocol = length(split(":", kv)) == 3 ? element(split(":", kv), 2) : "tcp"
+      description = length(split(":", kv)) == 2 ? element(split(":", kv), 1) : format("allow port [%s]", element(split(":", kv), 0))
+      source_security_group_id = module.disconnected-sg-ocp.security_group_id
     }],
     [{
       from_port = 22
       to_port = 22
-      protocol = tcp
-      source_security_group_id = module.disconnected-bastion-sg.this_security_group_id
-    }
+      protocol = "tcp"
+      source_security_group_id = module.disconnected-sg-bastion.security_group_id
+    }]
   ])
 }
 
@@ -158,19 +159,19 @@ module "disconnected-sg-ocp-to-vsphere" {
   name = "artifactory-nodes-sg-disconnected"
   description = "Artifactory host"
   vpc_id = module.disconnected_network.vpc_id
-  ingress_with_source_security_group_id = flatten(
+  ingress_with_source_security_group_id = flatten([
     [ for kv in local.allowed_ports.vsphere_api_access : {
-      from_port = element(split(kv, ":"), 0)
-      to_port = element(split(kv, ":"), 0)
-      protocol = len(split(kv, ":")) == 3 ? element(split(kv, ":"), 2) : "tcp"
-      description = len(split(kv, ":")) == 2 ? element(split(kv, ":"), 1) : format("allow port '%d'", element(split(kv, ":"), 0))
-      source_security_group_id = module.disconnected-sg-openshift.this_security_group_id
+      from_port = tonumber(element(split(":", kv), 0))
+      to_port = tonumber(element(split(":", kv), 0))
+      protocol = length(split(":", kv)) == 3 ? element(split(":", kv), 2) : "tcp"
+      description = length(split(":", kv)) == 2 ? element(split(":", kv), 1) : format("allow port [%s]", element(split(":", kv), 0))
+      source_security_group_id = module.disconnected-sg-ocp.security_group_id
     }],
     [{
       from_port = 22
       to_port = 22
-      protocol = tcp
-      source_security_group_id = module.disconnected-bastion-sg.this_security_group_id
-    }
+      protocol = "tcp"
+      source_security_group_id = module.disconnected-sg-bastion.security_group_id
+    }]
   ])
 }

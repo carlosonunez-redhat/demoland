@@ -14,12 +14,12 @@ module "connected-sg-bastion" {
   source = "terraform-aws-modules/security-group/aws"
   name = "bastion-nodes-sg-connected"
   description = "OCP control plane and workers"
-  vpc_id = module.connected-network.vpc_id
+  vpc_id = module.connected_network.vpc_id
   ingress_with_self = [ for kv in local.allowed_ports.bastion_host : {
     from_port = 22
     to_port = 22
-    protocol = tcp
-    description = "SSH to bastion from '${var.ssh_ip}'"
+    protocol = "tcp"
+    description = "SSH to bastion from [${var.ssh_ip}]"
     cidr_blocks = "${var.ssh_ip}/22"
   }]
 }

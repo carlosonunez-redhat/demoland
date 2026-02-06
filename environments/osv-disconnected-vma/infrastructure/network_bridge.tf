@@ -11,8 +11,8 @@ module "disconnected-sg-bastion-bridge" {
     {
       from_port = 22
       to_port = 22
-      protocol = tcp
-      cidr_blocks = "${local.bastion_disconnected_ip}/32"
+      protocol = "tcp"
+      cidr_blocks = "${local.bastion_bridge_ip}/32"
     }
   ]
 }
