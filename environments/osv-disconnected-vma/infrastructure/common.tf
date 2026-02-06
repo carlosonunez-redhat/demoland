@@ -1,5 +1,5 @@
 data "tls_public_key" "ec2_key" {
-  private_key_pem = file("/secrets/ssh-key")
+  private_key_openssh = file("/secrets/ssh-key")
 }
 
 module "ec2_key" {
