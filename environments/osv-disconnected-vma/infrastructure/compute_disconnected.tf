@@ -2,6 +2,7 @@ module "disconnected-bastion-vm" {
   source = "terraform-aws-modules/ec2-instance/aws"
   name = "bastion"
   instance_type = "m8g.large"
+  ami = data.aws_ami.fedora_arm.id
   key_name = module.ec2_key.key_pair_name
   subnet_id = module.connected_network.private_subnets[0]
   vpc_security_group_ids = [ module.disconnected-sg-bastion-bridge.security_group_id ]
