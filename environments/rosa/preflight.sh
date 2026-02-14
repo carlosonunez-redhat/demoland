@@ -3,18 +3,18 @@
 #
 # This adds some functions for working with cloud providers, the config file, and
 # other useful things.
-source "$INCLUDE_DIR/helpers/aws.sh"
-source "$INCLUDE_DIR/helpers/config.sh"
-source "$INCLUDE_DIR/helpers/data.sh"
-source "$INCLUDE_DIR/helpers/errors.sh"
-source "$INCLUDE_DIR/helpers/logging.sh"
-source "$INCLUDE_DIR/helpers/install_config.sh"
-source "$INCLUDE_DIR/helpers/yaml.sh"
+source "../../include/helpers/aws.sh"
+source "../../include/helpers/config.sh"
+source "../../include/helpers/data.sh"
+source "../../include/helpers/errors.sh"
+source "../../include/helpers/logging.sh"
+source "../../include/helpers/install_config.sh"
+source "../../include/helpers/yaml.sh"
 
-# If this environment has includes of its own, use the $ENVIRONMENT_INCLUDE_DIR environment
+# If this environment has includes of its own, use the ./include environment
 # variable, like shown in the comment below.
 #
-source "$ENVIRONMENT_INCLUDE_DIR/rosa.sh"
+source "./include/rosa.sh"
 
 verify_aws_quotas() {
   info "Checking that AWS quotas are sufficient for ROSA"

@@ -1,7 +1,4 @@
 # shellcheck shell=bash
-source "$(dirname "$0")/../include/helpers/errors.sh"
-source "$(dirname "$0")/../include/helpers/yaml.sh"
-
 _config_file_in_data_dir() {
   printf '%s/openshift-install/install-config.yaml' "$(_get_file_from_data_dir)"
 }

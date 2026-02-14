@@ -176,7 +176,7 @@ _delete_aws_resources_from_cfn_stack() {
   }
   _run() {
     local stack_file
-    stack_file="$ENVIRONMENT_INCLUDE_DIR/cloudformation/${1}.yaml"
+    stack_file="./include/cloudformation/${1}.yaml"
     if ! test -f "$stack_file"
     then
       error "Stack file not found: $stack_file"
@@ -203,7 +203,7 @@ _create_cfn_stack() {
   }
   _run() {
     local stack_file
-    stack_file="$ENVIRONMENT_INCLUDE_DIR/cloudformation/${1}.yaml"
+    stack_file="./include/cloudformation/${1}.yaml"
     if ! test -f "$stack_file"
     then
       error "Stack file not found: $stack_file"
