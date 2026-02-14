@@ -40,8 +40,14 @@ environments:
                 - ENC[AES256_GCM,data:SljBndr6TwMPfInKgr+4yiptPNY=,iv:p4ppB/QbEL7PKRUl/+OJpzhjitLO9EOGrxFy6WxcRss=,tag:7Mf1J3M93slOIAi/lE7XwA==,type:str]
                 - AWS_PAGER=""
                 - TOFU_REINIT
+            cluster_config:
+                name: osv-example
             cloud_config:
                 aws:
+                    compute:
+                        instance_sizes:
+                            vm: m6g.large
+                            bare_metal: c5.metal
                     networking:
                         common:
                             availability_zones:
@@ -49,6 +55,8 @@ environments:
                                 - us-east-2b
                                 - us-east-2c
                         connected:
+                            dns:
+                                domain_name: sandbox1832.opentlc.com
                             cidr: 10.0.0.0/16
                             subnets:
                                 public:
@@ -60,6 +68,8 @@ environments:
                                     - 10.0.252.0/24
                                     - 10.0.253.0/24
                         disconnected:
+                            dns:
+                                domain_name: private.network
                             cidr: 172.17.0.0/16
                             subnets:
                                 public:
@@ -183,8 +193,8 @@ environments:
                     # encrypted
                     data: ENC[AES256_GCM,data:U2eobbE6upIEWrxHBbiL1zSEMdXQBDwRWpiZyGog9UJMPT/JwpXKdy5pD0wR2O3Gg/QVR2lJH4pZGJum/Xeuccm6/rFfxLP913xX76Ps+W6AP10YowpbOAjcX/bubm+FA5WZnIs0CFr8LUSzmKzrKxv1ITL5vxECbXOseszrMvBnDUoduAj5b8X31/FmPzPJQ1hBIQm66Ko9qB5yY09MpxeWmWOB4ZjR6n2tbsRve886UEq922SdhaldEozb2zq+OC4U1eKBOc4Rq0JoWCam2NnM/Y8vCrgOd9wo5taB+RAR4v+0WqRZlZtFoRxv8L2BAZkuZ3mObqbb5PcH/a/w5HzJ/V82mm5UN3Ie6rBLR1W2SsdWh4ZHE2qhYMpgU/XreRTGwG+/b3hU/z2ik7wgVo7MIXTvDpGqN8tf70IzmMXX2EpHWQMAO4Re+UB8b7GP7xFREbCjC7hnFQoel3AJNUPVdFFsGFdgDHyRa09BamVfnlhWtVfChrY2xl1X5NroZZT7Qn9uOvw6gj7mJhrmbq0JfCaetecTwqY=,iv:/j7qGCxTK0lBUSONjta9cn2A3X4idjk3zamBgFkFLbc=,tag:IR2K25bjQdDe7+KU/OyyCg==,type:str]
 sops:
-    lastmodified: "2026-02-05T18:21:07Z"
-    mac: ENC[AES256_GCM,data:w8jWGlaK7/bplevf9OzzW7HiarBzaYtlXCMA9wYs4nJWsuecz+umA9YozxQ0ZsNvcYJjDja8D2g8QQHqUErclCkOW9bw8KVACOdXXSihbkE96pPxpEbR5xygWQxg1Ka1XsvaCuSlb6RxyVroWbVJnheCxS3RvfvThyVRtOGcxeA=,iv:NT9I87WsPbukR4uxzGavgyVkD+hG19+hDTntRurnfv4=,tag:eWJTznV7wRljT977W/TeRg==,type:str]
+    lastmodified: "2026-02-13T20:31:14Z"
+    mac: ENC[AES256_GCM,data:tvEDODlBpckpFh+Y9i/aWJQtkgQyj9QQ28VL0ZUzfkRDloXIx/UaGLel2XuCh0DpgeGtoeFTnPCgVEk2MgZmahvNMImiMbCQPrP9ekT2Fe2Tc5hd6p/pXaPBeAm/ozT84T0xm7dD2wdej+HKJIoD90docVi74jjTz+SSQWcsf60=,iv:YmuNvRydRZOYbAKzkZAzf8k5BgGKJnWZFIYg021fo3Q=,tag:mt2ysPp8PpjEHz5I23I67Q==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-

@@ -1,19 +1,29 @@
 #!/usr/bin/env bash
+# shellcheck source-path=../include source-path=./include
 # Destroys resources created within this environment.
 #
 # This adds some functions for working with cloud providers, the config file, and
 # other useful things.
-source "$INCLUDE_DIR/helpers/aws.sh"
-source "$INCLUDE_DIR/helpers/config.sh"
-source "$INCLUDE_DIR/helpers/data.sh"
-source "$INCLUDE_DIR/helpers/errors.sh"
-source "$INCLUDE_DIR/helpers/logging.sh"
-source "$INCLUDE_DIR/helpers/install_config.sh"
-source "$INCLUDE_DIR/helpers/yaml.sh"
-
-# If this environment has includes of its own, use the $ENVIRONMENT_INCLUDE_DIR environment
+source "../../include/helpers/aws.sh"
+source "../../include/helpers/config.sh"
+source "../../include/helpers/data.sh"
+source "../../include/helpers/errors.sh"
+source "../../include/helpers/logging.sh"
+source "../../include/helpers/install_config.sh"
+source "../../include/helpers/yaml.sh"
+# If this environment has includes of its own, use the ./include environment
 # variable, like shown in the comment below.
 #
-source "$ENVIRONMENT_INCLUDE_DIR/tofu.sh"
+source "./include/tofu.sh"
+source "./include/osv.sh"
 
-tofu destroy
+tear_everything_down() {
+  tofu destroy
+}
+
+delete_bare_metal_instances_sentinel() {
+  rm -r "$(_bare_metal_instances_sentinel)"
+}
+
+tear_everything_down
+delete_bare_metal_instances_sentinel
