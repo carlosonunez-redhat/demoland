@@ -4,6 +4,7 @@ _exec_tofu() {
   export TF_DATA_DIR="$(_get_file_from_data_dir 'tofu/data')"
   export TF_PLUGIN_DIR="$(_get_file_from_data_dir 'tofu/plugins')"
   export TF_CLI_ARGS_apply='-auto-approve'
+  test -n "$TOFU_DISABLE_REFRESH" && export TF_CLI_ARGS_apply="$TF_CLI_ARGS_apply -refresh=false"
   /usr/local/bin/tofu "$@" || return 1
   >/dev/null popd || return 1
 }

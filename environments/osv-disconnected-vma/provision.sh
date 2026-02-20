@@ -15,7 +15,6 @@ source "../../include/helpers/yaml.sh"
 # variable, like shown in the comment below.
 #
 source "./include/bastion.sh"
-source "./include/networking.sh"
 source "./include/osv.sh"
 source "./include/tofu.sh"
 
