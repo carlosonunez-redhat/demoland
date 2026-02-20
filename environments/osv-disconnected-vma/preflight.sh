@@ -16,6 +16,30 @@ source "../../include/helpers/yaml.sh"
 #
 source "./include/tofu.sh"
 
+verify_config_keys() {
+  local k
+  for k in '.deploy.cluster_config.cluster_name' \
+    '.deploy.cloud_config.aws.networking.connected.dns.domain_name' \
+    '.deploy.cloud_config.aws.networking.disconnected.dns.domain_name'
+  do
+    test -n "$(_get_from_config "$k")" && continue
+    error "Key not defined in config; please define it: $k"
+    return 1
+  done
+}
+
+verify_secrets() {
+  local f
+  for f in 'ssh-key' 'ssh-user-bastion'
+  do
+    test -f "$(_get_file_from_secrets_dir "$f")" && continue
+    error "Secret not found; please ensure it exists in config: $f"
+    return 1
+  done
+}
+
 set -e
+verify_config_keys
+verify_secrets
 create_tofu_state_s3
 tofu preflight
