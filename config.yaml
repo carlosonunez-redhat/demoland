@@ -17,7 +17,14 @@ environments:
                 - ANOTHER_KEY=another value
         # these secrets will get mounted into a folder called /secrets within the
         # container that builds your cluster.
-        secrets: {}
+        secrets:
+            # name: the name of the file that will contain this secret.
+            - name: example
+              # mode: the file mode to apply onto the secret (MUST be a string)
+              mode: "0600"
+              # encrypted
+              #ENC[AES256_GCM,data:2AYntBWzoWMqHz5LVIEfVPslpSNIiJnYZZ3cqp/WHQq44LdNWSMyLWzET8o0oUM6e91T4XIynaGdnYTy1ubulPsiBMlRljRTEExzRDdmyFB1eXNzS4zrR9ZtsWl6ao68/A==,iv:hzv/buxJqZg0JIYwuO0YEW1XfrTZ5Br1mAe1OM6sdos=,tag:Khc/KnBRaGlpjwZfO5K7Mw==,type:comment]
+              data: ENC[AES256_GCM,data:6UDzSd+9FA/NHDM=,iv:X1pFFpGbitwmy2OKxYFeWJNpvrNsN/hWdlJJvsOJLeE=,tag:FQLWIFifovsUUi7WlkxYuA==,type:str]
     osv-disconnected-vma:
         version: 20260124
         alias_of: ""
@@ -40,6 +47,7 @@ environments:
                 - ENC[AES256_GCM,data:SljBndr6TwMPfInKgr+4yiptPNY=,iv:p4ppB/QbEL7PKRUl/+OJpzhjitLO9EOGrxFy6WxcRss=,tag:7Mf1J3M93slOIAi/lE7XwA==,type:str]
                 - AWS_PAGER=""
                 - TOFU_REINIT
+                - TOFU_DISABLE_REFRESH=1
             cluster_config:
                 name: osv-example
             cloud_config:
@@ -83,6 +91,7 @@ environments:
         secrets:
             ssh_key:
                 name: ssh-key
+                mode: "0644"
                 # encrypted
                 data: ENC[AES256_GCM,data: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,iv:qSw9KDSfn0RdOieZLcD3ryJhSov1I0HaUrrya6xMh0c=,tag:9Zg6BNfo8szZ47F8izJ4rA==,type:str]
     rosa:
@@ -193,8 +202,8 @@ environments:
                     # encrypted
                     data: ENC[AES256_GCM,data:U2eobbE6upIEWrxHBbiL1zSEMdXQBDwRWpiZyGog9UJMPT/JwpXKdy5pD0wR2O3Gg/QVR2lJH4pZGJum/Xeuccm6/rFfxLP913xX76Ps+W6AP10YowpbOAjcX/bubm+FA5WZnIs0CFr8LUSzmKzrKxv1ITL5vxECbXOseszrMvBnDUoduAj5b8X31/FmPzPJQ1hBIQm66Ko9qB5yY09MpxeWmWOB4ZjR6n2tbsRve886UEq922SdhaldEozb2zq+OC4U1eKBOc4Rq0JoWCam2NnM/Y8vCrgOd9wo5taB+RAR4v+0WqRZlZtFoRxv8L2BAZkuZ3mObqbb5PcH/a/w5HzJ/V82mm5UN3Ie6rBLR1W2SsdWh4ZHE2qhYMpgU/XreRTGwG+/b3hU/z2ik7wgVo7MIXTvDpGqN8tf70IzmMXX2EpHWQMAO4Re+UB8b7GP7xFREbCjC7hnFQoel3AJNUPVdFFsGFdgDHyRa09BamVfnlhWtVfChrY2xl1X5NroZZT7Qn9uOvw6gj7mJhrmbq0JfCaetecTwqY=,iv:/j7qGCxTK0lBUSONjta9cn2A3X4idjk3zamBgFkFLbc=,tag:IR2K25bjQdDe7+KU/OyyCg==,type:str]
 sops:
-    lastmodified: "2026-02-20T00:26:42Z"
-    mac: ENC[AES256_GCM,data:3UaNBQFHyAQeNmqjokqsg95ZLaiLo6hlmNTmjG/gwRlwBTJXomwGiJ/tZ/TSXRo2QbisNOmnrQdpQ/Xo9YNjoQFqP9/Rc7lOyZA1KB+akxW4Wd718iVlNL+fmp+CHJyFf4eXYzAp3vScoDbnfgmWDwww+L5+XGYr1DoXDwxGEdc=,iv:eklgL+kB49puEoaPbEwadI2f2VDzV+n5Q9adOXTfMTQ=,tag:IJo08II+9FMHIhayb8jmcA==,type:str]
+    lastmodified: "2026-02-20T17:46:00Z"
+    mac: ENC[AES256_GCM,data:829C44X7MYdM74UpqyNGhvTQWXi9cgMXTtMrDJgMK/uSBv7f/EK+Q+EeJx7p+WgTktf73YKJrCiSRV4lkvlwXD5AoEyuQIHrdEuyS4u2joogSjHMHE25wJaH5muuubvvOqmXEvN9kiOY80Ygi+0zA1bMTF5QFqO9fiRjmERLfr4=,iv:CIcSx2CYgqpT1qPng/T0eCYW5EsHuqUgtt1xp9J94uc=,tag:s8dVpWFdpKFkwFOjEaE82Q==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
