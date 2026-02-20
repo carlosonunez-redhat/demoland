@@ -166,13 +166,15 @@ _execute_containerized environment file ignore_not_found='false' custom_message=
     -v "$(just _container_secrets_vol {{ environment }}):/secrets" \
     -v "$(just _container_vol_shared {{ environment }}):/shared/data" \
     -v "$(just _container_secrets_vol_shared {{ environment }}):/shared/secrets" \
-    -w /app); \
+    -v "$PWD/include:/include" \
+    -v "$(just _get_environment_directory {{ environment }}):/app/environment" \
+    -w /app/environment); \
   while read var; \
   do command+=(-e "$var"); \
   done < <(just _run_yq \
     "$(just _get_property_from_env_config {{ environment }} '.deploy.environment_vars')" \
     '.[]'); \
-  command+=($(just _container_image {{ environment }}) /app/environment/{{ file }}); \
+  command+=($(just _container_image {{ environment }}) ./{{ file }}); \
   set +u; \
   test -n "$SHOW_CONTAINER_COMMANDS" && just _log info "Running containerized command: ${command[@]}"; \
   set -u; \
