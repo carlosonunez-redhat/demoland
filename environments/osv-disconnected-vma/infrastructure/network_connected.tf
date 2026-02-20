@@ -26,4 +26,11 @@ module "connected-sg-bastion" {
     description = "SSH to bastion from [${var.ssh_ip}]"
     cidr_blocks = "${var.ssh_ip}/32"
   }]
+  egress_with_cidr_blocks = [{
+    from_port = 0
+    to_port = 0
+    protocol = -1
+    description = "Allow all outbound"
+    cidr_blocks = "0.0.0.0/0"
+  }]
 }

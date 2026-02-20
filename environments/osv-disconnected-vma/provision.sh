@@ -46,24 +46,24 @@ confirm_dns_records() {
   done
 }
 
-confirm_public_bastion_accessible() {
-  exec_in_public_network whoami
+confirm_connected_bastion_accessible() {
+  exec_in_connected_network '>/dev/null whoami'
 }
 
 confirm_disconnected_bastion_accessible() {
-  exec_in_disconnected_network whoami
+  exec_in_disconnected_network '>/dev/null whoami'
 }
 
 set -e
 provision_base_infrastructure_and_vms
-confirm_public_bastion_accessible
-confirm_private_bastion_accessible
-#install_oc_client_into_private_bastion
+confirm_connected_bastion_accessible
+confirm_disconnected_bastion_accessible
+#install_oc_client_into_disconnected_bastion
 #upload_rhcos_images_to_s3_bucket
-#verify_rhcos_images_accessible_from_private_bastion
+#verify_rhcos_images_accessible_from_disconnected_bastion
 #generate_rhcos_ignition_files
 #upload_rhcos_ignition_files_to_s3_bucket
-#verify_rhcos_ignition_files_accessible_from_private_bastion
+#verify_rhcos_ignition_files_accessible_from_disconnected_bastion
 #create_bare_metal_instances
 #provision_bare_metal_instances
 #confirm_dns_records
