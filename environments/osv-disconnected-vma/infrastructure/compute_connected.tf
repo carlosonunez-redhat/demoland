@@ -7,4 +7,5 @@ module "connected-bastion-vm" {
   subnet_id = module.connected_network.public_subnets[0]
   vpc_security_group_ids = [ module.connected-sg-bastion.security_group_id ]
   associate_public_ip_address = true
+  create_security_group = false
 }

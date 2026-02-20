@@ -7,6 +7,7 @@ module "disconnected-bastion-vm" {
   key_name = module.ec2_key.key_pair_name
   subnet_id = module.disconnected_network.private_subnets[0]
   vpc_security_group_ids = [ module.disconnected-sg-bastion.security_group_id ]
+  create_security_group = false
 }
 
 module "disconnected-artifactory-vm" {
@@ -17,6 +18,7 @@ module "disconnected-artifactory-vm" {
   key_name = module.ec2_key.key_pair_name
   subnet_id = module.disconnected_network.private_subnets[0]
   vpc_security_group_ids = [ module.disconnected-sg-ocp-to-artifactory.security_group_id ]
+  create_security_group = false
 }
 
 module "disconnected-ocp-cp-nodes-bm" {
@@ -28,6 +30,7 @@ module "disconnected-ocp-cp-nodes-bm" {
   key_name = module.ec2_key.key_pair_name
   subnet_id = module.disconnected_network.private_subnets[0]
   vpc_security_group_ids = [ module.disconnected-sg-ocp-to-artifactory.security_group_id ]
+  create_security_group = false
 }
 
 module "disconnected-ocp-worker-nodes-bm" {
@@ -39,6 +42,7 @@ module "disconnected-ocp-worker-nodes-bm" {
   key_name = module.ec2_key.key_pair_name
   subnet_id = module.disconnected_network.private_subnets[0]
   vpc_security_group_ids = [ module.disconnected-sg-ocp-to-artifactory.security_group_id ]
+  create_security_group = false
 }
 
 module "disconnected-esx-host-bm" {
@@ -50,4 +54,5 @@ module "disconnected-esx-host-bm" {
   key_name = module.ec2_key.key_pair_name
   subnet_id = module.disconnected_network.private_subnets[0]
   vpc_security_group_ids = [ module.disconnected-sg-ocp-to-artifactory.security_group_id ]
+  create_security_group = false
 }
