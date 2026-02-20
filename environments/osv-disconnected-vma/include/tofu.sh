@@ -56,7 +56,7 @@ create_tofu_state_s3() {
     error "Tofu couldn't init. Please define: $v"
     return 1
   done
-  >/dev/null aws s3 ls "s3://${TOFU_STATE_S3_BUCKET}" && return 0
+  &>/dev/null aws s3 ls "s3://${TOFU_STATE_S3_BUCKET}" && return 0
   >/dev/null aws s3 mb "s3://${TOFU_STATE_S3_BUCKET}"
 }
 
