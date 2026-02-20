@@ -1,8 +1,5 @@
 locals {
   allowed_ports = {
-    bastion_host = [
-      "22"
-    ]
     openshift_nodes = [
       "67:dnsmasq",
       "68:dnsmasq",
@@ -51,15 +48,14 @@ module "disconnected_network" {
 
 module "disconnected-sg-bastion" {
   source = "terraform-aws-modules/security-group/aws"
-  name = "bastion-nodes-sg-connected"
-  description = "OCP control plane and workers"
+  name = "bastion-nodes-sg-disconnected"
+  description = "SSH access into bastion inside disconnected network"
   vpc_id = module.disconnected_network.vpc_id
-  ingress_with_self = [{
-    from_port = 0
-    to_port = 0
-    protocol = -1
-    self = true
-    cidr_blocks = "${var.ssh_ip}/22"
+  ingress_with_cidr_blocks = [{
+    from_port = 22
+    to_port = 22
+    protocol = "tcp"
+    cidr_blocks = "${local.bastion_bridge_ip}/32"
   }]
 }
 
