@@ -7,7 +7,11 @@ module "connected_network" {
   azs = local.options.cloud_config.aws.networking.common.availability_zones
   public_subnets = local.options.cloud_config.aws.networking.connected.subnets.public
   private_subnets = local.options.cloud_config.aws.networking.connected.subnets.private
-  enable_nat_gateway = true
+}
+
+resource "aws_vpc_block_public_access_exclusion" "connected_network" {
+  vpc_id = module.connected_network.vpc_id
+  internet_gateway_exclusion_mode = "allow-bidirectional"
 }
 
 module "connected-sg-bastion" {
