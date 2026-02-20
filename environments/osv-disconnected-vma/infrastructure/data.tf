@@ -8,3 +8,7 @@ data "tls_public_key" "ec2_key" {
 }
 
 data "aws_region" "current" {}
+
+data "aws_route53_zone" "public" {
+  name = "${local.options.cloud_config.aws.networking.connected.dns.domain_name}."
+}
