@@ -18,11 +18,7 @@ source "./include/tofu.sh"
 source "./include/osv.sh"
 
 tear_everything_down() {
-  tofu destroy
-}
-
-delete_bare_metal_instances_sentinel() {
-  rm -r "$(_bare_metal_instances_sentinel)"
+  exec_tofu destroy
 }
 
 tear_everything_down

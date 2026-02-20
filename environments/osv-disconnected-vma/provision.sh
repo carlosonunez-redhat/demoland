@@ -20,14 +20,7 @@ source "./include/osv.sh"
 source "./include/tofu.sh"
 
 provision_base_infrastructure_and_vms() {
-  if ! this_ip=$(resolve_this_ip)
-  then
-    error "Failed to resolve this machine's IP; cannot continue"
-    exit 1
-  fi
-  export TF_VAR_ssh_ip="$this_ip"
-  export TF_VAR_bare_metal_creation_sentinel_file="$(_bare_metal_instances_sentinel)"
-  tofu apply
+  exec_tofu apply
 }
 
 confirm_dns_records() {
