@@ -54,11 +54,35 @@ confirm_disconnected_bastion_accessible() {
   exec_in_disconnected_network '>/dev/null whoami'
 }
 
+download_packages_in_connected_bastion() {
+  packages="curl rsync"
+  exec_in_connected_network "sudo dnf -y install $packages"
+}
+
+copy_private_key_into_bastion() {
+  cat "$(_get_file_from_secrets_dir 'ssh-key')" |
+    exec_in_connected_network 'cat - > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa'
+}
+
+install_oc_client_into_disconnected_bastion() {
+  version=$(_get_from_config '.deploy.cluster_config.cluster_version')
+  url="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/$version/openshift-client-linux.tar.gz"
+  exec_in_connected_network "mkdir -p /tmp/oc && \
+    { test -f /tmp/oc_client.tar.gz || curl -sSL -o /tmp/oc_client.tar.gz '$url'; } &&  \
+    tar -xzf /tmp/oc_client.tar.gz -C /tmp/oc"
+  exec_in_connected_network "test -f /tmp/oc/oc" || return 1
+  exec_in_disconnected_network 'mkdir -p $HOME/.local/bin'
+  rsync_into_disconnected_network /tmp/oc/oc '$HOME/.local/bin'
+  exec_in_disconnected_network 'chmod +x $HOME/.local/bin/oc && oc version --client | grep -q Client'
+}
+
 set -e
 provision_base_infrastructure_and_vms
 confirm_connected_bastion_accessible
 confirm_disconnected_bastion_accessible
-#install_oc_client_into_disconnected_bastion
+copy_private_key_into_bastion
+download_packages_in_connected_bastion
+install_oc_client_into_disconnected_bastion
 #upload_rhcos_images_to_s3_bucket
 #verify_rhcos_images_accessible_from_disconnected_bastion
 #generate_rhcos_ignition_files

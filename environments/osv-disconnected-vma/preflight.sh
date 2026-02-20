@@ -19,6 +19,7 @@ source "./include/tofu.sh"
 verify_config_keys() {
   local k
   for k in '.deploy.cluster_config.cluster_name' \
+    '.deploy.cluster_config.cluster_version' \
     '.deploy.cloud_config.aws.networking.connected.dns.domain_name' \
     '.deploy.cloud_config.aws.networking.disconnected.dns.domain_name'
   do
