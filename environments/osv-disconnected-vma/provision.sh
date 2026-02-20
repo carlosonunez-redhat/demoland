@@ -14,7 +14,9 @@ source "../../include/helpers/yaml.sh"
 # If this environment has includes of its own, use the ./include environment
 # variable, like shown in the comment below.
 #
+source "./include/bastion.sh"
 source "./include/networking.sh"
+source "./include/osv.sh"
 source "./include/tofu.sh"
 
 provision_base_infrastructure_and_vms() {
@@ -24,6 +26,7 @@ provision_base_infrastructure_and_vms() {
     exit 1
   fi
   export TF_VAR_ssh_ip="$this_ip"
+  export TF_VAR_bare_metal_creation_sentinel_file="$(_bare_metal_instances_sentinel)"
   tofu apply
 }
 
@@ -59,7 +62,7 @@ confirm_disconnected_bastion_accessible() {
   exec_in_disconnected_network whoami
 }
 
-
+set -e
 provision_base_infrastructure_and_vms
 confirm_public_bastion_accessible
 confirm_private_bastion_accessible
