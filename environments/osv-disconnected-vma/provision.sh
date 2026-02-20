@@ -28,7 +28,7 @@ confirm_dns_records() {
   }
 
   cluster_name=$(_get_from_config '.deploy.cluster_config.cluster_name')
-  domain_name=$(_get_from_config '.deploy.cloud_config.aws.networking.common.dns.domain_name')
+  domain_name=$(_get_from_config '.deploy.cloud_config.aws.networking.connected.dns.domain_name')
   
   for ocp_component in apps api api-int bootstrap control-plane worker
   do
