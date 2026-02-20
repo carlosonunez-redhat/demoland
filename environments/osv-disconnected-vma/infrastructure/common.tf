@@ -8,38 +8,39 @@ data "aws_ami" "ipxe" {
   most_recent = true
   filter {
     name = "name"
-    values = "iPXE*"
+    values = [ "iPXE*" ]
   }
   filter {
     name = "architecture"
-    values = "x86_64"
+    values = [ "x86_64" ]
   }
   filter {
     name = "virtualization-type"
-    values = "hvm"
+    values = [ "hvm" ]
   }
   filter {
     name = "owner-id"
-    values = "833372943033" # source: https://ipxe.org/howto/ec2
+    values = [ "833372943033" ] # source: https://ipxe.org/howto/ec2
+  }
 }
 
 data "aws_ami" "fedora_arm" {
   most_recent = true
   filter {
     name = "name"
-    values = "Fedora-Cloud-41*"
+    values = [ "Fedora-Cloud-Base*-43-*" ]
   }
   filter {
     name = "owner-id"
-    values = "125523088429" # source: https://wiki.centos.org/Cloud(2f)AWS.html
+    values = [ "125523088429" ] # source: https://wiki.centos.org/Cloud(2f)AWS.html
   }
   filter {
     name = "architecture"
-    values = "arm64"
+    values = [ "arm64" ]
   }
   filter {
     name = "virtualization-type"
-    values = "hvm"
+    values = [ "hvm" ]
   }
 }
 
@@ -47,18 +48,18 @@ data "aws_ami" "fedora_x86" {
   most_recent = true
   filter {
     name = "name"
-    values = "Fedora-Cloud-41*"
+    values = [ "Fedora-Cloud-Base*-43-*" ]
   }
   filter {
     name = "owner-id"
-    values = "125523088429" # source: https://wiki.centos.org/Cloud(2f)AWS.html
+    values = [ "125523088429" ] # source: https://wiki.centos.org/Cloud(2f)AWS.html
   }
   filter {
     name = "architecture"
-    values = "x86_64"
+    values = [ "x86_64" ]
   }
   filter {
     name = "virtualization-type"
-    values = "hvm"
+    values = [ "hvm" ]
   }
 }
