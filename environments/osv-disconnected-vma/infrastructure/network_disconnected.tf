@@ -80,6 +80,13 @@ module "disconnected-sg-ocp" {
       source_security_group_id = module.disconnected-sg-bastion.security_group_id
     }
   ]
+  egress_with_cidr_blocks = [{
+    from_port = 0
+    to_port = 0
+    protocol = -1
+    description = "Allow all outbound"
+    cidr_blocks = local.options.cloud_config.aws.networking.disconnected.cidr
+  }]
 }
 
 module "disconnected-sg-vsphere" {
@@ -103,6 +110,13 @@ module "disconnected-sg-vsphere" {
       source_security_group_id = module.disconnected-sg-bastion.security_group_id
     }
   ]
+  egress_with_cidr_blocks = [{
+    from_port = 0
+    to_port = 0
+    protocol = -1
+    description = "Allow all outbound"
+    cidr_blocks = local.options.cloud_config.aws.networking.disconnected.cidr
+  }]
 }
 
 module "disconnected-sg-artifactory" {
@@ -126,6 +140,13 @@ module "disconnected-sg-artifactory" {
       source_security_group_id = module.disconnected-sg-bastion.security_group_id
     }
   ]
+  egress_with_cidr_blocks = [{
+    from_port = 0
+    to_port = 0
+    protocol = -1
+    description = "Allow all outbound"
+    cidr_blocks = local.options.cloud_config.aws.networking.disconnected.cidr
+  }]
 }
 
 module "disconnected-sg-ocp-to-artifactory" {
@@ -148,6 +169,13 @@ module "disconnected-sg-ocp-to-artifactory" {
       source_security_group_id = module.disconnected-sg-bastion.security_group_id
     }]
   ])
+  egress_with_cidr_blocks = [{
+    from_port = 0
+    to_port = 0
+    protocol = -1
+    description = "Allow all outbound"
+    cidr_blocks = local.options.cloud_config.aws.networking.disconnected.cidr
+  }]
 }
 
 module "disconnected-sg-ocp-to-vsphere" {
@@ -170,4 +198,11 @@ module "disconnected-sg-ocp-to-vsphere" {
       source_security_group_id = module.disconnected-sg-bastion.security_group_id
     }]
   ])
+  egress_with_cidr_blocks = [{
+    from_port = 0
+    to_port = 0
+    protocol = -1
+    description = "Allow all outbound"
+    cidr_blocks = local.options.cloud_config.aws.networking.disconnected.cidr
+  }]
 }
