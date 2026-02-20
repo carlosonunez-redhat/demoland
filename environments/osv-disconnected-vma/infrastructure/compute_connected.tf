@@ -8,4 +8,8 @@ module "connected-bastion-vm" {
   vpc_security_group_ids = [ module.connected-sg-bastion.security_group_id ]
   associate_public_ip_address = true
   create_security_group = false
+  root_block_device = {
+    type       = "gp3"
+    size       = 100
+  }
 }
