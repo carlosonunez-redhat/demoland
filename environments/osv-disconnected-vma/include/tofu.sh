@@ -12,6 +12,7 @@ _exec_tofu() {
 _delete_tofu_state_s3() {
   # shellcheck disable=SC2016 # (not trying to run code here)
   info "Destroying Tofu state bucket post "'`tofu destroy`'
+  aws s3 rm --recursive "s3://${TOFU_STATE_S3_BUCKET}"
   aws s3 rb "s3://${TOFU_STATE_S3_BUCKET}"
 }
 

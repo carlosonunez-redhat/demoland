@@ -35,13 +35,24 @@ exec_in_disconnected_network() {
     "$@"
 }
 
+exec_in_disconnected_node() {
+  local host
+  host="$1"
+  exec_in_disconnected_network "ssh -o StrictHostKeyChecking=no \
+    -o UserKnownHostsFile=/dev/null \
+    -o LogLevel=quiet \
+    -i /home/$(_bastion_user)/.ssh/id_rsa \
+    $host -- \
+    '${*:2}'"  
+}
+
 rsync_into_disconnected_network() {
   local src dest
   src="$1"
   dest="$2"
+  exec_in_disconnected_network "test -f $dest" && return 0
   exec_in_connected_network rsync \
-    -i "/home/$(_bastion_user)/.ssh/id_rsa" \
-    -e "'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'" \
+    -e "'ssh -i /home/$(_bastion_user)/.ssh/id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'" \
     -azv \
     "$src" \
       "$(_bastion_user)@$(_bastion_disconnected_hostname):$dest"

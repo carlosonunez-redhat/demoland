@@ -17,3 +17,13 @@ resource "aws_route53_record" "disconnected-bastion-vm" {
     module.disconnected-bastion-vm.private_ip
   ]
 }
+
+resource "aws_route53_record" "disconnected-artifactory-vm" {
+  zone_id = aws_route53_zone.disconnected.id
+  name = "registry"
+  type = "A"
+  ttl = 1
+  records = [
+    module.disconnected-bastion-vm.private_ip
+  ]
+}
