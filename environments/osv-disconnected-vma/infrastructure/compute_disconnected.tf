@@ -21,7 +21,10 @@ module "disconnected-artifactory-vm" {
   ami = data.aws_ami.fedora_x86.id
   key_name = module.ec2_key.key_pair_name
   subnet_id = module.disconnected_network.private_subnets[0]
-  vpc_security_group_ids = [ module.disconnected-sg-ocp-to-artifactory.security_group_id ]
+  vpc_security_group_ids = [
+    module.disconnected-sg-artifactory.security_group_id,
+    module.disconnected-sg-ocp-to-artifactory.security_group_id
+  ]
   create_security_group = false
   root_block_device = {
     type       = "gp3"

@@ -46,16 +46,37 @@ module "disconnected_network" {
   }
 }
 
+# Allow instances to access AWS's S3 EPEL repositories.
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id = module.disconnected_network.vpc_id
+  service_name = data.aws_vpc_endpoint_service.s3.service_name
+}
+
 module "disconnected-sg-bastion" {
   source = "terraform-aws-modules/security-group/aws"
   name = "bastion-nodes-sg-disconnected"
   description = "SSH access into bastion inside disconnected network"
   vpc_id = module.disconnected_network.vpc_id
+  ingress_with_self = [
+    {
+      self = true
+      from_port = 0
+      to_port = 0
+      protocol = "-1"
+    }
+  ]
   ingress_with_cidr_blocks = [{
     from_port = 22
     to_port = 22
     protocol = "tcp"
     cidr_blocks = "${local.bastion_bridge_ip}/32"
+  }]
+  egress_with_cidr_blocks = [{
+    from_port = 0
+    to_port = 0
+    protocol = -1
+    description = "Allow all outbound"
+    cidr_blocks = local.options.cloud_config.aws.networking.disconnected.cidr
   }]
 }
 
@@ -72,14 +93,12 @@ module "disconnected-sg-ocp" {
       protocol = "-1"
     }
   ]
-  ingress_with_source_security_group_id = [
-    {
-      from_port = 22
-      to_port = 22
-      protocol = "tcp"
-      source_security_group_id = module.disconnected-sg-bastion.security_group_id
-    }
-  ]
+  ingress_with_source_security_group_id = [ for p in [22,443,6443]: {
+    from_port = p
+    to_port = p
+    protocol = "tcp"
+    source_security_group_id = module.disconnected-sg-bastion.security_group_id
+  } ]
   egress_with_cidr_blocks = [{
     from_port = 0
     to_port = 0
@@ -102,14 +121,12 @@ module "disconnected-sg-vsphere" {
       protocol = "-1"
     }
   ]
-  ingress_with_source_security_group_id = [
-    {
-      from_port = 22
-      to_port = 22
-      protocol = "tcp"
-      source_security_group_id = module.disconnected-sg-bastion.security_group_id
-    }
-  ]
+  ingress_with_source_security_group_id = [ for p in [22,80,443,8080,8443]: {
+    from_port = p
+    to_port = p
+    protocol = "tcp"
+    source_security_group_id = module.disconnected-sg-bastion.security_group_id
+  } ]
   egress_with_cidr_blocks = [{
     from_port = 0
     to_port = 0
@@ -132,14 +149,12 @@ module "disconnected-sg-artifactory" {
       protocol = "-1"
     }
   ]
-  ingress_with_source_security_group_id = [
-    {
-      from_port = 22
-      to_port = 22
-      protocol = "tcp"
-      source_security_group_id = module.disconnected-sg-bastion.security_group_id
-    }
-  ]
+  ingress_with_source_security_group_id = [ for p in [22,8082]: {
+    from_port = p
+    to_port = p
+    protocol = "tcp"
+    source_security_group_id = module.disconnected-sg-bastion.security_group_id
+  } ]
   egress_with_cidr_blocks = [{
     from_port = 0
     to_port = 0
