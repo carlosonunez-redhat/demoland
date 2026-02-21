@@ -55,6 +55,9 @@ environments:
             registry_config:
                 artifactory:
                     jcr_version: 7.133.8
+                    username: admin
+                    # encrypted
+                    password: ENC[AES256_GCM,data:6PDzE+DF6C8Uaiw=,iv:srToITOopatPVGPna30XE1aG/pTscaeNg1q/D9x8yJA=,tag:zjK+LB6BBojgDKxuJqLQpw==,type:str]
             cloud_config:
                 aws:
                     compute:
@@ -94,6 +97,11 @@ environments:
                                     - 172.17.252.0/24
                                     - 172.17.253.0/24
         secrets:
+            artifactory_license:
+                name: artifactory-license
+                mode: "0644"
+                # encrypted
+                data: ENC[AES256_GCM,data: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,iv:CXzyB+qmcpGzIRZdeMpF1w8tV8ubVQyHnns7+BxNDiM=,tag:7VesTOJFzQEbvpd6zVuxXg==,type:str]
             ssh_user:
                 name: ssh-user-bastion
                 mode: "0600"
@@ -212,8 +220,8 @@ environments:
                     # encrypted
                     data: ENC[AES256_GCM,data:U2eobbE6upIEWrxHBbiL1zSEMdXQBDwRWpiZyGog9UJMPT/JwpXKdy5pD0wR2O3Gg/QVR2lJH4pZGJum/Xeuccm6/rFfxLP913xX76Ps+W6AP10YowpbOAjcX/bubm+FA5WZnIs0CFr8LUSzmKzrKxv1ITL5vxECbXOseszrMvBnDUoduAj5b8X31/FmPzPJQ1hBIQm66Ko9qB5yY09MpxeWmWOB4ZjR6n2tbsRve886UEq922SdhaldEozb2zq+OC4U1eKBOc4Rq0JoWCam2NnM/Y8vCrgOd9wo5taB+RAR4v+0WqRZlZtFoRxv8L2BAZkuZ3mObqbb5PcH/a/w5HzJ/V82mm5UN3Ie6rBLR1W2SsdWh4ZHE2qhYMpgU/XreRTGwG+/b3hU/z2ik7wgVo7MIXTvDpGqN8tf70IzmMXX2EpHWQMAO4Re+UB8b7GP7xFREbCjC7hnFQoel3AJNUPVdFFsGFdgDHyRa09BamVfnlhWtVfChrY2xl1X5NroZZT7Qn9uOvw6gj7mJhrmbq0JfCaetecTwqY=,iv:/j7qGCxTK0lBUSONjta9cn2A3X4idjk3zamBgFkFLbc=,tag:IR2K25bjQdDe7+KU/OyyCg==,type:str]
 sops:
-    lastmodified: "2026-02-20T21:01:17Z"
-    mac: ENC[AES256_GCM,data:3n2FrJKfwGxMcATb1aKU2m7Dns7bJw9rly0lLwsK+SvqdLsDvBOLJWOq6AaFyU0qJLRgAuZ4DSD4y+giw8ySVS51GIubtBA4ikoOAsR5AuJw/4ctqv+/1cjZMUyIBZ2pNVcdD70XBMDctYxztK/k6k7dwUuZkd0pFc2pD0KfXxM=,iv:UXG1fc3aOmkAlzP255myHQEO2QDeSHaxSNXU9J6+oHs=,tag:EDxo3NmBu35tqAbjvhnHbA==,type:str]
+    lastmodified: "2026-02-21T19:52:56Z"
+    mac: ENC[AES256_GCM,data:f7Bbcbqzt2pzBy8thFuwEz7hxaz0pHpxOMNGAA+5o3cnV/dqNDAqUtztZ3mzuSw6klWFjPQ25Mw5EdIus7KBSBLbnc9NTKe2+KSvxJO7/GUqlb60Eyh7/lov3xCRy/uKZzzGY5ezmeDyBhEyvowkWPChKyiUKK4/PsNFpvxGWQg=,iv:G+0kOvUFTSvDaCZ+W5jj3wwp5cts0J6efPOuB4MLjLU=,tag:x5XuzqpUHzDbkqiaT4uX1g==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-

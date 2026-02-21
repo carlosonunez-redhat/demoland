@@ -80,6 +80,15 @@ install_oc_client_into_disconnected_bastion() {
 }
 
 install_artifactory_on_registry_instance() {
+  _artifactory_installed_and_running() {
+    local want got
+    want=enabled
+    got=$(exec_in_disconnected_node 'fedora@registry.private.network' 'sudo systemctl is-enabled artifactory')
+    test "$want" == "${got,,}"
+  }
+
+  _artifactory_installed_and_running && return 0
+
   local version
   version=$(_get_from_config '.deploy.registry_config.artifactory.jcr_version')
   url="https://releases.jfrog.io/artifactory/bintray-artifactory/org/artifactory/jcr/\
@@ -87,10 +96,7 @@ jfrog-artifactory-jcr/$version/jfrog-artifactory-jcr-${version}-linux.tar.gz"
   exec_in_connected_network "test -f /tmp/jcr.tar.gz || curl -sSL -o /tmp/jcr.tar.gz '$url'";
   exec_in_disconnected_node 'fedora@registry.private.network' "sudo mkdir -p /app/jfrog && sudo chown $(_bastion_user) /app/jfrog"
   rsync_into_disconnected_network /tmp/jcr.tar.gz /tmp/jcr.tar.gz
-  exec_in_disconnected_network 'rsync -avrh -e "ssh -o StrictHostKeyChecking=no \
-    -o UserKnownHostsFile=/dev/null \
-    -i ~/.ssh/id_rsa" \
-    /tmp/jcr.tar.gz fedora@registry.private.network:/app/jfrog/jcr.tar.gz'
+  exec_in_disconnected_network 'rsync -avrh /tmp/jcr.tar.gz fedora@registry.private.network:/app/jfrog/jcr.tar.gz'
   exec_in_disconnected_node 'fedora@registry.private.network' \
     'test -d /app/jfrog/artifactory && exit 0; \
       cd /app/jfrog; tar -xzf jcr.tar.gz ; mv artifactory* artifactory'
@@ -106,14 +112,60 @@ jfrog-artifactory-jcr/$version/jfrog-artifactory-jcr-${version}-linux.tar.gz"
     "sudo systemctl start artifactory.service"
 }
 
+wait_for_artifactory_up() {
+  exec_in_disconnected_node 'fedora@registry.private.network' \
+    'timeout 300 curl --connect-timeout 1000 localhost:8082'
+}
+
+apply_artifactory_license() {
+  _license_applied() {
+    exec_in_disconnected_node 'fedora@registry.private.network' \
+      'sudo test -f /app/jfrog/artifactory/var/etc/artifactory/artifactory.lic'
+  }
+
+  _license_applied && return 0
+
+  cat "$(_get_file_from_secrets_dir 'artifactory-license')" | \
+    exec_in_connected_network sh -c 'cat - > /tmp/artifactory.lic'
+  rsync_into_disconnected_network /tmp/artifactory.lic /tmp/artifactory.lic
+  exec_in_disconnected_network 'rsync -avrh /tmp/artifactory.lic fedora@registry.private.network:/tmp/license'
+  exec_in_disconnected_node 'fedora@registry.private.network' \
+    'sudo cp /tmp/license /app/jfrog/artifactory/var/etc/artifactory/artifactory.lic && \
+      sudo systemctl restart artifactory'
+}
+
+change_artifactory_default_password() {
+  _password_changed() {
+    exec_in_disconnected_node 'fedora@registry.private.network' 'sudo test -f /app/jfrog/.passwd_changed'
+  }
+
+  _password_changed && return 0
+
+  payload="$(printf '{\\\"password\\\": \\\"%s\\\",\\\"email\\\":\\\"%s\\\",\\\"admin\\\":true\\\"}' \
+    "$(_get_from_config '.deploy.registry_config.artifactory.password')" \
+    "$(_get_from_config '.deploy.registry_config.artifactory.email_address')")"
+  exec_in_disconnected_node 'fedora@registry.private.network' \
+    'curl -u admin:password \
+      http://localhost:8082/artifactory/api/security/users/admin \
+      -H "Content-Type: application/json" \
+      -d "'"$payload"'" && sudo touch /app/jfrog/.passwd_changed'
+}
+
+
 set -e
 provision_base_infrastructure_and_vms
-confirm_connected_bastion_accessible
-confirm_disconnected_bastion_accessible
-copy_private_key_into_bastions
+initialize_bastions
+initialize_disconnected_node 'fedora@registry.private.network'
 download_packages_in_connected_bastion
 install_oc_client_into_disconnected_bastion
 install_artifactory_on_registry_instance
+if ! wait_for_artifactory_up
+then
+  error "Artifactory never started (or took too long to start)"
+  exit 1
+fi
+apply_artifactory_license
+change_artifactory_default_password
 #upload_rhcos_images_to_s3_bucket
 #verify_rhcos_images_accessible_from_disconnected_bastion
 #generate_rhcos_ignition_files

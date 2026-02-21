@@ -51,9 +51,107 @@ rsync_into_disconnected_network() {
   src="$1"
   dest="$2"
   exec_in_disconnected_network "test -f $dest" && return 0
-  exec_in_connected_network rsync \
-    -e "'ssh -i /home/$(_bastion_user)/.ssh/id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'" \
-    -azv \
-    "$src" \
-      "$(_bastion_user)@$(_bastion_disconnected_hostname):$dest"
+  exec_in_connected_network rsync -azv "$src" \
+    "$(_bastion_user)@$(_bastion_disconnected_hostname):$dest"
+}
+
+_bastion_init_file() {
+  echo "$(_get_file_from_data_dir)/.bastions_initialized"
+}
+
+_disconnected_node_init_file() {
+  echo "$(_get_file_from_data_dir)/.disconnected_node_initialized_$(base64 -w 0 <<< "$1")"
+}
+
+_disconnected_network_ssh_config() {
+  cat <<-EOF
+Host *.private.network
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
+  LogLevel quiet
+  IdentityFile /home/$(_bastion_user)/.ssh/id_rsa
+EOF
+}
+
+initialize_disconnected_node() {
+  test -f "$(_disconnected_node_init_file "$1")" && return 0
+
+  _disconnected_network_ssh_config | exec_in_connected_network sh -c 'cat - > /tmp/config' &&
+    rsync_into_disconnected_network /tmp/config /tmp/config && 
+    exec_in_disconnected_network 'cat /tmp/config | ssh -i ~/.ssh/id_rsa \
+      -o StrictHostKeyChecking=no \
+      -o LogLevel=quiet \
+      -o UserKnownHostsFile=/dev/null '"$1"' sh -c "cat - > ~/.ssh/config"' &&
+      touch "$(_disconnected_node_init_file "$1")"
+}
+
+initialize_bastions() {
+  _copy_ssh_config_into_bastions() {
+    _disconnected_network_ssh_config | exec_in_connected_network 'cat - > ~/.ssh/config'
+    rsync_into_disconnected_network '~/.ssh/config' '~/.ssh/config'
+  }
+  _copy_private_key_into_bastions() {
+    cat "$(_get_file_from_secrets_dir 'ssh-key')" |
+      exec_in_connected_network 'cat - > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa'
+    cat "$(_get_file_from_secrets_dir 'ssh-key')" |
+      exec_in_disconnected_network 'cat - > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa'
+  }
+  _confirm_connected_bastion_accessible() {
+    info "Waiting 300 seconds for connected bastion to become available"
+    attempts=0
+    while test "$attempts" -lt 300
+    do
+      # https://stackoverflow.com/a/71962683
+      curl --telnet-option 'DISCONNECT_NOW=1' --connect-timeout 1 -s \
+        "telnet://$(_bastion_connected_hostname):22"
+      test "$?" -eq 48 && break
+      sleep 1
+      attempts="$((attempts+1))"
+    done
+    return 1
+  }
+  _confirm_disconnected_bastion_accessible() {
+    attempts=0
+    while test "$attempts" -lt 300
+    do
+      exec_in_connected_network "curl -s --telnet-option DISCONNECT_NOW=1 \
+--connect-timeout 1 telnet://$(_bastion_disconnected_hostname):22"
+      test "$?" -eq 48 && break
+      sleep 1
+      attempts="$((attempts+1))"
+    done
+    return 1
+  }
+  _mark_bastions_initialized() {
+    touch "$(_bastion_init_file)"
+  }
+  _bastions_initialized() {
+    test -f "$(_bastion_init_file)"
+  }
+
+ 
+  _bastions_initialized && return 0
+
+  if ! _confirm_connected_bastion_accessible
+  then
+    error "Bastion in connected network is inaccessible"
+    return 1
+  fi
+  if ! _confirm_disconnected_bastion_accessible
+  then
+    error "Bastion in disconnected network is inaccessible"
+    return 1
+  fi
+  _copy_private_key_into_bastions &&
+    _copy_ssh_config_into_bastions &&
+    _mark_bastions_initialized
+
+}
+
+deinitialize_disconnected_node() {
+  rm -f "$(_disconnected_node_init_file "$1")"
+}
+
+deinitialize_bastions() {
+  rm -f "$(_bastion_init_file)"
 }

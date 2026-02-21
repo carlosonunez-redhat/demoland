@@ -14,6 +14,7 @@ source "../../include/helpers/yaml.sh"
 # If this environment has includes of its own, use the ./include environment
 # variable, like shown in the comment below.
 #
+source "./include/bastion.sh"
 source "./include/tofu.sh"
 source "./include/osv.sh"
 
@@ -21,5 +22,8 @@ tear_everything_down() {
   exec_tofu destroy
 }
 
+set -e
+deinitialize_disconnected_node 'fedora@registry.private.network'
+deinitialize_bastions
 tear_everything_down
 delete_bare_metal_instances_sentinel
