@@ -24,6 +24,6 @@ resource "aws_route53_record" "disconnected-artifactory-vm" {
   type = "A"
   ttl = 1
   records = [
-    module.disconnected-bastion-vm.private_ip
+    module.disconnected-artifactory-vm.private_ip
   ]
 }

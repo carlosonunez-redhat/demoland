@@ -12,3 +12,8 @@ data "aws_region" "current" {}
 data "aws_route53_zone" "public" {
   name = "${local.options.cloud_config.aws.networking.connected.dns.domain_name}."
 }
+
+data "aws_vpc_endpoint_service" "s3" {
+  service = "s3"
+  service_type = "Gateway"
+}
