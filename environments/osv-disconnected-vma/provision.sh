@@ -85,7 +85,7 @@ install_artifactory_on_registry_instance() {
   url="https://releases.jfrog.io/artifactory/bintray-artifactory/org/artifactory/jcr/\
 jfrog-artifactory-jcr/$version/jfrog-artifactory-jcr-${version}-linux.tar.gz"
   exec_in_connected_network "test -f /tmp/jcr.tar.gz || curl -sSL -o /tmp/jcr.tar.gz '$url'";
-  exec_in_disconnected_node 'fedora@registry.private.network' "sudo mkdir /app/jfrog && chown $(_bastion_user) /app/jfrog"
+  exec_in_disconnected_node 'fedora@registry.private.network' "sudo mkdir -p /app/jfrog && sudo chown $(_bastion_user) /app/jfrog"
   rsync_into_disconnected_network /tmp/jcr.tar.gz /tmp/jcr.tar.gz
   exec_in_disconnected_network 'rsync -avrh -e "ssh -o StrictHostKeyChecking=no \
     -o UserKnownHostsFile=/dev/null \
@@ -95,11 +95,11 @@ jfrog-artifactory-jcr/$version/jfrog-artifactory-jcr-${version}-linux.tar.gz"
     'test -d /app/jfrog/artifactory && exit 0; \
       cd /app/jfrog; tar -xzf jcr.tar.gz ; mv artifactory* artifactory'
   exec_in_disconnected_node 'fedora@registry.private.network' \
+    'cd /app/jfrog/artifactory/app/bin && sudo ./installService.sh'
+  exec_in_disconnected_node 'fedora@registry.private.network' \
     'sudo /app/jfrog/artifactory/app/third-party/yq/yq -i \
       ".shared.database.allowNonPostgresql = true" \
       /app/jfrog/artifactory/var/etc/system.yaml'
-  exec_in_disconnected_node 'fedora@registry.private.network' \
-    'cd /app/jfrog/artifactory/app/bin && sudo ./installService.sh'
   exec_in_disconnected_node 'fedora@registry.private.network' \
     "sudo systemctl start artifactory.service"
 }
