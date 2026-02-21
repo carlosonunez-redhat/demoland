@@ -46,24 +46,9 @@ confirm_dns_records() {
   done
 }
 
-confirm_connected_bastion_accessible() {
-  exec_in_connected_network '>/dev/null whoami'
-}
-
-confirm_disconnected_bastion_accessible() {
-  exec_in_disconnected_network '>/dev/null whoami'
-}
-
 download_packages_in_connected_bastion() {
   packages="curl rsync"
   exec_in_connected_network "sudo dnf -y install $packages"
-}
-
-copy_private_key_into_bastions() {
-  cat "$(_get_file_from_secrets_dir 'ssh-key')" |
-    exec_in_connected_network 'cat - > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa'
-  cat "$(_get_file_from_secrets_dir 'ssh-key')" |
-    exec_in_disconnected_network 'cat - > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa'
 }
 
 install_oc_client_into_disconnected_bastion() {

@@ -12,7 +12,7 @@ _bastion_user() {
 }
 
 _ssh() {
-  ssh -A -i "$(_get_file_from_secrets_dir 'ssh-key')" \
+  ssh -i "$(_get_file_from_secrets_dir 'ssh-key')" \
     -o LogLevel=quiet \
     -o UserKnownHostsFile=/dev/null \
     -o StrictHostKeyChecking=false \
@@ -26,11 +26,15 @@ exec_in_connected_network() {
 
 exec_in_disconnected_network() {
   info "Executing in disconnected network through '$(_bastion_disconnected_hostname)': $*"
-  _ssh -o ProxyCommand="ssh -i $(_get_file_from_secrets_dir 'ssh-key') -W %h:%p \
-    -o UserKnownHostsFile=/dev/null \
+  _ssh \
+    -o ProxyCommand="ssh -i $(_get_file_from_secrets_dir 'ssh-key') \
+      -o StrictHostKeyChecking=no \
+      -o UserKnownHostsFile=/dev/null \
+      -o LogLevel=quiet \
+      -W %h:%p $(_bastion_user)@$(_bastion_connected_hostname)" \
     -o StrictHostKeyChecking=no \
+    -o UserKnownHostsFile=/dev/null \
     -o LogLevel=quiet \
-    $(_bastion_user)@$(_bastion_connected_hostname)" \
     "$(_bastion_user)@$(_bastion_disconnected_hostname)" \
     "$@"
 }
@@ -38,12 +42,7 @@ exec_in_disconnected_network() {
 exec_in_disconnected_node() {
   local host
   host="$1"
-  exec_in_disconnected_network "ssh -o StrictHostKeyChecking=no \
-    -o UserKnownHostsFile=/dev/null \
-    -o LogLevel=quiet \
-    -i /home/$(_bastion_user)/.ssh/id_rsa \
-    $host -- \
-    '${*:2}'"  
+  exec_in_disconnected_network "ssh $host -- '${*:2}'"
 }
 
 rsync_into_disconnected_network() {
