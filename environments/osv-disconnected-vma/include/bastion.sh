@@ -103,8 +103,7 @@ initialize_bastions() {
       # https://stackoverflow.com/a/71962683
       curl --telnet-option 'DISCONNECT_NOW=1' --connect-timeout 1 -s \
         "telnet://$(_bastion_connected_hostname):22"
-      test "$?" -eq 48 && break
-      sleep 1
+      test "$?" -eq 48 && return 0
       attempts="$((attempts+1))"
     done
     return 1
@@ -113,9 +112,10 @@ initialize_bastions() {
     attempts=0
     while test "$attempts" -lt 300
     do
+      # https://stackoverflow.com/a/71962683
       exec_in_connected_network "curl -s --telnet-option DISCONNECT_NOW=1 \
 --connect-timeout 1 telnet://$(_bastion_disconnected_hostname):22"
-      test "$?" -eq 48 && break
+      test "$?" -eq 48 && return 0
       sleep 1
       attempts="$((attempts+1))"
     done
