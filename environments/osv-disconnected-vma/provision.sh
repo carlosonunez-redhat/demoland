@@ -101,6 +101,8 @@ jfrog-artifactory-jcr/$version/jfrog-artifactory-jcr-${version}-linux.tar.gz"
       ".shared.database.allowNonPostgresql = true" \
       /app/jfrog/artifactory/var/etc/system.yaml'
   exec_in_disconnected_node 'fedora@registry.private.network' \
+    'sudo semanage fcontext -a -t bin_t /app/jfrog && sudo chcon -R -t bin_t /app/jfrog/artifactory/app/bin'
+  exec_in_disconnected_node 'fedora@registry.private.network' \
     "sudo systemctl start artifactory.service"
 }
 
