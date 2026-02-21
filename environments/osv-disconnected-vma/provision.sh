@@ -91,6 +91,12 @@ jfrog-artifactory-jcr/$version/jfrog-artifactory-jcr-${version}-linux.tar.gz"
     'sudo /app/jfrog/artifactory/app/third-party/yq/yq -i \
       ".shared.database.allowNonPostgresql = true" \
       /app/jfrog/artifactory/var/etc/system.yaml'
+  ip_address="$(exec_in_disconnected_node 'fedora@registry.private.network' 'hostname -I' |
+    tr -d ' ')"
+  exec_in_disconnected_node 'fedora@registry.private.network' \
+    'sudo /app/jfrog/artifactory/app/third-party/yq/yq -i \
+      ".shared.node.ip = \"'"$ip_address"'\"" \
+      /app/jfrog/artifactory/var/etc/system.yaml'
   exec_in_disconnected_node 'fedora@registry.private.network' \
     'sudo semanage fcontext -a -t bin_t /app/jfrog && sudo chcon -R -t bin_t /app/jfrog/artifactory/app/bin'
   exec_in_disconnected_node 'fedora@registry.private.network' \
@@ -99,7 +105,8 @@ jfrog-artifactory-jcr/$version/jfrog-artifactory-jcr-${version}-linux.tar.gz"
 
 wait_for_artifactory_up() {
   exec_in_disconnected_node 'fedora@registry.private.network' \
-    'timeout 300 curl --connect-timeout 1000 localhost:8082'
+    'timeout 300 sh -c "while true; do curl -o /dev/null -s --connect-timeout 1000 \
+      localhost:8082 && break; sleep 1; done"'
 }
 
 apply_artifactory_license() {
@@ -117,6 +124,7 @@ apply_artifactory_license() {
   exec_in_disconnected_node 'fedora@registry.private.network' \
     'sudo cp /tmp/license /app/jfrog/artifactory/var/etc/artifactory/artifactory.lic && \
       sudo systemctl restart artifactory'
+  wait_for_artifactory_up
 }
 
 change_artifactory_default_password() {

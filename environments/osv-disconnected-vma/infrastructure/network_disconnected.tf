@@ -151,7 +151,7 @@ module "disconnected-sg-artifactory" {
       protocol = "-1"
     }
   ]
-  ingress_with_source_security_group_id = [ for p in [22,8082]: {
+  ingress_with_source_security_group_id = [ for p in [22,8081,8082]: {
     from_port = p
     to_port = p
     protocol = "tcp"
