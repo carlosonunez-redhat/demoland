@@ -12,6 +12,7 @@ locals {
       "6183:BMC worker node access",
       "6385:Ironic API",
       "6388:Ironic API",
+      "6443:Kubernetes API",
       "8080:Web services",
       "8083:BMC",
       "9999:Python agent"
@@ -20,6 +21,7 @@ locals {
       "80",
       "443",
       "8080",
+      "8082",
       "8443"
     ]
     vsphere_api_access = [
