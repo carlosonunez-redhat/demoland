@@ -18,6 +18,10 @@ source "./include/bastion.sh"
 source "./include/osv.sh"
 source "./include/tofu.sh"
 
+_test_image_name() {
+  echo "registry.private.network:8082/$(_get_from_config '.deploy.registry_config.artifactory.repository_name')/hello"
+}
+
 _restart_artifactory() {
   local cmd
   cmd="sudo systemctl restart artifactory.service"
@@ -36,6 +40,16 @@ _restart_artifactory() {
 
 _restart_artifactory_no_wait() {
   _restart_artifactory quiet
+}
+
+_artifactory_token_file() {
+  local artifactory_instance_id
+  artifactory_instance_id=$(tofu output -raw disconnected_artifactory_instance_id)
+  _get_file_from_data_dir "artifactory_token_$artifactory_instance_id"
+}
+
+_artifactory_token() {
+  cat "$(_artifactory_token_file)"
 }
 
 provision_base_infrastructure_and_vms() {
@@ -64,6 +78,10 @@ confirm_dns_records() {
   for ext_component in registry
   do _verify_record "${ext_component}.${domain_name}"
   done
+}
+
+initialize_registry() {
+  initialize_disconnected_node 'fedora@registry.private.network'
 }
 
 download_packages_in_connected_bastion() {
@@ -213,7 +231,7 @@ change_artifactory_default_password() {
 
 create_artifactory_admin_token() {
   _token_created() {
-    test -f "$(_get_file_from_data_dir 'artifactory_admin_token')"
+    test -f "$(_artifactory_token_file)"
   }
 
   _token_created && return 0
@@ -254,7 +272,7 @@ create_artifactory_admin_token() {
     error "Couldn't create an admin token with Artifactory"
     return 1
   fi
-  echo "$access_token" > "$(_get_file_from_data_dir 'artifactory_admin_token')"
+  echo "$access_token" > "$(_artifactory_token_file)"
 }
 
 create_artifactory_oci_repo() {
@@ -271,7 +289,6 @@ create_artifactory_oci_repo() {
   }
 
   _repo_created && return 0
-  access_token="$(cat "$(_get_file_from_data_dir 'artifactory_admin_token')")"
   repo_config=$(cat <<-EOF
 {
   "key": "$(_get_from_config '.deploy.registry_config.artifactory.repository_name')",
@@ -283,18 +300,65 @@ EOF
 )
   repo_config_json=$(jq -cr . <<< "$repo_config") || return 1
   exec_in_disconnected_network \
-    "curl -sS -H \"Authorization: Bearer $access_token\" \
+    "curl -sS -H \"Authorization: Bearer $(_artifactory_token)\" \
       -H \"Content-Type: application/json\" \
       -X PUT \
       -d '$repo_config_json' \
       http://registry.private.network:8082/artifactory/api/repositories/$(_get_from_config '.deploy.registry_config.artifactory.repository_name')"
 }
 
+log_into_artifactory_on_disconnected_bastion() {
+  exec_in_disconnected_network \
+    "podman login --tls-verify=false \
+      -u '$(_get_from_config '.deploy.registry_config.artifactory.username')' \
+      -p '$(_artifactory_token)' \
+      http://registry.private.network:8082"
+}
+
+confirm_artifactory_push_and_pull() {
+  _confirmed() {
+    exec_in_disconnected_network "podman images | grep -q $(_test_image_name)" && return 0
+  }
+
+  _pull_and_save_test_image_in_connected_bastion() {
+    _confirmed && return 0
+
+    exec_in_connected_network \
+      'test -f /tmp/image.tar.gz && exit 0; podman pull hello && podman save -o /tmp/image.tar.gz hello'
+  }
+  
+  _send_test_image_to_disconnected_bastion() {
+    _confirmed && return 0
+
+    rsync_into_disconnected_network /tmp/image.tar.gz /tmp
+  }
+
+  _push_test_image_into_disconnected_registry() {
+    _confirmed && return 0
+
+    exec_in_disconnected_network \
+      "cat /tmp/image.tar.gz | podman load -q && podman tag hello $(_test_image_name)"
+  }
+
+  _confirm_push_and_pull() {
+    _confirmed && return 0
+
+    exec_in_disconnected_network \
+      "podman push --tls-verify=false $(_test_image_name) && \
+      podman rmi $(_test_image_name) && \
+      podman pull --tls-verify=false $(_test_image_name)"
+  }
+
+  _pull_and_save_test_image_in_connected_bastion &&
+    _send_test_image_to_disconnected_bastion &&
+    _push_test_image_into_disconnected_registry &&
+    _confirm_push_and_pull
+}
 
 set -e
 provision_base_infrastructure_and_vms
 initialize_bastions
-initialize_disconnected_node 'fedora@registry.private.network'
+initialize_registry
 download_packages_in_connected_bastion
 install_oc_client_into_disconnected_bastion
 install_artifactory_on_disconnected_registry_instance
@@ -302,7 +366,9 @@ apply_artifactory_license
 change_artifactory_default_password
 create_artifactory_admin_token
 create_artifactory_oci_repo
-#upload_rhcos_images_to_s3_bucket
+log_into_artifactory_on_disconnected_bastion
+confirm_artifactory_push_and_pull
+#upload_rhcos_images_to_s3_bucket # <-- WE ARE HERE
 #verify_rhcos_images_accessible_from_disconnected_bastion
 #generate_rhcos_ignition_files
 #upload_rhcos_ignition_files_to_s3_bucket
