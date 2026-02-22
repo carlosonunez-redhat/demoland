@@ -55,7 +55,15 @@ rsync_into_disconnected_network() {
 }
 
 _bastion_init_file() {
-  echo "$(_get_file_from_data_dir)/.bastions_initialized"
+  connected_id=$(tofu output -raw connected_bastion_instance_id)
+  disconnected_id=$(tofu output -raw disconnected_bastion_instance_id)
+  if test -n "$connected_id" && test -n "$disconnected_id"
+  then
+    echo "$(_get_file_from_data_dir)/.bastions_initialized_${connected_id}_${disconnected_id}"
+    return 0
+  fi
+  error "One of these bastion instance IDs is empty: [connected: $connected_id], [disconnected: $disconnected_id]"
+  return 1
 }
 
 _disconnected_node_init_file() {
@@ -122,10 +130,10 @@ initialize_bastions() {
     return 1
   }
   _mark_bastions_initialized() {
-    touch "$(_bastion_init_file)"
+    touch "$(_bastion_init_file)" || return 1
   }
   _bastions_initialized() {
-    test -f "$(_bastion_init_file)"
+    test -f "$(_bastion_init_file)" || return 1
   }
 
  
@@ -152,5 +160,5 @@ deinitialize_disconnected_node() {
 }
 
 deinitialize_bastions() {
-  rm -f "$(_bastion_init_file)"
+  rm -f "$(_bastion_init_file)" || return 1
 }
