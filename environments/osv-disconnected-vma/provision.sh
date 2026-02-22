@@ -100,7 +100,7 @@ install_artifactory_on_registry_instance() {
   local version
   version=$(_get_from_config '.deploy.registry_config.artifactory.jcr_version')
   url="https://releases.jfrog.io/artifactory/bintray-artifactory/org/artifactory/jcr/\
-jfrog-artifactory-jcr/$version/jfrog-artifactory-jcr-${version}-linux.tar.gz"
+jfrog-artifactory-pro/$version/jfrog-artifactory-pro-${version}-linux.tar.gz"
   exec_in_connected_network "test -f /tmp/jcr.tar.gz || curl -sSL -o /tmp/jcr.tar.gz '$url'";
   exec_in_disconnected_node 'fedora@registry.private.network' "sudo mkdir -p /app/jfrog && sudo chown $(_bastion_user) /app/jfrog"
   rsync_into_disconnected_network /tmp/jcr.tar.gz /tmp/jcr.tar.gz
@@ -128,6 +128,24 @@ jfrog-artifactory-jcr/$version/jfrog-artifactory-jcr-${version}-linux.tar.gz"
     'sudo semanage fcontext -a -t bin_t /app/jfrog && sudo chcon -R -t bin_t /app/jfrog/artifactory/app/bin'
   _restart_artifactory
 }
+
+apply_artifactory_license() {
+  _license_applied() {
+    exec_in_disconnected_node 'fedora@registry.private.network' \
+      'sudo test -f /app/jfrog/artifactory/var/etc/artifactory/artifactory.lic'
+  }
+
+  _license_applied && return 0
+
+  cat "$(_get_file_from_secrets_dir 'artifactory-license')" | \
+    exec_in_connected_network sh -c 'cat - > /tmp/artifactory.lic'
+  rsync_into_disconnected_network /tmp/artifactory.lic /tmp/artifactory.lic
+  exec_in_disconnected_network 'rsync -avrh /tmp/artifactory.lic fedora@registry.private.network:/tmp/license'
+  exec_in_disconnected_node 'fedora@registry.private.network' \
+    'sudo cp /tmp/license /app/jfrog/artifactory/var/etc/artifactory/artifactory.lic'
+  _restart_artifactory
+}
+
 
 change_artifactory_default_password() {
   _password_changed() {
@@ -201,6 +219,26 @@ create_artifactory_admin_token() {
   echo "$access_token" > "$(_get_file_from_data_dir 'artifactory_admin_token')"
 }
 
+create_artifactory_oci_repo() {
+  _repo_created() {
+    local want got
+    want=200
+    got=$(exec_in_disconnected_network "curl -sS -o /dev/null \
+      -w \"%{http_code}\" \
+      http://registry.private.network:8082/artifactory/$(_get_from_config '.deploy.registry_config.artifactory.repository_name')")
+    test "$want" == "$got"
+  }
+
+  _repo_created && return 0
+  access_token="$(cat "$(_get_file_from_data_dir 'artifactory_admin_token')")"
+  result=$(exec_in_disconnected_network \
+    "curl -sS -H \"Authorization: Bearer $access_token\" \
+      -H \"Content-Type: application/json\" \
+      -X PUT \
+      http://registry.private.network:8082/foo")
+  return 1
+}
+
 
 set -e
 provision_base_infrastructure_and_vms
@@ -209,8 +247,10 @@ initialize_disconnected_node 'fedora@registry.private.network'
 download_packages_in_connected_bastion
 install_oc_client_into_disconnected_bastion
 install_artifactory_on_registry_instance
+apply_artifactory_license
 change_artifactory_default_password
 create_artifactory_admin_token
+create_artifactory_oci_repo
 #upload_rhcos_images_to_s3_bucket
 #verify_rhcos_images_accessible_from_disconnected_bastion
 #generate_rhcos_ignition_files

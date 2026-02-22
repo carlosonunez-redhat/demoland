@@ -23,6 +23,7 @@ verify_config_keys() {
     '.deploy.cloud_config.aws.networking.connected.dns.domain_name' \
     '.deploy.cloud_config.aws.networking.disconnected.dns.domain_name' \
     '.deploy.registry_config.artifactory.jcr_version' \
+    '.deploy.registry_config.artifactory.repository_name' \
     '.deploy.registry_config.artifactory.password'
   do
     test -n "$(_get_from_config "$k")" && continue
