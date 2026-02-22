@@ -157,10 +157,10 @@ jfrog-artifactory-pro/$version/jfrog-artifactory-pro-${version}-linux.tar.gz"
   _artifactory_installed_and_running && return 0
 
   set -e
+  _create_jfrog_home_dir_in_disconnected_registry_instance
   _download_artifactory_archive_into_connected_bastion
   _rsync_artifactory_archive_into_disconnected_bastion
   _rsync_artifactory_archive_into_disconnected_registry_instance
-  _create_jfrog_home_dir_in_disconnected_registry_instance
   _extract_artifactory_in_disconnected_registry_instance
   _install_artifactory_service
   _configure_artifactory
@@ -218,10 +218,10 @@ create_artifactory_admin_token() {
 
   _token_created && return 0
   # https://jfrog.com/help/r/artifactory-how-to-create-an-admin-token-without-using-the-ui/artifactory-how-to-create-an-admin-token-without-using-the-ui
-  local token
+  local token new_token_json
   exec_in_disconnected_node 'fedora@registry.private.network' \
     "sudo touch /app/jfrog/artifactory/var/bootstrap/etc/access/keys/generate.token.json" &&
-    _restart_artifactory_no_wait || return 1
+    _restart_artifactory || return 1
 
   if ! exec_in_disconnected_node 'fedora@registry.private.network' \
     "timeout 120 sh -c \"while true; do sudo test -f /app/jfrog/artifactory/var/etc/access/keys/token.json && break; sleep 1; done\""
@@ -259,9 +259,12 @@ create_artifactory_admin_token() {
 
 create_artifactory_oci_repo() {
   _repo_created() {
-    local want got
+    local username password want got
+    username=$(_get_from_config '.deploy.registry_config.artifactory.username')
+    password=$(_get_from_config '.deploy.registry_config.artifactory.password')
     want=200
     got=$(exec_in_disconnected_network "curl -sS -o /dev/null \
+      -u \"${username}:${password}\" \
       -w \"%{http_code}\" \
       http://registry.private.network:8082/artifactory/$(_get_from_config '.deploy.registry_config.artifactory.repository_name')")
     test "$want" == "$got"
@@ -269,12 +272,22 @@ create_artifactory_oci_repo() {
 
   _repo_created && return 0
   access_token="$(cat "$(_get_file_from_data_dir 'artifactory_admin_token')")"
-  result=$(exec_in_disconnected_network \
+  repo_config=$(cat <<-EOF
+{
+  "key": "$(_get_from_config '.deploy.registry_config.artifactory.repository_name')",
+  "rclass": "local",
+  "packageType": "docker",
+  "description": "The repository."
+}
+EOF
+)
+  repo_config_json=$(jq -cr . <<< "$repo_config") || return 1
+  exec_in_disconnected_network \
     "curl -sS -H \"Authorization: Bearer $access_token\" \
       -H \"Content-Type: application/json\" \
       -X PUT \
-      http://registry.private.network:8082/foo")
-  return 1
+      --json '$repo_config_json' \
+      http://registry.private.network:8082/artifactory/api/repositories/$(_get_from_config '.deploy.registry_config.artifactory.repository_name')"
 }
 
 
