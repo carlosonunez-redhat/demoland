@@ -27,6 +27,7 @@ _init_tofu() {
     --backend-config="region=${AWS_DEFAULT_REGION}" || return 1
 
     touch "$(_get_file_from_data_dir tofu_initialized)"
+    unset TOFU_REINIT
 }
 
 tofu() {
@@ -35,8 +36,7 @@ tofu() {
       { 2>&1 aws s3api head-bucket --bucket "$TOFU_STATE_S3_BUCKET" | grep -q 'Not Found'; }
   }
   _asked_for_destroy_but_state_bucket_deleted "$@" && return 0
-
-  _init_tofu || return 1
+  _init_tofu
   case "${1,,}" in
     preflight)
       return 0
