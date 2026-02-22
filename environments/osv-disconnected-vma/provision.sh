@@ -84,48 +84,86 @@ install_oc_client_into_disconnected_bastion() {
   exec_in_disconnected_network 'chmod +x $HOME/.local/bin/oc && oc version --client | grep -q Client'
 }
 
-install_artifactory_on_registry_instance() {
+install_artifactory_on_disconnected_registry_instance() {
   _artifactory_installed_and_running() {
     local want got
     want=enabled
     got=$(exec_in_disconnected_node 'fedora@registry.private.network' 'sudo systemctl is-enabled artifactory')
-    test "$want" == "${got,,}"
+    test "$want" == "${got,,}" || return 1
+    exec_in_disconnected_network '2>/dev/null nc -w 1 -z registry.private.network 8082'
   }
-
-  _artifactory_installed_and_running && return 0
 
   # https://jfrog.com/help/r/jfrog-installation-setup-documentation/install-artifactory-with-linux-archive
   # However, these docs do not disambiguate Artifactory from their other
   # Artifactory-lite SKUs (JCR, X-Ray, etc.)
-  local version
-  version=$(_get_from_config '.deploy.registry_config.artifactory.jcr_version')
-  url="https://releases.jfrog.io/artifactory/bintray-artifactory/org/artifactory/jcr/\
+  _download_artifactory_archive_into_connected_bastion() {
+    local version
+    version=$(_get_from_config '.deploy.registry_config.artifactory.jcr_version')
+    url="https://releases.jfrog.io/artifactory/artifactory-pro/org/artifactory/pro/\
 jfrog-artifactory-pro/$version/jfrog-artifactory-pro-${version}-linux.tar.gz"
-  exec_in_connected_network "test -f /tmp/jcr.tar.gz || curl -sSL -o /tmp/jcr.tar.gz '$url'";
-  exec_in_disconnected_node 'fedora@registry.private.network' "sudo mkdir -p /app/jfrog && sudo chown $(_bastion_user) /app/jfrog"
-  rsync_into_disconnected_network /tmp/jcr.tar.gz /tmp/jcr.tar.gz
-  exec_in_disconnected_network 'rsync -avrh /tmp/jcr.tar.gz fedora@registry.private.network:/app/jfrog/jcr.tar.gz'
-  exec_in_disconnected_node 'fedora@registry.private.network' \
-    'test -d /app/jfrog/artifactory && exit 0; \
-      cd /app/jfrog; tar -xzf jcr.tar.gz ; mv artifactory* artifactory'
-  exec_in_disconnected_node 'fedora@registry.private.network' \
-    'cd /app/jfrog/artifactory/app/bin && sudo ./installService.sh'
-  ip_address="$(exec_in_disconnected_node 'fedora@registry.private.network' 'hostname -I' |
-    tr -d ' ')"
-  # allowNonPostgresql: The ONLY config param that was documented in the installation docs
-  # jfconnect.enabled = false: https://stackoverflow.com/questions/78661243/artifactory-oss-wont-start-log-shows-failed-executing-getentitlements-server
-  # ip address: https://jfrog.com/help/r/artifactory-how-to-fix-invalid-url-escape-et/artifactory-how-to-fix-invalid-url-escape-et
-  for modification in ".shared.database.allowNonPostgresql = true" \
-    ".shared.node.ip = \"$ip_address\"" \
-    ".shared.extraJavaOpts = \"...-Dartifactory.onboarding.skipWizard=true\"" \
-    "jfconnect.enabled = false"
-  do exec_in_disconnected_node 'fedora@registry.private.network' \
-    'sudo /app/jfrog/artifactory/app/third-party/yq/yq -i \
-      \"'"$modification"'\" \
-      /app/jfrog/artifactory/var/etc/system.yaml'
-  done
-  exec_in_disconnected_node 'fedora@registry.private.network' \
-    'sudo semanage fcontext -a -t bin_t /app/jfrog && sudo chcon -R -t bin_t /app/jfrog/artifactory/app/bin'
+    exec_in_connected_network "test -f /tmp/jcr.tar.gz || curl -L -o /tmp/jcr.tar.gz '$url'";
+  }
+
+  _rsync_artifactory_archive_into_disconnected_bastion() {
+    rsync_into_disconnected_network /tmp/jcr.tar.gz /tmp/jcr.tar.gz
+  }
+
+  _rsync_artifactory_archive_into_disconnected_registry_instance() {
+    exec_in_disconnected_network 'rsync -avrh /tmp/jcr.tar.gz fedora@registry.private.network:/app/jfrog/jcr.tar.gz'
+  }
+
+  _create_jfrog_home_dir_in_disconnected_registry_instance() {
+    exec_in_disconnected_node \
+      'fedora@registry.private.network' \
+      "sudo mkdir -p /app/jfrog && sudo chown $(_bastion_user) /app/jfrog"
+  }
+
+  _extract_artifactory_in_disconnected_registry_instance() {
+    exec_in_disconnected_node 'fedora@registry.private.network' \
+      'test -d /app/jfrog/artifactory && exit 0; \
+        cd /app/jfrog; tar -xzf jcr.tar.gz ; mv artifactory* artifactory'
+  }
+
+  _install_artifactory_service() {
+    exec_in_disconnected_node 'fedora@registry.private.network' \
+      'cd /app/jfrog/artifactory/app/bin && sudo ./installService.sh'
+    # This wasn't in the docs.
+    exec_in_disconnected_node 'fedora@registry.private.network' \
+      'sudo semanage fcontext -a -t bin_t /app/jfrog && sudo chcon -R -t bin_t /app/jfrog/artifactory/app/bin'
+  }
+
+  # Skip onboarding and work around some bugs in the installer.
+  # "Build this Lego set. The pieces are ALL OVER THE INTERNET. Good luck." -JFrog, probably.
+  _configure_artifactory() {
+    local ip_address
+    ip_address="$(exec_in_disconnected_node 'fedora@registry.private.network' 'hostname -I' |
+      tr -d ' ')"
+    # allowNonPostgresql: The ONLY config param that was documented in the installation docs
+    # jfconnect.enabled = false: UI won't load if this is enabled. Don't know why.
+    # (source: https://stackoverflow.com/questions/78661243/artifactory-oss-wont-start-log-shows-failed-executing-getentitlements-server)
+    # ip address: Weird UI errors due to script using inet6 iface address instead of inet4.
+    # (source: beer, coffee, and https://jfrog.com/help/r/artifactory-how-to-fix-invalid-url-escape-et/artifactory-how-to-fix-invalid-url-escape-et)
+    for modification in ".shared.database.allowNonPostgresql = true" \
+      ".shared.node.ip = \\\"$ip_address\\\"" \
+      ".shared.extraJavaOpts = \\\"-Dartifactory.onboarding.skipWizard=true\\\"" \
+      ".jfconnect.enabled = false"
+    do exec_in_disconnected_node 'fedora@registry.private.network' \
+      'sudo /app/jfrog/artifactory/app/third-party/yq/yq -i \
+        "'"$modification"'" \
+        /app/jfrog/artifactory/var/etc/system.yaml'
+    done
+  }
+
+  _artifactory_installed_and_running && return 0
+
+  set -e
+  _download_artifactory_archive_into_connected_bastion
+  _rsync_artifactory_archive_into_disconnected_bastion
+  _rsync_artifactory_archive_into_disconnected_registry_instance
+  _create_jfrog_home_dir_in_disconnected_registry_instance
+  _extract_artifactory_in_disconnected_registry_instance
+  _install_artifactory_service
+  _configure_artifactory
   _restart_artifactory
 }
 
@@ -246,7 +284,7 @@ initialize_bastions
 initialize_disconnected_node 'fedora@registry.private.network'
 download_packages_in_connected_bastion
 install_oc_client_into_disconnected_bastion
-install_artifactory_on_registry_instance
+install_artifactory_on_disconnected_registry_instance
 apply_artifactory_license
 change_artifactory_default_password
 create_artifactory_admin_token
