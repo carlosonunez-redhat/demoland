@@ -18,6 +18,26 @@ source "./include/bastion.sh"
 source "./include/osv.sh"
 source "./include/tofu.sh"
 
+_restart_artifactory() {
+  local cmd
+  cmd="sudo systemctl restart artifactory.service"
+  test "${1,,}" == quiet && cmd="${cmd} --no-block"
+  exec_in_disconnected_node 'fedora@registry.private.network' "$cmd"
+  test "${1,,}" == quiet && return 0
+
+  if ! exec_in_disconnected_node 'fedora@registry.private.network' \
+    'timeout 300 sh -c "while true; do curl -o /dev/null -s --connect-timeout 1000 \
+      localhost:8082 && break; sleep 1; done"'
+  then
+    error "Artifactory never started (or took too long to start)"
+    exit 1
+  fi
+}
+
+_restart_artifactory_no_wait() {
+  _restart_artifactory quiet
+}
+
 provision_base_infrastructure_and_vms() {
   exec_tofu apply
 }
@@ -74,6 +94,9 @@ install_artifactory_on_registry_instance() {
 
   _artifactory_installed_and_running && return 0
 
+  # https://jfrog.com/help/r/jfrog-installation-setup-documentation/install-artifactory-with-linux-archive
+  # However, these docs do not disambiguate Artifactory from their other
+  # Artifactory-lite SKUs (JCR, X-Ray, etc.)
   local version
   version=$(_get_from_config '.deploy.registry_config.artifactory.jcr_version')
   url="https://releases.jfrog.io/artifactory/bintray-artifactory/org/artifactory/jcr/\
@@ -87,61 +110,95 @@ jfrog-artifactory-jcr/$version/jfrog-artifactory-jcr-${version}-linux.tar.gz"
       cd /app/jfrog; tar -xzf jcr.tar.gz ; mv artifactory* artifactory'
   exec_in_disconnected_node 'fedora@registry.private.network' \
     'cd /app/jfrog/artifactory/app/bin && sudo ./installService.sh'
-  exec_in_disconnected_node 'fedora@registry.private.network' \
-    'sudo /app/jfrog/artifactory/app/third-party/yq/yq -i \
-      ".shared.database.allowNonPostgresql = true" \
-      /app/jfrog/artifactory/var/etc/system.yaml'
   ip_address="$(exec_in_disconnected_node 'fedora@registry.private.network' 'hostname -I' |
     tr -d ' ')"
-  exec_in_disconnected_node 'fedora@registry.private.network' \
+  # allowNonPostgresql: The ONLY config param that was documented in the installation docs
+  # jfconnect.enabled = false: https://stackoverflow.com/questions/78661243/artifactory-oss-wont-start-log-shows-failed-executing-getentitlements-server
+  # ip address: https://jfrog.com/help/r/artifactory-how-to-fix-invalid-url-escape-et/artifactory-how-to-fix-invalid-url-escape-et
+  for modification in ".shared.database.allowNonPostgresql = true" \
+    ".shared.node.ip = \"$ip_address\"" \
+    ".shared.extraJavaOpts = \"...-Dartifactory.onboarding.skipWizard=true\"" \
+    "jfconnect.enabled = false"
+  do exec_in_disconnected_node 'fedora@registry.private.network' \
     'sudo /app/jfrog/artifactory/app/third-party/yq/yq -i \
-      ".shared.node.ip = \"'"$ip_address"'\"" \
+      \"'"$modification"'\" \
       /app/jfrog/artifactory/var/etc/system.yaml'
+  done
   exec_in_disconnected_node 'fedora@registry.private.network' \
     'sudo semanage fcontext -a -t bin_t /app/jfrog && sudo chcon -R -t bin_t /app/jfrog/artifactory/app/bin'
-  exec_in_disconnected_node 'fedora@registry.private.network' \
-    "sudo systemctl start artifactory.service"
-}
-
-wait_for_artifactory_up() {
-  exec_in_disconnected_node 'fedora@registry.private.network' \
-    'timeout 300 sh -c "while true; do curl -o /dev/null -s --connect-timeout 1000 \
-      localhost:8082 && break; sleep 1; done"'
-}
-
-apply_artifactory_license() {
-  _license_applied() {
-    exec_in_disconnected_node 'fedora@registry.private.network' \
-      'sudo test -f /app/jfrog/artifactory/var/etc/artifactory/artifactory.lic'
-  }
-
-  _license_applied && return 0
-
-  cat "$(_get_file_from_secrets_dir 'artifactory-license')" | \
-    exec_in_connected_network sh -c 'cat - > /tmp/artifactory.lic'
-  rsync_into_disconnected_network /tmp/artifactory.lic /tmp/artifactory.lic
-  exec_in_disconnected_network 'rsync -avrh /tmp/artifactory.lic fedora@registry.private.network:/tmp/license'
-  exec_in_disconnected_node 'fedora@registry.private.network' \
-    'sudo cp /tmp/license /app/jfrog/artifactory/var/etc/artifactory/artifactory.lic && \
-      sudo systemctl restart artifactory'
-  wait_for_artifactory_up
+  _restart_artifactory
 }
 
 change_artifactory_default_password() {
   _password_changed() {
-    exec_in_disconnected_node 'fedora@registry.private.network' 'sudo test -f /app/jfrog/.passwd_changed'
+    local username password
+    username=$(_get_from_config '.deploy.registry_config.artifactory.username')
+    password=$(_get_from_config '.deploy.registry_config.artifactory.password')
+    exec_in_disconnected_node \
+      'fedora@registry.private.network' \
+      "curl -s -u \"${username}:${password}\" http://localhost:8082/artifactory/api/system  | grep -q \"System Info\""
   }
 
   _password_changed && return 0
 
-  payload="$(printf '{\\\"password\\\": \\\"%s\\\",\\\"email\\\":\\\"%s\\\",\\\"admin\\\":true\\\"}' \
-    "$(_get_from_config '.deploy.registry_config.artifactory.password')" \
-    "$(_get_from_config '.deploy.registry_config.artifactory.email_address')")"
+  local username password
+  username=$(_get_from_config '.deploy.registry_config.artifactory.username')
+  password=$(_get_from_config '.deploy.registry_config.artifactory.password')
+  # https://jfrog.com/help/r/artifactory-how-to-create-an-admin-token-without-using-the-ui/artifactory-how-to-create-an-admin-token-without-using-the-ui
+  exec_in_disconnected_node \
+    'fedora@registry.private.network' \
+    "sudo sh -c \"echo '${username}@*=${password}' > /app/jfrog/artifactory/var/etc/access/bootstrap.creds\"" &&
   exec_in_disconnected_node 'fedora@registry.private.network' \
-    'curl -u admin:password \
-      http://localhost:8082/artifactory/api/security/users/admin \
-      -H "Content-Type: application/json" \
-      -d "'"$payload"'" && sudo touch /app/jfrog/.passwd_changed'
+    "sudo chown artifactory:artifactory /app/jfrog/artifactory/var/etc/access/bootstrap.creds" &&
+  exec_in_disconnected_node 'fedora@registry.private.network' \
+    "sudo chmod 600 /app/jfrog/artifactory/var/etc/access/bootstrap.creds" &&
+    _restart_artifactory
+}
+
+create_artifactory_admin_token() {
+  _token_created() {
+    test -f "$(_get_file_from_data_dir 'artifactory_admin_token')"
+  }
+
+  _token_created && return 0
+  # https://jfrog.com/help/r/artifactory-how-to-create-an-admin-token-without-using-the-ui/artifactory-how-to-create-an-admin-token-without-using-the-ui
+  local token
+  exec_in_disconnected_node 'fedora@registry.private.network' \
+    "sudo touch /app/jfrog/artifactory/var/bootstrap/etc/access/keys/generate.token.json" &&
+    _restart_artifactory_no_wait || return 1
+
+  if ! exec_in_disconnected_node 'fedora@registry.private.network' \
+    "timeout 120 sh -c \"while true; do sudo test -f /app/jfrog/artifactory/var/etc/access/keys/token.json && break; sleep 1; done\""
+  then
+    error "Timed out while waiting for Artifactory to generate a short-lived admin token"
+    return 1
+  fi
+  token_json=$(exec_in_disconnected_node 'fedora@registry.private.network' \
+    'sudo cat /app/jfrog/artifactory/var/etc/access/keys/token.json')
+  if test -z "$token_json"
+  then
+    error "Artifactory failed to create a short-lived admin token."
+    return 1
+  fi
+  token=$(echo "$token_json" | jq -r '.token')
+  attempts=0
+  while test "$attempts" -lt 30
+  do
+    new_token_json=$(exec_in_disconnected_node 'fedora@registry.private.network' \
+      "curl -sS -H \"Authorization: Bearer $token\" \
+        -X POST \
+        http://localhost:8082/access/api/v1/tokens \
+        -d \"scope=applied-permissions/user\"") || true
+    test -n "$new_token_json" && break
+    attempts=$((attempts+1))
+  done
+  access_token=$(jq -r .access_token <<< "$new_token_json")
+  if test -z "$access_token" || test "${access_token,,}" == null
+  then
+    error "Couldn't create an admin token with Artifactory"
+    return 1
+  fi
+  echo "$access_token" > "$(_get_file_from_data_dir 'artifactory_admin_token')"
 }
 
 
@@ -152,13 +209,8 @@ initialize_disconnected_node 'fedora@registry.private.network'
 download_packages_in_connected_bastion
 install_oc_client_into_disconnected_bastion
 install_artifactory_on_registry_instance
-if ! wait_for_artifactory_up
-then
-  error "Artifactory never started (or took too long to start)"
-  exit 1
-fi
-apply_artifactory_license
 change_artifactory_default_password
+create_artifactory_admin_token
 #upload_rhcos_images_to_s3_bucket
 #verify_rhcos_images_accessible_from_disconnected_bastion
 #generate_rhcos_ignition_files
