@@ -263,7 +263,7 @@ create_artifactory_oci_repo() {
     username=$(_get_from_config '.deploy.registry_config.artifactory.username')
     password=$(_get_from_config '.deploy.registry_config.artifactory.password')
     want=200
-    got=$(exec_in_disconnected_network "curl -sS -o /dev/null \
+    got=$(exec_in_disconnected_network "curl -sSL -o /dev/null \
       -u \"${username}:${password}\" \
       -w \"%{http_code}\" \
       http://registry.private.network:8082/artifactory/$(_get_from_config '.deploy.registry_config.artifactory.repository_name')")
@@ -286,7 +286,7 @@ EOF
     "curl -sS -H \"Authorization: Bearer $access_token\" \
       -H \"Content-Type: application/json\" \
       -X PUT \
-      --json '$repo_config_json' \
+      -d '$repo_config_json' \
       http://registry.private.network:8082/artifactory/api/repositories/$(_get_from_config '.deploy.registry_config.artifactory.repository_name')"
 }
 
