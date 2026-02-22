@@ -22,7 +22,12 @@ tear_everything_down() {
   exec_tofu destroy
 }
 
+delete_saved_artifactory_token() {
+  rm -rf "$(_get_file_from_data_dir 'artifactory_admin_token')"
+}
+
 set -e
+delete_saved_artifactory_token
 deinitialize_disconnected_node 'fedora@registry.private.network'
 deinitialize_bastions
 tear_everything_down
