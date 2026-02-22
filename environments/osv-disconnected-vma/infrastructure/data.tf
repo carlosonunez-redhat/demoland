@@ -17,3 +17,43 @@ data "aws_vpc_endpoint_service" "s3" {
   service = "s3"
   service_type = "Gateway"
 }
+
+data "aws_ami" "ipxe" {
+  most_recent = true
+  filter {
+    name = "name"
+    values = [ "iPXE*" ]
+  }
+  filter {
+    name = "architecture"
+    values = [ "x86_64" ]
+  }
+  filter {
+    name = "virtualization-type"
+    values = [ "hvm" ]
+  }
+  filter {
+    name = "owner-id"
+    values = [ "833372943033" ] # source: https://ipxe.org/howto/ec2
+  }
+}
+
+data "aws_ami" "fedora_x86" {
+  most_recent = true
+  filter {
+    name = "name"
+    values = [ "Fedora-Cloud-Base-AmazonEC2.x86_64-43-2*" ]
+  }
+  filter {
+    name = "owner-id"
+    values = [ "125523088429" ] # source: https://wiki.centos.org/Cloud(2f)AWS.html
+  }
+  filter {
+    name = "architecture"
+    values = [ "x86_64" ]
+  }
+  filter {
+    name = "virtualization-type"
+    values = [ "hvm" ]
+  }
+}
