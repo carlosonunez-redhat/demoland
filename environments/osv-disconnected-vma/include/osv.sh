@@ -14,7 +14,7 @@ _bare_metal_instances_sentinel() {
 }
 
 delete_bare_metal_instances_sentinel() {
-  test -f "$(_bare_metal_instances_sentinel)" &&
+  test -f "$(_bare_metal_instances_sentinel)" || return 0
     rm "$(_bare_metal_instances_sentinel)"
 }
 

@@ -29,6 +29,12 @@ _init_tofu() {
 }
 
 tofu() {
+  _asked_for_destroy_but_state_bucket_deleted() {
+    test "${1,,}" == destroy &&
+      { 2>&1 aws s3api head-bucket --bucket "$TOFU_STATE_S3_BUCKET" | grep -q 'Not Found'; }
+  }
+  _asked_for_destroy_but_state_bucket_deleted "$@" && return 0
+
   _init_tofu || return 1
   case "${1,,}" in
     preflight)
