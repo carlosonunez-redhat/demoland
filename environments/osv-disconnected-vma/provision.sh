@@ -238,7 +238,7 @@ create_artifactory_admin_token() {
   fi
   token=$(echo "$token_json" | jq -r '.token')
   attempts=0
-  while test "$attempts" -lt 30
+  while test "$attempts" -lt 90
   do
     new_token_json=$(exec_in_disconnected_node 'fedora@registry.private.network' \
       "curl -sS -H \"Authorization: Bearer $token\" \
