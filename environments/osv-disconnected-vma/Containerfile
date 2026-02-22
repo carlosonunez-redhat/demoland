@@ -9,6 +9,6 @@ RUN tar -xvzf /tmp/file.tar.gz -C /tmp
 
 FROM fedora:41 AS final
 COPY --from=oc_client /tmp/oc /usr/bin/oc
-COPY --from=ghcr.io/opentofu/opentofu:1.9.1-minimal /usr/local/bin/tofu /usr/local/bin/tofu
+COPY --from=ghcr.io/opentofu/opentofu:1.11.5-minimal /usr/local/bin/tofu /usr/local/bin/tofu
 RUN dnf -y update
 RUN dnf -y install yq jq awscli openssh ssh-agent git
