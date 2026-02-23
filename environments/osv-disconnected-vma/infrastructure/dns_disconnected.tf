@@ -27,3 +27,9 @@ resource "aws_route53_record" "disconnected-artifactory-vm" {
     module.disconnected-artifactory-vm.private_ip
   ]
 }
+
+# resource "aws_route53_record" "api-ext" {}
+# resource "aws_route53_record" "api-int" {}
+# resource "aws_route53_record" "bootstrap" {} # same as bastion.private.network
+# resource "aws_route53_record" "control-plane" {} # count = len(ocp_cp_bare_metal_vms)
+# resource "aws_route53_record" "worker" {} # count  = len(ocp_worker_bare_metal_vms)
