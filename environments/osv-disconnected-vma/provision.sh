@@ -52,6 +52,10 @@ _artifactory_token() {
   cat "$(_artifactory_token_file)"
 }
 
+_pull_secret_for_disconnected_registry() {
+  exec_in_disconnected_network 'cat $XDG_RUNTIME_DIR/containers/auth.json' > $(_pull_secret_file)
+}
+
 provision_base_infrastructure_and_vms() {
   exec_tofu apply
 }
@@ -95,11 +99,29 @@ install_oc_client_into_disconnected_bastion() {
   url="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/$version/openshift-client-linux.tar.gz"
   exec_in_connected_network "mkdir -p /tmp/oc && \
     { test -f /tmp/oc_client.tar.gz || curl -sSL -o /tmp/oc_client.tar.gz '$url'; } &&  \
-    tar -xzf /tmp/oc_client.tar.gz -C /tmp/oc"
-  exec_in_connected_network "test -f /tmp/oc/oc" || return 1
+    tar -xzf /tmp/oc_client.tar.gz -C /tmp/oc && \
+    sudo cp /tmp/oc/oc /usr/local/bin/oc"
+  exec_in_connected_network "sudo test -f /usr/local/bin/oc" || return 1
   exec_in_disconnected_network 'mkdir -p $HOME/.local/bin'
   rsync_into_disconnected_network /tmp/oc/oc '$HOME/.local/bin'
   exec_in_disconnected_network 'chmod +x $HOME/.local/bin/oc && oc version --client | grep -q Client'
+}
+
+install_oc_mirror_into_bastions() {
+  local version
+  version=$(_get_from_config '.deploy.cluster_config.cluster_version')
+  url="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/$version/oc-mirror.tar.gz"
+  exec_in_connected_network "mkdir -p /tmp/oc-mirror && \
+    { test -f /tmp/oc-mirror.tar.gz || curl -sSL -o /tmp/oc-mirror.tar.gz '$url'; } &&  \
+    tar -xzf /tmp/oc-mirror.tar.gz -C /tmp/oc-mirror && \
+    sudo cp /tmp/oc-mirror/oc-mirror /usr/local/bin/oc-mirror && \
+    sudo chmod +x /usr/local/bin/oc-mirror && \
+    &>/dev/null oc mirror --v2 --help"
+  exec_in_connected_network "sudo test -f /usr/local/bin/oc-mirror" || return 1
+  rsync_into_disconnected_network /tmp/oc-mirror/oc-mirror /tmp
+  exec_in_disconnected_network 'sudo mv /tmp/oc-mirror /usr/local/bin/oc-mirror && \
+    chmod +x /usr/local/bin/oc-mirror && \
+    &>/dev/null oc mirror --v2 --help'
 }
 
 install_artifactory_on_disconnected_registry_instance() {
@@ -355,12 +377,73 @@ confirm_artifactory_push_and_pull() {
     _confirm_push_and_pull
 }
 
+upload_openshift_install_config_into_disconnected_bastion() {
+  values=(
+    ssh_key "$(ssh-keygen -yf "$(_get_file_from_secrets_dir 'ssh-key')")"
+    base_domain 'private.network'
+    cluster_name "$(_get_from_config '.deploy.cluster_config.cluster_name')"
+    pull_secret "$(_pull_secret_for_disconnected_registry)"
+    image_content_sources "$(cat "$(_image_content_sources_file)")" 
+  )
+  render_and_save_install_config "${values[@]}"
+}
+
+mirror_ocp_images_into_disconnected_bastion() {
+  _upload_public_pull_secret_into_connected_bastion() {
+    cat "$(_get_file_from_secrets_dir 'public-pull-secret')" |
+      yq -o=y -P . |
+      exec_in_connected_network 'cat - > /tmp/public_pull_secret'
+  }
+
+  _upload_image_set_into_connected_bastion() {
+    local version track channel branch values
+    # TODO: Preflight check this.
+    version="$(_get_from_config '.deploy.cluster_config.cluster_version')"
+    branch="$(cut -f1-2 -d '.' <<< "$version")"
+    track="$(_get_from_config '.deploy.cluster_config.cluster_track')"
+    test -z "$track" && track=stable
+    channel="${track}-${branch}"
+    values=(
+      openshift_channel "${channel}"
+      max_version "$version"
+    )
+    template=$(render_yaml_template image_set "${values[@]}") || return 1
+    echo "$template" | exec_in_connected_network 'cat - > /tmp/image_set.yaml'
+  }
+
+  _mirror_to_disk_in_connected_bastion() {
+    exec_in_connected_network 'test -d $HOME/.local/images && exit 0; \
+      oc mirror --v2 -c /tmp/image_set.yaml \
+        --authfile /tmp/public_pull_secret \
+        file:///$HOME/.local/images'
+  }
+  
+  _upload_images_to_disconnected_bastion() {
+    rsync_into_disconnected_network '$HOME/.local/images' '$HOME/.local'
+  }
+
+  _disk_to_mirror_in_disconnected_bastion() {
+    exec_in_disconnected_network 'test -f $HOME/.local/d2m_done && exit 0; \
+      oc mirror --v2 -c /tmp/image_set.yaml \
+        --from file://$HOME/.local/images \
+        docker://registry.private.network:8082 && touch $HOME/.local/d2m_done'
+  }
+
+  set -e
+  _upload_public_pull_secret_into_connected_bastion
+  _upload_image_set_into_connected_bastion
+  _mirror_to_disk_in_connected_bastion
+  _upload_images_to_disconnected_bastion
+  _disk_to_mirror_in_disconnected_bastion
+}
+
 set -e
 provision_base_infrastructure_and_vms
 initialize_bastions
 initialize_registry
 download_packages_in_connected_bastion
 install_oc_client_into_disconnected_bastion
+install_oc_mirror_into_bastions
 install_artifactory_on_disconnected_registry_instance
 apply_artifactory_license
 change_artifactory_default_password
@@ -368,6 +451,8 @@ create_artifactory_admin_token
 create_artifactory_oci_repo
 log_into_artifactory_on_disconnected_bastion
 confirm_artifactory_push_and_pull
+mirror_ocp_images_into_disconnected_bastion
+#upload_openshift_install_config_into_disconnected_bastion
 #upload_rhcos_images_to_s3_bucket # <-- WE ARE HERE
 #verify_rhcos_images_accessible_from_disconnected_bastion
 #generate_rhcos_ignition_files

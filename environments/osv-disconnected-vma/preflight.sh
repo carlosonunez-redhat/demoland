@@ -34,7 +34,7 @@ verify_config_keys() {
 
 verify_secrets() {
   local f
-  for f in 'ssh-key' 'ssh-user-bastion' 'artifactory-license'
+  for f in 'ssh-key' 'ssh-user-bastion' 'artifactory-license' 'public-pull-secret'
   do
     test -f "$(_get_file_from_secrets_dir "$f")" && continue
     error "Secret not found; please ensure it exists in config: $f"

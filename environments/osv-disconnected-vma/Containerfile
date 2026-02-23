@@ -12,3 +12,7 @@ COPY --from=oc_client /tmp/oc /usr/bin/oc
 COPY --from=ghcr.io/opentofu/opentofu:1.11.5-minimal /usr/local/bin/tofu /usr/local/bin/tofu
 RUN dnf -y update
 RUN dnf -y install yq jq awscli openssh ssh-agent git
+RUN arch=amd64; uname -m | grep -Eiq 'arm|aarch' && arch=arm64; \
+    curl -Lo /usr/bin/ytt "https://github.com/carvel-dev/ytt/releases/download/v0.52.0/ytt-linux-$arch"
+RUN chmod +x /usr/bin/ytt
+RUN ytt --version
