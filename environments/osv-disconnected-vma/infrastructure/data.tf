@@ -1,6 +1,7 @@
 locals {
   config = yamldecode(file("/secrets/config.yaml"))
   options = local.config.deploy
+  oc_mirror_az_index = index(local.options.cloud_config.aws.networking.common.availability_zones, local.options.cloud_config.aws.storage.oc_mirror.availability_zone)
 }
 
 data "tls_public_key" "ec2_key" {

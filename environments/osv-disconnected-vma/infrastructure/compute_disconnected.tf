@@ -2,10 +2,11 @@ module "disconnected-bastion-vm" {
   source = "terraform-aws-modules/ec2-instance/aws"
   name = "bastion-disconnected"
   instance_type = local.options.cloud_config.aws.compute.instance_sizes.vm
+  availability_zone = local.options.cloud_config.aws.storage.oc_mirror.availability_zone
   associate_public_ip_address = false
   ami = data.aws_ami.fedora_x86.id
   key_name = module.ec2_key.key_pair_name
-  subnet_id = module.disconnected_network.private_subnets[0]
+  subnet_id = module.disconnected_network.private_subnets[local.oc_mirror_az_index]
   vpc_security_group_ids = [ module.disconnected-sg-bastion.security_group_id ]
   create_security_group = false
   root_block_device = {

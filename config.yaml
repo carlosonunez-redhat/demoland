@@ -61,6 +61,9 @@ environments:
                     repository_name: ocp-registry
             cloud_config:
                 aws:
+                    storage:
+                        oc_mirror:
+                            availability_zone: us-east-2b
                     compute:
                         instance_sizes:
                             vm: m8a.large
@@ -226,8 +229,8 @@ environments:
                     # encrypted
                     data: ENC[AES256_GCM,data:U2eobbE6upIEWrxHBbiL1zSEMdXQBDwRWpiZyGog9UJMPT/JwpXKdy5pD0wR2O3Gg/QVR2lJH4pZGJum/Xeuccm6/rFfxLP913xX76Ps+W6AP10YowpbOAjcX/bubm+FA5WZnIs0CFr8LUSzmKzrKxv1ITL5vxECbXOseszrMvBnDUoduAj5b8X31/FmPzPJQ1hBIQm66Ko9qB5yY09MpxeWmWOB4ZjR6n2tbsRve886UEq922SdhaldEozb2zq+OC4U1eKBOc4Rq0JoWCam2NnM/Y8vCrgOd9wo5taB+RAR4v+0WqRZlZtFoRxv8L2BAZkuZ3mObqbb5PcH/a/w5HzJ/V82mm5UN3Ie6rBLR1W2SsdWh4ZHE2qhYMpgU/XreRTGwG+/b3hU/z2ik7wgVo7MIXTvDpGqN8tf70IzmMXX2EpHWQMAO4Re+UB8b7GP7xFREbCjC7hnFQoel3AJNUPVdFFsGFdgDHyRa09BamVfnlhWtVfChrY2xl1X5NroZZT7Qn9uOvw6gj7mJhrmbq0JfCaetecTwqY=,iv:/j7qGCxTK0lBUSONjta9cn2A3X4idjk3zamBgFkFLbc=,tag:IR2K25bjQdDe7+KU/OyyCg==,type:str]
 sops:
-    lastmodified: "2026-02-23T03:06:47Z"
-    mac: ENC[AES256_GCM,data:BapOAK7MYIWd2Twp6dA/p5kTzWTAohg0kqN9MzYSHlF5CriCb/eVEFX5m4VsyyP2gOXEp0Jh6TwIG0hya+dax17uUP25ykgcMRhiCPeDUwoWW2/MYSrnFBFZdccOwUBuQu8A/I29v/dltBXyLHnTPZemq4bhnUD/TTcVpaHtHNY=,iv:OuBQwG66oZpKuWUiEoQTPCJ9cB8SqpPrEH1XPHIstyY=,tag:fFmA9O0nzfZx3NDG6NB2qw==,type:str]
+    lastmodified: "2026-02-25T17:02:57Z"
+    mac: ENC[AES256_GCM,data:55yNtah9+BNFRu03JfycoVlsshW0yb8efEEREzf+d+GuToVfv/7vLb4GpAAyZkwJhS9lfC1hXk4N22lfL8pbA2y3IXoinGRBlKmqF/7YskmfIxs9pVSnAaAefWqP5or50Bq95/b/mWtK0x5zwc/rYC6UbuwL0/pMgx1gImk7ZLU=,iv:+Q17DRvvU9R97SAQRnuK3JEmCKIlSwtTm30QgAehqGw=,tag:yPmRRwdQJwE755J2zvPFVg==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-

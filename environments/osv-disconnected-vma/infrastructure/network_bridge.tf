@@ -1,5 +1,5 @@
 locals {
-  bastion_bridge_ip = cidrhost(module.disconnected_network.private_subnets_cidr_blocks[0], 252)
+  bastion_bridge_ip = cidrhost(module.disconnected_network.private_subnets_cidr_blocks[local.oc_mirror_az_index], 252)
 }
 
 module "disconnected-sg-bastion-bridge" {
@@ -17,7 +17,7 @@ module "disconnected-sg-bastion-bridge" {
 }
 
 resource "aws_network_interface" "bastion-bridge" {
-  subnet_id = module.disconnected_network.private_subnets[0]
+  subnet_id = module.disconnected_network.private_subnets[local.oc_mirror_az_index]
   private_ips = [ local.bastion_bridge_ip ]
   security_groups = [ module.disconnected-sg-bastion-bridge.security_group_id ]
   attachment {

@@ -15,6 +15,7 @@ source "../../include/helpers/yaml.sh"
 # variable, like shown in the comment below.
 #
 source "./include/bastion.sh"
+source "./include/mirror_volume.sh"
 source "./include/osv.sh"
 source "./include/tofu.sh"
 
@@ -388,57 +389,70 @@ upload_openshift_install_config_into_disconnected_bastion() {
   render_and_save_install_config "${values[@]}"
 }
 
-mirror_ocp_images_into_disconnected_bastion() {
-  _upload_public_pull_secret_into_connected_bastion() {
-    cat "$(_get_file_from_secrets_dir 'public-pull-secret')" |
-      yq -o=y -P . |
-      exec_in_connected_network 'cat - > /tmp/public_pull_secret'
-  }
+generate_and_upload_image_set_into_mirror_vol() {
+  local version track channel branch values
+  # TODO: Preflight check this.
+  version="$(_get_from_config '.deploy.cluster_config.cluster_version')"
+  branch="$(cut -f1-2 -d '.' <<< "$version")"
+  track="$(_get_from_config '.deploy.cluster_config.cluster_track')"
+  test -z "$track" && track=stable
+  channel="${track}-${branch}"
+  values=(
+    openshift_channel "${channel}"
+    max_version "$version"
+  )
+  template=$(render_yaml_template image_set "${values[@]}") || return 1
+  echo "$template" | exec_in_connected_network 'cat - > /mnt/mirror/image_set.yaml'
+}
 
-  _upload_image_set_into_connected_bastion() {
-    local version track channel branch values
-    # TODO: Preflight check this.
-    version="$(_get_from_config '.deploy.cluster_config.cluster_version')"
-    branch="$(cut -f1-2 -d '.' <<< "$version")"
-    track="$(_get_from_config '.deploy.cluster_config.cluster_track')"
-    test -z "$track" && track=stable
-    channel="${track}-${branch}"
-    values=(
-      openshift_channel "${channel}"
-      max_version "$version"
-    )
-    template=$(render_yaml_template image_set "${values[@]}") || return 1
-    echo "$template" | exec_in_connected_network 'cat - > /tmp/image_set.yaml'
-  }
+upload_public_pull_secret_into_connected_bastion() {
+  cat "$(_get_file_from_secrets_dir 'public-pull-secret')" |
+    yq -o=y -P . |
+    exec_in_connected_network 'cat - > /tmp/public_pull_secret'
+}
 
-  _mirror_to_disk_in_connected_bastion() {
-    exec_in_connected_network 'test -d $HOME/.local/images && exit 0; \
-      oc mirror --v2 -c /tmp/image_set.yaml \
-        --authfile /tmp/public_pull_secret \
-        file:///$HOME/.local/images'
-  }
-  
-  _upload_images_to_disconnected_bastion() {
-    rsync_into_disconnected_network '$HOME/.local/images' '$HOME/.local'
-  }
+mirror_to_disk_connected_bastion() {
+  exec_in_connected_network 'test -f /mnt/mirror/.done && exit 0; \
+    oc mirror --v2 -c /mnt/mirror/image_set.yaml \
+      --authfile /tmp/public_pull_secret \
+      file:///mnt/mirror'
+}
 
-  _disk_to_mirror_in_disconnected_bastion() {
-    exec_in_disconnected_network 'test -f $HOME/.local/d2m_done && exit 0; \
-      oc mirror --v2 -c /tmp/image_set.yaml \
-        --from file://$HOME/.local/images \
-        docker://registry.private.network:8082 && touch $HOME/.local/d2m_done'
-  }
+disk_to_mirror_disconnected_bastion() {
+  exec_in_disconnected_network 'test -f /mnt/mirror/.done && exit 0'
+  exec_in_disconnected_network 'oc mirror --v2 -c /mnt/mirror/image_set.yaml \
+      --from file:///mnt/mirror \
+      docker://registry.private.network:8082 && touch /mnt/mirror/.done'
+}
 
-  set -e
-  _upload_public_pull_secret_into_connected_bastion
-  _upload_image_set_into_connected_bastion
-  _mirror_to_disk_in_connected_bastion
-  _upload_images_to_disconnected_bastion
-  _disk_to_mirror_in_disconnected_bastion
+attach_and_mount_oc_mirror_volume_to_connected_bastion() {
+  set -x
+  aws ec2 attach-volume --device /dev/sdh \
+    --instance-id "$(tofu output -raw connected_bastion_instance_id)" \
+    --volume-id "$(oc_mirror_ebs_volume_id)" &&
+    set +x &&
+    exec_in_connected_network 'sudo sh -c "mkdir -p /mnt/mirror && mount -t ext4 /dev/sdh /mnt/mirror"'
+}
+
+detach_oc_mirror_volume() {
+  local output_var
+  output_var="${1,,}_bastion_instance_id"
+  exec_in_connected_network 'sudo umount /mnt/mirror' &&
+    aws ec2 detach-volume --device /dev/sdh \
+      --instance-id "$(tofu output -raw "$output_var")" \
+      --volume-id "$(tofu output -raw oc_mirror_volume_id)"
+}
+
+attach_and_mount_oc_mirror_volume_to_disconnected_bastion() {
+  aws ec2 attach-volume --device /dev/sdh \
+    --instance-id "$(tofu output -raw disconnected_bastion_instance_id)" \
+    --volume-id "$(tofu output -raw oc_mirror_volume_id)" &&
+    exec_in_disconnected_network 'sudo sh -c "mkdir -p /mnt/mirror && mount -t ext4 /dev/sdh /mnt/mirror"'
 }
 
 set -e
 provision_base_infrastructure_and_vms
+provision_oc_mirror_ebs_volume
 initialize_bastions
 initialize_registry
 download_packages_in_connected_bastion
@@ -451,7 +465,14 @@ create_artifactory_admin_token
 create_artifactory_oci_repo
 log_into_artifactory_on_disconnected_bastion
 confirm_artifactory_push_and_pull
-mirror_ocp_images_into_disconnected_bastion
+upload_public_pull_secret_into_connected_bastion
+attach_and_mount_oc_mirror_volume_to_connected_bastion
+generate_and_upload_image_set_into_mirror_vol
+mirror_to_disk_connected_bastion
+detach_oc_mirror_volume connected
+attach_and_mount_oc_mirror_volume_to_disconnected_bastion
+disk_to_mirror_disconnected_bastion
+detach_oc_mirror_volume disconnected
 #upload_openshift_install_config_into_disconnected_bastion
 #upload_rhcos_images_to_s3_bucket # <-- WE ARE HERE
 #verify_rhcos_images_accessible_from_disconnected_bastion
