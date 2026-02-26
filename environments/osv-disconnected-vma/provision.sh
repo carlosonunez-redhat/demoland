@@ -393,8 +393,8 @@ upload_public_pull_secret_into_connected_bastion() {
 }
 
 mirror_to_disk_connected_bastion() {
-  exec_in_connected_network 'test -f /mnt/mirror/.m2d_done && exit 0; \
-    oc mirror --v2 -c /mnt/mirror/image_set.yaml \
+  exec_in_connected_network 'test -f /mnt/mirror/.m2d_done' && return 0
+  exec_in_connected_network 'oc mirror --v2 -c /mnt/mirror/image_set.yaml \
       --authfile /tmp/public_pull_secret \
       --cache-dir /mnt/mirror/cache \
       file:///mnt/mirror' &&
