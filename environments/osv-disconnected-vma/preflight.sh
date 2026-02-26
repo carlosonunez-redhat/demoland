@@ -25,7 +25,7 @@ verify_config_keys() {
     '.deploy.registry_config.artifactory.jcr_version' \
     '.deploy.registry_config.artifactory.repository_name' \
     '.deploy.registry_config.artifactory.password' \
-    '.deploy.cloud_config.aws.storage.oc_mirror.availability_zone'
+    '.deploy.cloud_config.aws.networking.common.default_availability_zone'
   do
     test -n "$(_get_from_config "$k")" && continue
     error "Key not defined in config; please define it: $k"

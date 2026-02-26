@@ -1,5 +1,5 @@
 locals {
-  bastion_bridge_ip = cidrhost(module.disconnected_network.private_subnets_cidr_blocks[local.oc_mirror_az_index], 252)
+  bastion_bridge_ip = cidrhost(module.disconnected_network.private_subnets_cidr_blocks[local.default_availability_zone_index], 252)
 }
 
 module "disconnected-sg-bastion-bridge" {

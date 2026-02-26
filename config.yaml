@@ -74,6 +74,7 @@ environments:
                                 - us-east-2a
                                 - us-east-2b
                                 - us-east-2c
+                            default_availability_zone: us-east-2b
                         connected:
                             dns:
                                 domain_name: sandbox3253.opentlc.com
@@ -229,8 +230,8 @@ environments:
                     # encrypted
                     data: ENC[AES256_GCM,data:U2eobbE6upIEWrxHBbiL1zSEMdXQBDwRWpiZyGog9UJMPT/JwpXKdy5pD0wR2O3Gg/QVR2lJH4pZGJum/Xeuccm6/rFfxLP913xX76Ps+W6AP10YowpbOAjcX/bubm+FA5WZnIs0CFr8LUSzmKzrKxv1ITL5vxECbXOseszrMvBnDUoduAj5b8X31/FmPzPJQ1hBIQm66Ko9qB5yY09MpxeWmWOB4ZjR6n2tbsRve886UEq922SdhaldEozb2zq+OC4U1eKBOc4Rq0JoWCam2NnM/Y8vCrgOd9wo5taB+RAR4v+0WqRZlZtFoRxv8L2BAZkuZ3mObqbb5PcH/a/w5HzJ/V82mm5UN3Ie6rBLR1W2SsdWh4ZHE2qhYMpgU/XreRTGwG+/b3hU/z2ik7wgVo7MIXTvDpGqN8tf70IzmMXX2EpHWQMAO4Re+UB8b7GP7xFREbCjC7hnFQoel3AJNUPVdFFsGFdgDHyRa09BamVfnlhWtVfChrY2xl1X5NroZZT7Qn9uOvw6gj7mJhrmbq0JfCaetecTwqY=,iv:/j7qGCxTK0lBUSONjta9cn2A3X4idjk3zamBgFkFLbc=,tag:IR2K25bjQdDe7+KU/OyyCg==,type:str]
 sops:
-    lastmodified: "2026-02-25T23:20:21Z"
-    mac: ENC[AES256_GCM,data:JXOGOO715/HOg9s1jXOMiIUNLaTSzvXogmFnBnrXpvrkaScTDLX4HzpVlFdk5PM74/7bmkd8EVpu1YmAr/mdxyxlO1AQXiTBbqAGGHgUZvc4Vm90WgJFECCy2kKyK7k/3weNio5zSgVXFWgNmsoBio7y7prXLA/k7+DzUJ6p8Co=,iv:EF+a7MEfczRnCFiXLqjTewepSW/K3qUnOCckEiK2StM=,tag:xaIeynDFuKooBKZGlwhIeA==,type:str]
+    lastmodified: "2026-02-26T18:59:59Z"
+    mac: ENC[AES256_GCM,data:9JgrAFzdHvRRial1bnJC8P/uoa3776MI+LvBVLJwGWAqTa2EVSYSpxVlVQAsmadbSTNmEEYbkBxRQU+vb7NpPO54IH4csR4wp8KUpnrgRvidOXUqHwJBns8YnYrh/OsCA4flSTrCRb068oTVL/BXhldXhWGoHVIPy/VHqkhUSVo=,iv:F8PbQpH1D4y0x8J2U5pUlpdYAkYd+UdxYsTjHCpvDOI=,tag:QSpvmKUcHpHuFlhXLp/YYg==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-

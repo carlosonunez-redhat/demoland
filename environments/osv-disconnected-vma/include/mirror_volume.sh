@@ -59,7 +59,7 @@ provision_oc_mirror_ebs_volume() {
   test -n "$(oc_mirror_ebs_volume_id)" && return 0
 
   local az
-  az="$(_get_from_config '.deploy.cloud_config.aws.storage.oc_mirror.availability_zone')"
+  az="$(_get_from_config '.deploy.cloud_config.aws.networking.common.default_availability_zone')"
   >/dev/null aws ec2 create-volume \
     --availability-zone "$az" \
     --iops 5000 \

@@ -48,6 +48,11 @@ module "disconnected_network" {
   }
 }
 
+resource "aws_subnet" "management_network_disconnected" {
+  vpc_id = module.disconnected_network.vpc_id
+  cidr_block = cidrsubnet(local.options.cloud_config.aws.networking.disconnected.cidr, 8, 252)
+}
+
 # Allow instances to access AWS's S3 EPEL repositories.
 resource "aws_vpc_endpoint" "s3" {
   vpc_id = module.disconnected_network.vpc_id
@@ -73,6 +78,28 @@ module "disconnected-sg-bastion" {
     protocol = "tcp"
     cidr_blocks = "${local.bastion_bridge_ip}/32"
   }]
+  egress_with_cidr_blocks = [{
+    from_port = 0
+    to_port = 0
+    protocol = -1
+    description = "Allow all outbound"
+    cidr_blocks = local.options.cloud_config.aws.networking.disconnected.cidr
+  }]
+}
+
+module "disconnected-sg-mgmt-net" {
+  source = "terraform-aws-modules/security-group/aws"
+  name = "ocp-nodes-sg-disconnected"
+  description = "OCP control plane and workers"
+  vpc_id = module.disconnected_network.vpc_id
+  ingress_with_self = [
+    {
+      self = true
+      from_port = 0
+      to_port = 0
+      protocol = "-1"
+    }
+  ]
   egress_with_cidr_blocks = [{
     from_port = 0
     to_port = 0
