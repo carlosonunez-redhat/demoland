@@ -508,7 +508,10 @@ create_openshift_install_workspace_in_disconnected_bastion() {
 
 generate_install_config() {
   local idms values
-  idms="$(exec_in_disconnected_network 'cat /mnt/mirror/working-dir/cluster-resources/idms-oc-mirror.yaml' | yq -r '.spec.imageDigestMirrors' | grep -Ev '^null$' | cat)"
+  idms="$(exec_in_disconnected_network 'cat /mnt/mirror/working-dir/cluster-resources/idms-oc-mirror.yaml' |
+    yq -o=j -I=0 -r '.spec.imageDigestMirrors[]' |
+    grep -Ev '^null$' |
+    cat)"
   if test -z "$idms"
   then
     error "Couldn't retrieve imageDigestMirrors."
@@ -517,9 +520,9 @@ generate_install_config() {
   values=(
     base_domain "$(_get_from_config '.deploy.cloud_config.aws.networking.disconnected.dns.domain_name')"
     cluster_name "$(_get_from_config '.deploy.cluster_config.cluster_name')"
-    pull_secret "$(exec_in_disconnected_network 'cat $XDG_RUNTIME_DIR/containers/auth.json')"
-    ssh_key "$(cat "$(_get_file_from_secrets_dir 'ssh-key')")"
-    image_content_sources "$idms"
+    pull_secret "$(exec_in_disconnected_network 'cat $XDG_RUNTIME_DIR/containers/auth.json' | as_json_string)"
+    ssh_key_is_string_value "$(cat "$(_get_file_from_secrets_dir 'ssh-key')")"
+    image_content_sources "$(jq -scr '.' <<< "$idms")"
   )
   render_and_save_install_config "${values[@]}"
 }
