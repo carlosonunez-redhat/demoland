@@ -10,6 +10,23 @@ mirror:
     graph: true
   operators:
     - catalog: #@ 'registry.redhat.io/redhat/redhat-operator-index:v{}'.format(data.values.openshift_channel.split("-")[1])
+      packages:
+      - name: multicluster-engine
+      - name: ocs-operator
+      - name: odf-operator
+      - name: mcg-operator
+      - name: odf-csi-addons-operator
+      - name: odr-cluster-operator
+      - name: odr-hub-operator
+      - name: lvms-operator
+      - name: local-storage-operator
+      - name: metallb-operator
+      - name: node-healthcheck-operator
+      - name: node-maintenance-operator
+      - name: fence-agents-remediation
+      - name: kubevirt-hyperconverged
+      - name: kubernetes-nmstate-operator
+      - name: cincinnati-operator
   additionalImages:
    - name: registry.redhat.io/ubi8/ubi:latest
    - name: registry.redhat.io/ubi9/ubi:latest
