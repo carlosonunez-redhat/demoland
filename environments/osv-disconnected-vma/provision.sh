@@ -522,7 +522,10 @@ umount_and_detach_oc_mirror_volume() {
 }
 
 upload_openshift_install_into_disconnected_bastion() {
-  rsync_into_disconnected_network '/usr/local/bin/openshift-install' '$HOME/.local/bin/' &&
+  version="$(_get_from_config '.deploy.cluster_config.cluster_version')" || return 1
+  exec_in_connected_network "curl -Lo /tmp/openshift-install \
+    https://mirror.openshift.com/pub/openshift-v4/clients/ocp/$version/openshift-install-linux-amd64.tar.gz" &&
+    rsync_into_disconnected_network '/tmp/openshift-install' '$HOME/.local/bin/' &&
     exec_in_disconnected_network 'openshift-install --version >/dev/null' && return 0
   error "openshift-install upload into disconnected network failed"
   return 1
