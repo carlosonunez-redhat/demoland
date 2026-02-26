@@ -521,6 +521,40 @@ umount_and_detach_oc_mirror_volume() {
   detach_oc_mirror_volume_from_instance "$instance_id"
 }
 
+upload_openshift_install_into_disconnected_bastion() {
+  rsync_into_disconnected_network '/usr/local/bin/openshift-install' '$HOME/.local/bin/' &&
+    exec_in_disconnected_network 'openshift-install --version >/dev/null' && return 0
+  error "openshift-install upload into disconnected network failed"
+  return 1
+}
+
+create_openshift_install_workspace_in_disconnected_bastion() {
+  exec_in_disconnected_network 'mkdir -p $HOME/openshift_install'
+}
+
+generate_install_config() {
+  local idms values
+  idms="$(exec_in_disconnected_network 'cat /mnt/mirror/working-dir/cluster-resources/idms-oc-mirror.yaml' | yq -r '.spec.imageDigestMirrors' | grep -Ev '^null$' | cat)"
+  if test -z "$idms"
+  then
+    error "Couldn't retrieve imageDigestMirrors."
+    return 1
+  fi
+  values=(
+    base_domain "$(_get_from_config '.deploy.cloud_config.aws.networking.disconnected.dns.domain_name')"
+    cluster_name "$(_get_from_config '.deploy.cluster_config.cluster_name')"
+    pull_secret "$(exec_in_disconnected_network 'cat $XDG_RUNTIME_DIR/containers/auth.json')"
+    ssh_key "$(cat "$(_get_file_from_secrets_dir 'ssh-key')")"
+    image_content_sources "$idms"
+  )
+  render_and_save_install_config "${values[@]}"
+}
+
+upload_openshift_install_config_into_disconnected_bastion() {
+  rsync_into_disconnected_network "$(_config_file_in_data_dir)" \
+    '$HOME/openshift_install/'
+}
+
 set -e
 provision_base_infrastructure_and_vms
 provision_oc_mirror_ebs_volume
@@ -544,7 +578,9 @@ attach_and_mount_oc_mirror_volume disconnected
 log_into_artifactory_on_disconnected_bastion
 disk_to_mirror_disconnected_bastion
 umount_and_detach_oc_mirror_volume disconnected
-#upload_openshift_install_config_into_disconnected_bastion
+upload_openshift_install_into_disconnected_bastion
+generate_install_config
+upload_openshift_install_config_into_disconnected_bastion
 #upload_rhcos_images_to_s3_bucket # <-- WE ARE HERE
 #verify_rhcos_images_accessible_from_disconnected_bastion
 #generate_rhcos_ignition_files

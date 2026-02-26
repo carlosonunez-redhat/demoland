@@ -7,7 +7,17 @@ RUN \
   curl -o /tmp/file.tar.gz "${url}.tar.gz"
 RUN tar -xvzf /tmp/file.tar.gz -C /tmp
 
+FROM curlimages/curl AS ocp_installer
+ENV OPENSHIFT_VERSION=4.19.9
+ENV OPENSHIFT_BINARIES_URL="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${OPENSHIFT_VERSION}"
+RUN \
+  url="${OPENSHIFT_BINARIES_URL}/openshift-install-linux"; \
+  uname -m | grep -Eq 'arm|aarch' && url="${url}-arm64"; \
+  curl -o /tmp/file.tar.gz "${url}.tar.gz"
+RUN tar -xvzf /tmp/file.tar.gz -C /tmp
+
 FROM fedora:41 AS final
+COPY --from=ocp_installer /tmp/openshift-install /usr/bin/openshift-install
 COPY --from=oc_client /tmp/oc /usr/bin/oc
 COPY --from=ghcr.io/opentofu/opentofu:1.11.5-minimal /usr/local/bin/tofu /usr/local/bin/tofu
 RUN dnf -y update
