@@ -94,35 +94,16 @@ download_packages_in_connected_bastion() {
   exec_in_connected_network "sudo dnf -y install $packages"
 }
 
-install_oc_client_into_disconnected_bastion() {
-  local version
-  version=$(_get_from_config '.deploy.cluster_config.cluster_version')
-  url="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/$version/openshift-client-linux.tar.gz"
-  exec_in_connected_network "mkdir -p /tmp/oc && \
-    { test -f /tmp/oc_client.tar.gz || curl -sSL -o /tmp/oc_client.tar.gz '$url'; } &&  \
-    tar -xzf /tmp/oc_client.tar.gz -C /tmp/oc && \
-    sudo cp /tmp/oc/oc /usr/local/bin/oc"
-  exec_in_connected_network "sudo test -f /usr/local/bin/oc" || return 1
-  exec_in_disconnected_network 'mkdir -p $HOME/.local/bin'
-  rsync_into_disconnected_network /tmp/oc/oc '$HOME/.local/bin'
-  exec_in_disconnected_network 'chmod +x $HOME/.local/bin/oc && oc version --client | grep -q Client'
+install_oc_client_into_bastions() {
+  install_into_bastions openshift-client-linux.tar.gz oc
 }
 
 install_oc_mirror_into_bastions() {
-  local version
-  version=$(_get_from_config '.deploy.cluster_config.cluster_version')
-  url="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/$version/oc-mirror.tar.gz"
-  exec_in_connected_network "mkdir -p /tmp/oc-mirror && \
-    { test -f /tmp/oc-mirror.tar.gz || curl -sSL -o /tmp/oc-mirror.tar.gz '$url'; } &&  \
-    tar -xzf /tmp/oc-mirror.tar.gz -C /tmp/oc-mirror && \
-    sudo cp /tmp/oc-mirror/oc-mirror /usr/local/bin/oc-mirror && \
-    sudo chmod +x /usr/local/bin/oc-mirror && \
-    &>/dev/null oc mirror --v2 --help"
-  exec_in_connected_network "sudo test -f /usr/local/bin/oc-mirror" || return 1
-  rsync_into_disconnected_network /tmp/oc-mirror/oc-mirror /tmp
-  exec_in_disconnected_network 'sudo mv /tmp/oc-mirror /usr/local/bin/oc-mirror && \
-    chmod +x /usr/local/bin/oc-mirror && \
-    &>/dev/null oc mirror --v2 --help'
+  install_into_bastions oc-mirror.tar.gz oc-mirror "oc-mirror --v2 --help"
+}
+
+install_openshift_install_into_bastions() {
+  install_into_bastions openshift-install-linux.tar.gz openshift-install
 }
 
 install_artifactory_on_disconnected_registry_instance() {
@@ -521,16 +502,6 @@ umount_and_detach_oc_mirror_volume() {
   detach_oc_mirror_volume_from_instance "$instance_id"
 }
 
-upload_openshift_install_into_disconnected_bastion() {
-  version="$(_get_from_config '.deploy.cluster_config.cluster_version')" || return 1
-  exec_in_connected_network "curl -Lo /tmp/openshift-install \
-    https://mirror.openshift.com/pub/openshift-v4/clients/ocp/$version/openshift-install-linux-amd64.tar.gz" &&
-    rsync_into_disconnected_network '/tmp/openshift-install' '$HOME/.local/bin/' &&
-    exec_in_disconnected_network 'openshift-install --version >/dev/null' && return 0
-  error "openshift-install upload into disconnected network failed"
-  return 1
-}
-
 create_openshift_install_workspace_in_disconnected_bastion() {
   exec_in_disconnected_network 'mkdir -p $HOME/openshift_install'
 }
@@ -564,8 +535,9 @@ provision_oc_mirror_ebs_volume
 initialize_bastions
 initialize_registry
 download_packages_in_connected_bastion
-install_oc_client_into_disconnected_bastion
+install_oc_client_into_bastions
 install_oc_mirror_into_bastions
+install_openshift_install_into_bastions
 install_artifactory_on_disconnected_registry_instance
 apply_artifactory_license
 change_artifactory_default_password
@@ -580,10 +552,8 @@ umount_and_detach_oc_mirror_volume connected
 attach_and_mount_oc_mirror_volume disconnected
 log_into_artifactory_on_disconnected_bastion
 disk_to_mirror_disconnected_bastion
-umount_and_detach_oc_mirror_volume disconnected
-upload_openshift_install_into_disconnected_bastion
 generate_install_config
-upload_openshift_install_config_into_disconnected_bastion
+umount_and_detach_oc_mirror_volume disconnected
 #upload_rhcos_images_to_s3_bucket # <-- WE ARE HERE
 #verify_rhcos_images_accessible_from_disconnected_bastion
 #generate_rhcos_ignition_files

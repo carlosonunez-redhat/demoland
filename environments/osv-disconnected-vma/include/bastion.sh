@@ -162,3 +162,19 @@ deinitialize_disconnected_node() {
 deinitialize_bastions() {
   rm -f "$(_bastion_init_file)" || return 1
 }
+
+install_into_bastions() {
+  local oc_file_to_download oc_file check_command
+  oc_file_to_download="$1"
+  oc_file="$2"
+  check_command="$3"
+  test -z "$check_command" && check_command='--help'
+  version=$(_get_from_config '.deploy.cluster_config.cluster_version')
+  url="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/$version/$oc_file_to_download"
+  exec_in_connected_network 'test -f $HOME/.local/bin/'"$oc_file"' && exit 0; \
+    mkdir -p $HOME/.local/bin && \
+    curl -sSL -o - '"$url"' | tar -xvzf - -C $HOME/.local/bin && \
+    chmod +x $HOME/.local/bin/'"$oc_file"' && '"$oc_file"' '"$check_command"'  >/dev/null'
+  rsync_into_disconnected_network '$HOME/.local/bin/'"$oc_file" '$HOME/.local/bin'
+  exec_in_disconnected_network 'chmod +x $HOME/.local/bin/'"$oc_file"' && '"$oc_file"' '"$check_command"' >/dev/null'
+}
