@@ -17,7 +17,7 @@ module "disconnected-sg-bastion-bridge" {
 }
 
 resource "aws_network_interface" "bastion-bridge" {
-  subnet_id = module.disconnected_network.private_subnets[local.oc_mirror_az_index]
+  subnet_id = module.disconnected_network.private_subnets[local.default_availability_zone_index]
   private_ips = [ local.bastion_bridge_ip ]
   security_groups = [ module.disconnected-sg-bastion-bridge.security_group_id ]
   attachment {

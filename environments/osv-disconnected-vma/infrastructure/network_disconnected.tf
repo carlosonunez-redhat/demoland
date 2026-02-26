@@ -48,11 +48,6 @@ module "disconnected_network" {
   }
 }
 
-resource "aws_subnet" "management_network_disconnected" {
-  vpc_id = module.disconnected_network.vpc_id
-  cidr_block = cidrsubnet(local.options.cloud_config.aws.networking.disconnected.cidr, 8, 252)
-}
-
 # Allow instances to access AWS's S3 EPEL repositories.
 resource "aws_vpc_endpoint" "s3" {
   vpc_id = module.disconnected_network.vpc_id

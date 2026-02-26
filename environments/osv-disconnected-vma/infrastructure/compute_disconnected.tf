@@ -80,23 +80,3 @@ module "disconnected-ocp-worker-nodes-bm" {
 #     size       = 100
 #   }
 # }
-
-resource "aws_network_interface" "management_network_nics_cp" {
-  count = fileexists(var.bare_metal_creation_sentinel_file) ? 3 : 0
-  subnet_id = local.management_network_disconnected
-  security_groups = [ module.disconnected-sg-mgmt-net.security_group_id ]
-  attachment {
-    instance = module.disconneted-ocp-cp-nodes-bm[count.index]
-    device_index = 1
-  }
-}
-
-resource "aws_network_interface" "management_network_nics_workers" {
-  count = fileexists(var.bare_metal_creation_sentinel_file) ? 3 : 0
-  subnet_id = local.management_network_disconnected
-  security_groups = [ module.disconnected-sg-mgmt-net.security_group_id ]
-  attachment {
-    instance = module.disconneted-ocp-worker-nodes-bm[count.index]
-    device_index = 1
-  }
-}

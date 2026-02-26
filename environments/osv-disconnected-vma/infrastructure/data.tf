@@ -4,7 +4,6 @@ locals {
   default_availability_zone = local.options.cloud_config.aws.networking.common.default_availability_zone
   default_availability_zone_index = index(local.options.cloud_config.aws.networking.common.availability_zones, local.default_availability_zone)
   provisioning_subnet_disconnected = module.disconnected_network.private_subnets[local.default_availability_zone_index]
-  baremetal_subnet_disconnected = module.disconnected_network.public_subnets[local.default_availability_zone_index]
 }
 
 data "tls_public_key" "ec2_key" {
