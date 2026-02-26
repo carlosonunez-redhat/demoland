@@ -415,7 +415,31 @@ mirror_to_disk_connected_bastion() {
   exec_in_connected_network 'test -f /mnt/mirror/.m2d_done && exit 0; \
     oc mirror --v2 -c /mnt/mirror/image_set.yaml \
       --authfile /tmp/public_pull_secret \
-      file:///mnt/mirror && touch /mnt/mirror/.m2d_done'
+      --cache-dir /mnt/mirror/cache \
+      file:///mnt/mirror' &&
+    # wait for tar file(s) to settle
+    exec_in_connected_network 'attempts=0; \
+      max_attempts=300; \
+      failed=0; \
+      while true; \
+      do \
+        find /mnt/mirror/mirror*tar | \
+          while read -r file; \
+          do \
+            tar -tf "$file" >/dev/null && continue; \
+            >&2 echo "ERROR: mirror is either corrupted or still being created: $file"; \
+            failed=1; \
+          done; \
+        test "$failed" -eq 0 && exit 0; \
+        >&2 echo "ERROR: Still waiting for mirror TARs to settle (attempt ${attempts}/${max_attempts})"; \
+        sleep 1; \
+        attempts=$((attempts+1)); \
+      done; \
+      >&2 echo "ERROR: mirror TARs never settled."; \
+      exit 1;' &&
+    # clear these directories, as oc-mirror will decompress into them during d2m
+    exec_in_connected_network 'rm -rf /mnt/mirror/{working-dir,cache}'
+    exec_in_connected_network 'touch /mnt/mirror/.m2d_done'
 }
 
 disk_to_mirror_disconnected_bastion() {
@@ -485,10 +509,12 @@ attach_and_mount_oc_mirror_volume() {
     chown -R fedora /mnt/mirror"' || return 1
 }
 
-detach_oc_mirror_volume() {
+umount_and_detach_oc_mirror_volume() {
   local instance_id
   instance_id="$(tofu output -raw "${1,,}_bastion_instance_id")" || return 1
   oc_mirror_volume_attached "$instance_id" || return 0
+  exec_cmd="exec_in_${1,,}_network"
+  "$exec_cmd" "sudo umount /mnt/mirror" || return 1
   detach_oc_mirror_volume_from_instance "$instance_id"
 }
 
@@ -505,14 +531,14 @@ apply_artifactory_license
 change_artifactory_default_password
 create_artifactory_admin_token
 create_artifactory_oci_repo
-log_into_artifactory_on_disconnected_bastion
 confirm_artifactory_push_and_pull
 upload_public_pull_secret_into_connected_bastion
 attach_and_mount_oc_mirror_volume connected
 generate_and_upload_image_set_into_mirror_vol
 mirror_to_disk_connected_bastion
-detach_oc_mirror_volume connected
+umount_and_detach_oc_mirror_volume connected
 attach_and_mount_oc_mirror_volume disconnected
+log_into_artifactory_on_disconnected_bastion
 disk_to_mirror_disconnected_bastion
 detach_oc_mirror_volume disconnected
 #upload_openshift_install_config_into_disconnected_bastion
