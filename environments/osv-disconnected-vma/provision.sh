@@ -443,10 +443,13 @@ mirror_to_disk_connected_bastion() {
 }
 
 disk_to_mirror_disconnected_bastion() {
-  exec_in_disconnected_network 'test -f /mnt/mirror/.d2m_done && exit 0'
-  exec_in_disconnected_network 'oc mirror --v2 -c /mnt/mirror/image_set.yaml \
-      --from file:///mnt/mirror \
-      docker://registry.private.network:8082 && touch /mnt/mirror/.d2m_done'
+  exec_in_disconnected_network 'test -f /mnt/mirror/.d2m_done && exit 0' ||
+    exec_in_disconnected_network 'oc mirror --v2 -c /mnt/mirror/image_set.yaml \
+        --from file:///mnt/mirror \
+        --dest-tls-verify=false \
+        --cache-dir /mnt/mirror/cache \
+        --image-timeout 60m \
+        docker://registry.private.network:8082/ocp-registry && touch /mnt/mirror/.d2m_done'
 }
 
 attach_and_mount_oc_mirror_volume() {
