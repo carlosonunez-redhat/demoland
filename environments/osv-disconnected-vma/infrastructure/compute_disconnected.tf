@@ -36,7 +36,7 @@ module "disconnected-artifactory-vm" {
 module "disconnected-ocp-cp-nodes-bm" {
   count = fileexists(var.bare_metal_creation_sentinel_file) ? 3 : 0
   source = "terraform-aws-modules/ec2-instance/aws"
-  name = "ocp-cp"
+  name = "ocp-cp-${count.index}"
   instance_type = local.options.cloud_config.aws.compute.instance_sizes.bare_metal
   ami = data.aws_ami.ipxe.id
   key_name = module.ec2_key.key_pair_name
@@ -52,11 +52,11 @@ module "disconnected-ocp-cp-nodes-bm" {
 module "disconnected-ocp-worker-nodes-bm" {
   count = fileexists(var.bare_metal_creation_sentinel_file) ? 3 : 0
   source = "terraform-aws-modules/ec2-instance/aws"
-  name = "ocp-cp"
+  name = "ocp-worker-${count.index}"
   instance_type = local.options.cloud_config.aws.compute.instance_sizes.bare_metal
   ami = data.aws_ami.ipxe.id
   key_name = module.ec2_key.key_pair_name
-  subnet_id = local.provisioning_subnet_disconnected
+  subnet_id = module.disconnected_network.private_subnets[count.index]
   vpc_security_group_ids = [ module.disconnected-sg-ocp-to-artifactory.security_group_id ]
   create_security_group = false
   root_block_device = {
@@ -72,7 +72,7 @@ module "disconnected-ocp-worker-nodes-bm" {
 #   ami = data.aws_ami.ipxe.id
 #   instance_type = local.options.cloud_config.aws.compute.instance_sizes.bare_metal
 #   key_name = module.ec2_key.key_pair_name
-#   subnet_id = local.provisioning_subnet_disconnected
+# subnet_id = module.disconnected_network.private_subnets[count.index]
 #   vpc_security_group_ids = [ module.disconnected-sg-ocp-to-artifactory.security_group_id ]
 #   create_security_group = false
 #   root_block_device = {
