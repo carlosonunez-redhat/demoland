@@ -15,6 +15,7 @@ source "../../include/helpers/yaml.sh"
 # variable, like shown in the comment below.
 #
 source "./include/bastion.sh"
+source "./include/mirror_volume.sh"
 source "./include/tofu.sh"
 source "./include/osv.sh"
 
@@ -26,7 +27,8 @@ delete_saved_artifactory_token() {
   rm -rf "$(_get_file_from_data_dir 'artifactory_admin_token')"
 }
 
-set -e
+umount_and_detach_oc_mirror_volume disconnected ||
+  umount_and_detach_oc_mirror_volume connected
 delete_saved_artifactory_token
 deinitialize_disconnected_node 'fedora@registry.private.network'
 deinitialize_bastions
