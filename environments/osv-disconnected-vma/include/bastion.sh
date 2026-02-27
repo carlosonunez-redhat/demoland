@@ -171,6 +171,7 @@ install_into_bastions() {
   test -z "$check_command" && check_command='--help'
   version=$(_get_from_config '.deploy.cluster_config.cluster_version')
   url="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/$version/$oc_file_to_download"
+  exec_in_disconnected_network 'test -d $HOME/.local/bin || mkdir -p $HOME/.local/bin'
   exec_in_connected_network 'test -f $HOME/.local/bin/'"$oc_file"' && exit 0; \
     mkdir -p $HOME/.local/bin && \
     curl -sSL -o - '"$url"' | tar -xvzf - -C $HOME/.local/bin && \
