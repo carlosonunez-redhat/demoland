@@ -1,57 +1,40 @@
-resource "aws_acm_certificate" "lb_cert" {
-  domain_name       = local.options.cloud_config.aws.networking.dns.domain_name
-  validation_method = "DNS"
+resource "aws_acm_certificate" "cert" {
+  domain_name       = local.options.cloud_config.aws.networking.disconnected.dns.domain_name
+  certificate_authority_arn = aws_acmpca_certificate_authority.ca_disconnected.arn
+  subject_alternative_names = [
+    "${local.options.cluster_config.cluster_name}.${local.options.cloud_config.aws.networking.disconnected.dns.domain_name}",
+    "*.${local.options.cluster_config.cluster_name}.${local.options.cloud_config.aws.networking.disconnected.dns.domain_name}"
+  ]
+}
 
-  tags = {
-    Environment = "test"
-  }
-
-  lifecycle {
-    create_before_destroy = true
-  }
+resource "aws_lb_target_group_attachment" "api" {
+  for_each = { for k, v in module.disconnected-ocp-cp-nodes-bm : k => v }
+  target_group_arn = module.api-alb[0].target_groups["target-group"].arn
+  target_id = each.value.id
+  port = 6443
 }
 
 module "api-alb" {
   source = "terraform-aws-modules/alb/aws"
   name = "api-public"
+  internal = true
+  enable_deletion_protection = false
   vpc_id = module.disconnected_network.vpc_id
   subnets = module.disconnected_network.private_subnets
   listeners = {
-    ex-http-https-redirect = {
-      port     = 6443
-      protocol = "HTTP"
-      redirect = {
-        port        = "443"
-        protocol    = "HTTPS"
-        status_code = "HTTP_301"
-      }
-    }
     ex-https = {
       port            = 6443
       protocol        = "HTTPS"
-      certificate_arn = resource.aws_acm_certificate.lb_cert.arn
+      certificate_arn = aws_acm_certificate.cert.arn
       forward = {
-        target_group_key = "control-plane-nodes"
+        target_group_key = "target-group"
       }
     }
   }
 
   target_groups = {
-    control-plane-nodes = {
-      name_prefix = "ocp-cp-"
-      protocol = "HTTPS"
-      port = 6443
-      target_type = "instance"
-      health_check = {
-        enabled = true
-        healthy_threshold = 5
-        unhealthy_threshold = 10
-        timeout = 5
-        interval = 30
-        path = "/readyz"
-        matcher = "200"
-        port = "traffic-port"
-      }
+    target-group = {
+      create_attachment = false
     }
   }
   route53_records = {
@@ -62,49 +45,35 @@ module "api-alb" {
     }
   }
 }
+resource "aws_lb_target_group_attachment" "api-int" {
+  for_each = { for k, v in module.disconnected-ocp-cp-nodes-bm : k => v }
+  target_group_arn = module.api-int-alb[0].target_groups["target-group"].arn
+  target_id = each.value.id
+  port = 6443
+}
 
 # same as api since everything in disco is in private subnets.
 module "api-int-alb" {
   source = "terraform-aws-modules/alb/aws"
-  name = "api-public"
+  name = "api-int-public"
+  internal = true
+  enable_deletion_protection = false
   vpc_id = module.disconnected_network.vpc_id
   subnets = module.disconnected_network.private_subnets
   listeners = {
-    ex-http-https-redirect = {
-      port     = 6443
-      protocol = "HTTP"
-      redirect = {
-        port        = "443"
-        protocol    = "HTTPS"
-        status_code = "HTTP_301"
-      }
-    }
     ex-https = {
       port            = 6443
       protocol        = "HTTPS"
-      certificate_arn = resource.aws_acm_certificate.lb_cert.arn
+      certificate_arn = aws_acm_certificate.cert.arn
       forward = {
-        target_group_key = "control-plane-nodes"
+        target_group_key = "target-group"
       }
     }
   }
 
   target_groups = {
-    control-plane-nodes = {
-      name_prefix = "ocp-cp-"
-      protocol = "HTTPS"
-      port = 6443
-      target_type = "instance"
-      health_check = {
-        enabled = true
-        healthy_threshold = 5
-        unhealthy_threshold = 10
-        timeout = 5
-        interval = 30
-        path = "/readyz"
-        matcher = "200"
-        port = "traffic-port"
-      }
+    target-group = {
+      create_attachment = false
     }
   }
   route53_records = {
@@ -116,35 +85,57 @@ module "api-int-alb" {
   }
 }
 
-module "machine-config" {
+
+resource "aws_lb_target_group_attachment" "machine-config" {
+  for_each = { for k, v in module.disconnected-ocp-cp-nodes-bm : k => v }
+  target_group_arn = module.machine-config-alb[0].target_groups["target-group"].arn
+  target_id = each.value.id
+  port = 22623
+}
+module "machine-config-alb" {
   source = "terraform-aws-modules/alb/aws"
   name = "machine-config"
+  internal = true
+  enable_deletion_protection = false
   vpc_id = module.disconnected_network.vpc_id
   subnets = module.disconnected_network.private_subnets
   listeners = {
     ex-http = {
       port            = 22623
       protocol        = "HTTP"
-      certificate_arn = resource.aws_acm_certificate.lb_cert.arn
       forward = {
-        target_group_key = "control-plane-nodes"
+        target_group_key = "target-group"
       }
     }
   }
 
   target_groups = {
-    control-plane-nodes = {
-      name_prefix = "ocp-cp-"
-      protocol = "HTTP"
-      port = 22623
-      target_type = "instance"
+    target-group = {
+      create_attachment = false
     }
   }
 }
 
-module "app" {
+resource "aws_lb_target_group_attachment" "apps-insecure" {
+  for_each = { for k, v in module.disconnected-ocp-worker-nodes-bm : k => v }
+  target_group_arn = module.apps-alb[0].target_groups["target-group-insecure"].arn
+  target_id = each.value.id
+  port = 80
+}
+
+resource "aws_lb_target_group_attachment" "apps-secure" {
+  for_each = { for k, v in module.disconnected-ocp-worker-nodes-bm : k => v }
+  target_group_arn = module.apps-alb[0].target_groups["target-group-secure"].arn
+  target_id = each.value.id
+  port = 443
+}
+
+module "apps-alb" {
+  count = fileexists(var.bare_metal_creation_sentinel_file) ? 1 : 0
   source = "terraform-aws-modules/alb/aws"
   name = "apps"
+  internal = true
+  enable_deletion_protection = false
   vpc_id = module.disconnected_network.vpc_id
   subnets = module.disconnected_network.private_subnets
   listeners = {
@@ -152,7 +143,7 @@ module "app" {
       port            = 80
       protocol        = "HTTP"
       forward = {
-        target_group_key = "worker-nodes-insecure"
+        target_group_key = "target-group-insecure"
       }
     }
     ex-https-redirect = {
@@ -167,24 +158,18 @@ module "app" {
     ex-https = {
       port            = 443
       protocol        = "HTTPS"
-      certificate_arn = resource.aws_acm_certificate.lb_cert.arn
+      certificate_arn = aws_acm_certificate.cert.arn
       forward = {
-        target_group_key = "worker-nodes-secure"
+        target_group_key = "target-group-secure"
       }
     }
   }
   target_groups = {
-    worker-nodes-insecure = {
-      name_prefix = "ocp-compute-"
-      protocol = "HTTP"
-      port = 80
-      target_type = "instance"
+    target-group-insecure = {
+      create_attachment = false
     }
-    worker-nodes-secure = {
-      name_prefix = "ocp-compute-"
-      protocol = "HTTP"
-      port = 443
-      target_type = "instance"
+    target-group-secure = {
+      create_attachment = false
     }
   }
   route53_records = {
