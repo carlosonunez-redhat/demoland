@@ -88,3 +88,73 @@ attach_oc_mirror_volume_to_instance() {
     --volume-id "$(oc_mirror_ebs_volume_id)" &&
     wait_for_oc_volume_attached
 }
+
+attach_and_mount_oc_mirror_volume() {
+  _oc_mirror_device_id() {
+    local res
+    attempts=0
+    max_attempts=60
+    cmd="sudo lsblk -N | grep $(oc_mirror_ebs_volume_id | tr -d '-') | cut -f1 -d ' '"
+    while true
+    do
+      if test "${1,,}" == connected
+      then res=$(exec_in_connected_network "$cmd")
+      else res=$(exec_in_disconnected_network "$cmd")
+      fi
+      if test -n "$res"
+      then
+        echo "$res"
+        return 0
+      fi
+      info "[attach] Waiting for device to be recognized in '$1' bastion \
+(attempts $attempts of $max_attempts)"
+      sleep 1
+      attempts=$((attempts+1))
+    done
+    return 1
+  }
+
+  local connected_instance_id \
+    disconnected_instance_id \
+    opposite_instance_id \
+    instance_id dev_id \
+    exec_cmd
+  connected_instance_id=$(tofu output -raw connected_bastion_instance_id) || return 1
+  disconnected_instance_id=$(tofu output -raw disconnected_bastion_instance_id) || return 1
+  if test "${1,,}" == connected
+  then
+    instance_id="$connected_instance_id"
+    opposite_instance_id="$disconnected_instance_id"
+    exec_cmd=exec_in_connected_network
+  else
+    instance_id="$disconnected_instance_id"
+    opposite_instance_id="$connected_instance_id"
+    exec_cmd=exec_in_disconnected_network
+  fi
+  oc_mirror_volume_attached "$opposite_instance_id" && \
+    detach_oc_mirror_volume_from_instance "$opposite_instance_id"
+  if ! oc_mirror_volume_attached "$instance_id"
+  then attach_oc_mirror_volume_to_instance "$instance_id" || return 1
+  fi
+  dev_id="$(_oc_mirror_device_id "${1,,}")" || return 1
+  if test -z "$dev_id"
+  then
+    error "Couldn't find block device mapped to oc-mirror EBS volume"
+    return 1
+  fi
+  "$exec_cmd" \
+    'sudo lsblk -fnr /dev/'"$dev_id"' | grep -q ext4 || sudo mkfs.ext4 /dev/'"$dev_id"';'
+  "$exec_cmd" 'sudo sh -c "mkdir -p /mnt/mirror && \
+    { mount | grep -q '"$dev_id"' || mount -t ext4 /dev/'"$dev_id"' /mnt/mirror; } && \
+    chown -R fedora /mnt/mirror"' || return 1
+}
+
+umount_and_detach_oc_mirror_volume() {
+  local instance_id
+  instance_id="$(tofu output -raw "${1,,}_bastion_instance_id")" || return 1
+  oc_mirror_volume_attached "$instance_id" || return 0
+  exec_cmd="exec_in_${1,,}_network"
+  "$exec_cmd" "sudo umount /mnt/mirror" || return 1
+  detach_oc_mirror_volume_from_instance "$instance_id"
+}
+
