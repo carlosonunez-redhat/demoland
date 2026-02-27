@@ -47,7 +47,7 @@ data "aws_ami" "fedora_x86" {
   most_recent = true
   filter {
     name = "name"
-    values = [ "Fedora-Cloud-Base-AmazonEC2.x86_64-43-2*" ]
+    values = [ "Fedora-Cloud-Base-AmazonEC2.x86_64-43-20260226.0*" ]
   }
   filter {
     name = "owner-id"
