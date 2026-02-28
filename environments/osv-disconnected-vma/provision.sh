@@ -451,7 +451,7 @@ generate_install_config() {
     base_domain "$(_get_from_config '.deploy.cloud_config.aws.networking.disconnected.dns.domain_name')"
     cluster_name "$(_get_from_config '.deploy.cluster_config.cluster_name')"
     pull_secret "$(exec_in_disconnected_network 'cat $XDG_RUNTIME_DIR/containers/auth.json' | as_json_string)"
-    ssh_key_is_string_value "$(cat "$(_get_file_from_secrets_dir 'ssh-key')")"
+    ssh_key "$(ssh-keygen -yf "$(_get_file_from_secrets_dir 'ssh-key')")"
     image_content_sources "$(jq -scr '.' <<< "$idms")"
   )
   render_and_save_install_config "${values[@]}"
