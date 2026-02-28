@@ -364,15 +364,9 @@ confirm_artifactory_push_and_pull() {
     _confirm_push_and_pull
 }
 
-upload_openshift_install_config_into_disconnected_bastion() {
-  values=(
-    ssh_key "$(ssh-keygen -yf "$(_get_file_from_secrets_dir 'ssh-key')")"
-    base_domain 'private.network'
-    cluster_name "$(_get_from_config '.deploy.cluster_config.cluster_name')"
-    pull_secret "$(_pull_secret_for_disconnected_registry)"
-    image_content_sources "$(cat "$(_image_content_sources_file)")" 
-  )
-  render_and_save_install_config "${values[@]}"
+upload_openshift_install_config_to_bastions() {
+  cat "$(_config_file_in_data_dir)" | exec_in_connected_network 'cat - > /tmp/install-config.yaml'
+  rsync_into_disconnected_network '/tmp/install-config.yaml' '$HOME/openshift_install'
 }
 
 generate_and_upload_image_set_into_mirror_vol() {
@@ -468,6 +462,14 @@ upload_openshift_install_config_into_disconnected_bastion() {
     '$HOME/openshift_install/'
 }
 
+generate_rhcos_ignition_files_in_disconnected_bastion() {
+  exec_in_disconnected_network 'openshift-install create ignition-configs --dir $HOME/openshift_install'
+}
+
+generate_openshift_manifest_files_in_disconnected_bastion() {
+  exec_in_disconnected_network 'openshift-install create manifests --dir $HOME/openshift_install'
+}
+
 set -e
 provision_base_infrastructure_and_vms
 provision_oc_mirror_ebs_volume
@@ -493,9 +495,10 @@ log_into_artifactory_on_disconnected_bastion
 disk_to_mirror_disconnected_bastion
 generate_install_config
 umount_and_detach_oc_mirror_volume disconnected
+upload_openshift_install_config_to_bastions
+generate_rhcos_ignition_files_in_disconnected_bastion
 #upload_rhcos_images_to_s3_bucket # <-- WE ARE HERE
 #verify_rhcos_images_accessible_from_disconnected_bastion
-#generate_rhcos_ignition_files
 #upload_rhcos_ignition_files_to_s3_bucket
 #verify_rhcos_ignition_files_accessible_from_disconnected_bastion
 #create_bare_metal_instances
