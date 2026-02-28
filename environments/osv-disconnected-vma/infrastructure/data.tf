@@ -4,6 +4,40 @@ locals {
   default_availability_zone = local.options.cloud_config.aws.networking.common.default_availability_zone
   default_availability_zone_index = index(local.options.cloud_config.aws.networking.common.availability_zones, local.default_availability_zone)
   provisioning_subnet_disconnected = module.disconnected_network.private_subnets[local.default_availability_zone_index]
+  bootstrap_bucket_name = "ignition-bootstrap-${random_string.bootstrap_bucket.result}"
+  bastion_bridge_ip = cidrhost(module.disconnected_network.private_subnets_cidr_blocks[local.default_availability_zone_index], 252)
+  allowed_ports = {
+    openshift_nodes = [
+      "67:dnsmasq",
+      "68:dnsmasq",
+      "69:TFTP",
+      "80:web services",
+      "123:NTP",
+      "5050:hardware fact gathering",
+      "5051:hardware fact gathering",
+      "6180:BMC worker node access",
+      "6183:BMC worker node access",
+      "6385:Ironic API",
+      "6388:Ironic API",
+      "6443:Kubernetes API",
+      "8080:Web services",
+      "8083:BMC",
+      "9999:Python agent"
+    ]
+    artifactory_nodes = [
+      "80",
+      "443",
+      "8080",
+      "8082",
+      "8443"
+    ]
+    vsphere_api_access = [
+      "80",
+      "443",
+      "8080",
+      "8443"
+    ]
+  }
 }
 
 data "tls_public_key" "ec2_key" {
@@ -62,3 +96,17 @@ data "aws_ami" "fedora_x86" {
     values = [ "hvm" ]
   }
 }
+
+resource "random_string" "bootstrap_bucket" {
+  numeric = false
+  length = 8
+  upper = false
+  special = false
+}
+
+resource "random_string" "ca-suffix" {
+  length           = 8
+  special          = false
+  numeric = false
+}
+

@@ -1,9 +1,3 @@
-resource "random_string" "ca-suffix" {
-  length           = 8
-  special          = false
-  numeric = false
-}
-
 resource "aws_acmpca_certificate_authority" "ca_disconnected" {
   type = "ROOT"
   certificate_authority_configuration {

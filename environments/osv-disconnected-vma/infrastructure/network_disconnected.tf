@@ -1,38 +1,3 @@
-locals {
-  allowed_ports = {
-    openshift_nodes = [
-      "67:dnsmasq",
-      "68:dnsmasq",
-      "69:TFTP",
-      "80:web services",
-      "123:NTP",
-      "5050:hardware fact gathering",
-      "5051:hardware fact gathering",
-      "6180:BMC worker node access",
-      "6183:BMC worker node access",
-      "6385:Ironic API",
-      "6388:Ironic API",
-      "6443:Kubernetes API",
-      "8080:Web services",
-      "8083:BMC",
-      "9999:Python agent"
-    ]
-    artifactory_nodes = [
-      "80",
-      "443",
-      "8080",
-      "8082",
-      "8443"
-    ]
-    vsphere_api_access = [
-      "80",
-      "443",
-      "8080",
-      "8443"
-    ]
-  }
-}
-
 module "disconnected_network" {
   source = "terraform-aws-modules/vpc/aws"
   version = "6.6.0"

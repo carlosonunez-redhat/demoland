@@ -1,7 +1,3 @@
-locals {
-  bastion_bridge_ip = cidrhost(module.disconnected_network.private_subnets_cidr_blocks[local.default_availability_zone_index], 252)
-}
-
 module "disconnected-sg-bastion-bridge" {
   source = "terraform-aws-modules/security-group/aws"
   name = "bastion-bridge-sg-disconnected"
