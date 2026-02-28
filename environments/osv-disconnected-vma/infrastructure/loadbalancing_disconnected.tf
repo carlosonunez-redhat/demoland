@@ -131,7 +131,6 @@ resource "aws_lb_target_group_attachment" "apps-secure" {
 }
 
 module "apps-alb" {
-  count = fileexists(var.bare_metal_creation_sentinel_file) ? 1 : 0
   source = "terraform-aws-modules/alb/aws"
   name = "apps"
   internal = true
@@ -144,15 +143,6 @@ module "apps-alb" {
       protocol        = "HTTP"
       forward = {
         target_group_key = "target-group-insecure"
-      }
-    }
-    ex-https-redirect = {
-      port            = 443
-      protocol = "HTTP"
-      redirect = {
-        port        = "443"
-        protocol    = "HTTPS"
-        status_code = "HTTP_301"
       }
     }
     ex-https = {
@@ -174,7 +164,7 @@ module "apps-alb" {
   }
   route53_records = {
     A = {
-      name = "*.apps"
+      name = "*.apps.${local.options.cluster_config.cluster_name}"
       type = "A"
       zone_id = aws_route53_zone.disconnected.id
     }
