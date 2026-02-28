@@ -27,7 +27,12 @@ _restart_artifactory() {
   local cmd
   cmd="sudo systemctl restart artifactory.service"
   test "${1,,}" == quiet && cmd="${cmd} --no-block"
-  exec_in_disconnected_node 'fedora@registry.private.network' "$cmd"
+  if ! exec_in_disconnected_node 'fedora@registry.private.network' "$cmd"
+  then
+    warning "Artifactory failed to restart; trying forcefully..."
+    exec_in_disconnected_node 'fedora@registry.private.network' \
+      "ps -ef | grep artifactory | awk '{print \$2}' | xargs sudo kill -9 && $cmd"
+  fi
   test "${1,,}" == quiet && return 0
 
   if ! exec_in_disconnected_node 'fedora@registry.private.network' \
