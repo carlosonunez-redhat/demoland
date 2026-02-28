@@ -37,3 +37,21 @@ resource "aws_route53_record" "disconnected-artifactory-vm" {
     module.disconnected-artifactory-vm.private_ip
   ]
 }
+
+resource "aws_route53_record" "control_plane_nodes" {
+  for_each = { for k, v in module.disconnected-ocp-cp-nodes-bm : k => v }
+  zone_id = aws_route53_zone.disconnected.id
+  name = "control-plane${index(module.disconnected-ocp-cp-nodes-bm, each.value)}"
+  type = "A"
+  ttl = 1
+  records = [ each.value.private_ip ]
+}
+
+resource "aws_route53_record" "worker_nodes" {
+  for_each = { for k, v in module.disconnected-ocp-worker-nodes-bm : k => v }
+  zone_id = aws_route53_zone.disconnected.id
+  name = "compute${index(module.disconnected-ocp-worker-nodes-bm, each.value)}"
+  type = "A"
+  ttl = 1
+  records = [ each.value.private_ip ]
+}

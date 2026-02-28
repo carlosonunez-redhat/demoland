@@ -39,7 +39,7 @@ module "api-alb" {
   }
   route53_records = {
     A = {
-      name = "api"
+      name = "api.${local.options.cluster_config.cluster_name}"
       type = "A"
       zone_id = aws_route53_zone.disconnected.id
     }
@@ -78,7 +78,7 @@ module "api-int-alb" {
   }
   route53_records = {
     A = {
-      name = "api-int"
+      name = "api-int.${local.options.cluster_config.cluster_name}"
       type = "A"
       zone_id = aws_route53_zone.disconnected.id
     }
