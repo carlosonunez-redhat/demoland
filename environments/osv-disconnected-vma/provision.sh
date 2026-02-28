@@ -100,16 +100,21 @@ download_packages_in_connected_bastion() {
 }
 
 install_oc_client_into_bastions() {
-  install_into_bastions openshift-client-linux.tar.gz oc
+  install_ocp_tool_into_bastions openshift-client-linux.tar.gz oc
 }
 
 install_oc_mirror_into_bastions() {
-  install_into_bastions oc-mirror.tar.gz oc-mirror "oc-mirror --v2 --help"
+  install_ocp_tool_into_bastions oc-mirror.tar.gz oc-mirror "oc-mirror --v2 --help"
 }
 
 install_openshift_install_into_bastions() {
-  install_into_bastions openshift-install-linux.tar.gz openshift-install
+  install_ocp_tool_into_bastions openshift-install-linux.tar.gz openshift-install
 }
+
+install_butane_into_bastions() {
+  install_into_bastions 'butane/latest' butane butane
+}
+
 
 install_artifactory_on_disconnected_registry_instance() {
   _artifactory_installed_and_running() {
@@ -470,6 +475,16 @@ generate_openshift_manifest_files_in_disconnected_bastion() {
   exec_in_disconnected_network 'openshift-install create manifests --dir $HOME/openshift_install'
 }
 
+generate_ntp_configuration_files() {
+  for f in worker controlplane
+  do
+    cat "./include/files/99-${f}-chrony.bu" | exec_in_connected_network "cat - > /tmp/99-${f}-chrony.bu" &&
+    exec_in_disconnected_network "test -d \$HOME/openshift_install/openshift && mkdir -p \$HOME/openshift_install/openshift_install"
+    rsync_into_disconnected_network "/tmp/99-${f}-chrony.bu" /tmp &&
+    exec_in_disconnected_network "butane /tmp/99-${f}-chrony.bu -o \$HOME/openshift_install/openshift/99-${f}-chrony.yaml"
+  done
+}
+
 set -e
 provision_base_infrastructure_and_vms
 provision_oc_mirror_ebs_volume
@@ -479,6 +494,7 @@ download_packages_in_connected_bastion
 install_oc_client_into_bastions
 install_oc_mirror_into_bastions
 install_openshift_install_into_bastions
+install_butane_into_bastions
 install_artifactory_on_disconnected_registry_instance
 apply_artifactory_license
 change_artifactory_default_password
@@ -497,6 +513,8 @@ generate_install_config
 umount_and_detach_oc_mirror_volume disconnected
 upload_openshift_install_config_to_bastions
 generate_rhcos_ignition_files_in_disconnected_bastion
+generate_openshift_manifest_files_in_disconnected_bastion
+generate_ntp_configuration_files
 #upload_rhcos_images_to_s3_bucket # <-- WE ARE HERE
 #verify_rhcos_images_accessible_from_disconnected_bastion
 #upload_rhcos_ignition_files_to_s3_bucket
