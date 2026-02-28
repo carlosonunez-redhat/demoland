@@ -164,18 +164,27 @@ deinitialize_bastions() {
 }
 
 install_into_bastions() {
-  local oc_file_to_download oc_file check_command
-  oc_file_to_download="$1"
-  oc_file="$2"
-  check_command="$3"
+  local component oc_file_to_download oc_file check_command download_stanza
+  component="$1"
+  oc_file_to_download="$2"
+  oc_file="$3"
+  check_command="$4"
   test -z "$check_command" && check_command='--help'
   version=$(_get_from_config '.deploy.cluster_config.cluster_version')
-  url="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/$version/$oc_file_to_download"
-  exec_in_disconnected_network 'test -d $HOME/.local/bin || mkdir -p $HOME/.local/bin'
-  exec_in_connected_network 'test -f $HOME/.local/bin/'"$oc_file"' && exit 0; \
-    mkdir -p $HOME/.local/bin && \
-    curl -sSL -o - '"$url"' | tar -xvzf - -C $HOME/.local/bin && \
-    chmod +x $HOME/.local/bin/'"$oc_file"' && '"$oc_file"' '"$check_command"'  >/dev/null'
-  rsync_into_disconnected_network '$HOME/.local/bin/'"$oc_file" '$HOME/.local/bin'
-  exec_in_disconnected_network 'chmod +x $HOME/.local/bin/'"$oc_file"' && '"$oc_file"' '"$check_command"' >/dev/null'
+  url="https://mirror.openshift.com/pub/openshift-v4/clients/$component/$oc_file_to_download"
+  download_stanza="curl -sSL -o - $url | tar -xvzf - -C \$HOME/.local/bin"
+  grep -q '.tar.gz' <<< "$oc_file_to_download" ||
+    download_stanza="curl -sSL -o \$HOME/.local/bin/$oc_file $url"
+  exec_in_connected_network "test -f \$HOME/.local/bin/$oc_file && exit 0; \
+    mkdir -p \$HOME/.local/bin && \
+    $download_stanza && \
+    chmod +x \$HOME/.local/bin/$oc_file && $oc_file $check_command >/dev/null"
+  exec_in_disconnected_network "test -d \$HOME/.local/bin || mkdir -p \$HOME/.local/bin"
+  rsync_into_disconnected_network "\$HOME/.local/bin/$oc_file" "\$HOME/.local/bin"
+  exec_in_disconnected_network "chmod +x \$HOME/.local/bin/$oc_file && $oc_file $check_command >/dev/null"
+}
+
+install_ocp_tool_into_bastions() {
+  version=$(_get_from_config '.deploy.cluster_config.cluster_version')
+  install_into_bastions "ocp/$version" "$@"
 }
