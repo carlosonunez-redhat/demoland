@@ -8,6 +8,16 @@ resource "aws_route53_zone" "disconnected" {
   }
 }
 
+resource "aws_route53_record" "bootstrap" {
+  zone_id = aws_route53_zone.disconnected.id
+  name = "bootstrap"
+  type = "A"
+  ttl = 1
+  records = [
+    module.disconnected-bastion-vm.private_ip
+  ]
+}
+
 resource "aws_route53_record" "disconnected-bastion-vm" {
   zone_id = aws_route53_zone.disconnected.id
   name = "bastion"
