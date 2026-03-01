@@ -63,6 +63,8 @@ _pull_secret_for_disconnected_registry() {
 }
 
 provision_base_infrastructure_and_vms() {
+  # time to take that aws bill to the moon!!!!
+  create_bare_metal_instances_sentinel
   exec_tofu apply
 }
 
@@ -371,7 +373,7 @@ confirm_artifactory_push_and_pull() {
 
 upload_openshift_install_config_to_bastions() {
   cat "$(_config_file_in_data_dir)" | exec_in_connected_network 'cat - > /tmp/install-config.yaml'
-  rsync_into_disconnected_network '/tmp/install-config.yaml' '$HOME/openshift_install'
+  rsync_into_disconnected_network '/tmp/install-config.yaml' '$HOME/openshift_install/'
 }
 
 generate_and_upload_image_set_into_mirror_vol() {
@@ -508,10 +510,10 @@ confirm_ignition_bucket_accessible_in_disconnected_network() {
 upload_rhcos_images_to_s3_bucket() {
   local s3_bucket_url all_uploaded
   all_uploaded=true
-  s3_bucket_url="s3://$(tofu output -raw bootstrap_bucket_name)"
+  s3_bucket_url="s3://$(tofu output -raw ignition_bucket)"
   for f in kernel imitramfs.img rootfs.img
   do
-    if ! aws s3 ls "s3://$s3_bucket_url/$f"
+    if ! aws s3 ls "$s3_bucket_url/$f"
     then
       all_uploaded=false
       break
@@ -526,19 +528,21 @@ upload_rhcos_images_to_s3_bucket() {
       # get just the file name without version info or architecture to simplify
       # our iPXE config.
       fname="$(basename "$img_url" | cut -f5 -d '-' | cut -f1,3 -d '.')"
-      fp="$(_get_file_from_data_dir "$(basename "$img_url")")"
-      aws s3 ls "s3://$s3_bucket_url/$fp" && continue
+      fp="$(_get_file_from_data_dir "$fname" |
+        sed 's;//;/;g')"
+      aws s3 ls "$s3_bucket_url/$fname" && continue
 
       info "Downloading Red Hat CoreOS image [$fp] from [$img_url]"
       curl -sSLo "$fp" "$img_url" || return 1
-      aws s3 cp "$fp" "s3://$s3_bucket_url/$fp"
+      aws s3 cp "$fp" "$s3_bucket_url"
     done || return 1
 }
 
 upload_rhcos_ignition_files_to_s3_bucket() {
   local s3_bucket_url
-  s3_bucket_url="s3://$(tofu output -raw bootstrap_bucket_name)"
-  rsync_from_connected_network "\$HOME/openshift_install" "$(_get_file_from_data_dir 'openshift_install')" &&
+  s3_bucket_url="s3://$(tofu output -raw ignition_bucket)"
+  rsync_out_of_disconnected_network "\$HOME/openshift_install" "\$HOME/" &&
+    rsync_from_connected_network openshift_install "$(_get_file_from_data_dir 'openshift-install')/" &&
     aws s3 sync "$(_get_file_from_data_dir 'openshift-install')" "$s3_bucket_url"
 }
 
@@ -575,6 +579,4 @@ generate_openshift_manifest_files_in_disconnected_bastion
 generate_ntp_configuration_files
 upload_rhcos_images_to_s3_bucket
 upload_rhcos_ignition_files_to_s3_bucket
-#create_bare_metal_instances
-#provision_bare_metal_instances
-#confirm_dns_records
+provision_bare_metal_instances

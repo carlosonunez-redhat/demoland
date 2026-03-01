@@ -9,7 +9,7 @@ resource "aws_acm_certificate" "cert" {
 
 resource "aws_lb_target_group_attachment" "api" {
   for_each = { for k, v in module.disconnected-ocp-cp-nodes-bm : k => v }
-  target_group_arn = module.api-alb[0].target_groups["target-group"].arn
+  target_group_arn = module.api-alb.target_groups["target-group"].arn
   target_id = each.value.id
   port = 6443
 }
@@ -47,7 +47,7 @@ module "api-alb" {
 }
 resource "aws_lb_target_group_attachment" "api-int" {
   for_each = { for k, v in module.disconnected-ocp-cp-nodes-bm : k => v }
-  target_group_arn = module.api-int-alb[0].target_groups["target-group"].arn
+  target_group_arn = module.api-int-alb.target_groups["target-group"].arn
   target_id = each.value.id
   port = 6443
 }
@@ -88,7 +88,7 @@ module "api-int-alb" {
 
 resource "aws_lb_target_group_attachment" "machine-config" {
   for_each = { for k, v in module.disconnected-ocp-cp-nodes-bm : k => v }
-  target_group_arn = module.machine-config-alb[0].target_groups["target-group"].arn
+  target_group_arn = module.machine-config-alb.target_groups["target-group"].arn
   target_id = each.value.id
   port = 22623
 }
@@ -118,14 +118,14 @@ module "machine-config-alb" {
 
 resource "aws_lb_target_group_attachment" "apps-insecure" {
   for_each = { for k, v in module.disconnected-ocp-worker-nodes-bm : k => v }
-  target_group_arn = module.apps-alb[0].target_groups["target-group-insecure"].arn
+  target_group_arn = module.apps-alb.target_groups["target-group-insecure"].arn
   target_id = each.value.id
   port = 80
 }
 
 resource "aws_lb_target_group_attachment" "apps-secure" {
   for_each = { for k, v in module.disconnected-ocp-worker-nodes-bm : k => v }
-  target_group_arn = module.apps-alb[0].target_groups["target-group-secure"].arn
+  target_group_arn = module.apps-alb.target_groups["target-group-secure"].arn
   target_id = each.value.id
   port = 443
 }

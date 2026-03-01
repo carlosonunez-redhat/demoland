@@ -18,6 +18,10 @@ delete_bare_metal_instances_sentinel() {
     rm "$(_bare_metal_instances_sentinel)"
 }
 
+create_bare_metal_instances_sentinel() {
+  touch "$(_bare_metal_instances_sentinel)"
+}
+
 exec_tofu() {
   if ! this_ip=$(_resolve_this_ip)
   then

@@ -69,6 +69,16 @@ rsync_into_disconnected_network() {
     "$(_bastion_user)@$(_bastion_disconnected_hostname):$dest"
 }
 
+rsync_out_of_disconnected_network() {
+  local src_disconnected dest_connected
+  src_disconnected="$1"
+  dest_connected="$2"
+  exec_in_connected_network "test -f $dest_connected" && return 0
+  exec_in_connected_network rsync -azv \
+    "$(_bastion_user)@$(_bastion_disconnected_hostname):$src_disconnected" \
+    "$dest_connected"
+}
+
 _bastion_init_file() {
   connected_id=$(tofu output -raw connected_bastion_instance_id)
   disconnected_id=$(tofu output -raw disconnected_bastion_instance_id)
