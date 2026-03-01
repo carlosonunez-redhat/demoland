@@ -24,7 +24,6 @@ module "disconnected-artifactory-vm" {
   subnet_id = local.provisioning_subnet_disconnected
   vpc_security_group_ids = [
     module.disconnected-sg-artifactory.security_group_id,
-    module.disconnected-sg-ocp-to-artifactory.security_group_id
   ]
   create_security_group = false
   root_block_device = {

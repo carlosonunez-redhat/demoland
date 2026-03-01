@@ -22,10 +22,14 @@ module "vpc_endpoints" {
   security_group_description = "Security group for disconnected VPC endpoints"
   security_group_rules = {
     ingress_https = {
+      from_port = 443
+      to_port = 443
       description = "API access"
       cidr_blocks = [ module.disconnected_network.vpc_cidr_block ]
     }
     ingress_http = {
+      from_port = 80
+      to_port = 80
       description = "API access"
       cidr_blocks = [ module.disconnected_network.vpc_cidr_block ]
     }
@@ -85,27 +89,23 @@ module "disconnected-sg-ocp-control-plane" {
       protocol = "-1"
     }
   ]
-  ingress_with_source_security_group_id = [ for p in [22,443,6443]: {
+  ingress_with_source_security_group_id = flatten([[for p in [22,443,6443]: {
     from_port = p
     to_port = p
     protocol = "tcp"
     source_security_group_id = module.disconnected-sg-bastion.security_group_id
-  } ]
-  ingress_with_source_security_group_id = [ for lb in [
-    module.api-alb,
-    module.api-int.alb
-  ]: {
+  }],
+  [for lb in [ module.api-alb, module.api-int-alb ]: {
     from_port = 6443
     to_port = 6443
     protocol = "tcp"
     source_security_group_id = lb.security_group_id
-  }]
-  ingress_with_source_security_group_id = {
+  }],[{
     from_port = 22623
     to_port = 22623
     protocol = "tcp"
     source_security_group_id = module.machine-config-alb.security_group_id
-  }
+  }]])
   egress_with_cidr_blocks = [{
     from_port = 0
     to_port = 0
@@ -128,18 +128,17 @@ module "disconnected-sg-ocp-worker" {
       protocol = "-1"
     }
   ]
-  ingress_with_source_security_group_id = [ for p in [80,443]: {
+  ingress_with_source_security_group_id = flatten([[for p in [80,443]: {
     from_port = p
     to_port = p
     protocol = "tcp"
     source_security_group_id = module.apps-alb.security_group_id
-  } ]
-  ingress_with_source_security_group_id = [ {
+  }],[{
     from_port = 0
     to_port = 0
     protocol = -1
-    source_security_group_id = module.disconnected-sg-ocp-control-plane
-  } ]
+    source_security_group_id = module.disconnected-sg-ocp-control-plane.security_group_id
+  }]])
   egress_with_cidr_blocks = [{
     from_port = 0
     to_port = 0
@@ -190,22 +189,21 @@ module "disconnected-sg-artifactory" {
       protocol = "-1"
     }
   ]
-  ingress_with_source_security_group_id = [ for p in [22,8081,8082]: {
+  ingress_with_source_security_group_id = flatten([[for p in [22,8081,8082]: {
     from_port = p
     to_port = p
     protocol = "tcp"
     source_security_group_id = module.disconnected-sg-bastion.security_group_id
-  } ]
-  ingress_with_source_security_group_id = [ for sg in [
-      module.disconnected-sg-ocp-control-plane,
-      module.disconnected-sg-ocp-worker
-    ] : {
-      from_port = 443
-      to_port = 443
-      protocol = "tcp"
-      description = "Allow OCP nodes to pull images"
-      source_security_group_id = sg.security_group_id
-  }]
+  }], [ for sg in [
+    module.disconnected-sg-ocp-control-plane,
+    module.disconnected-sg-ocp-worker
+  ] : {
+    from_port = 443
+    to_port = 443
+    protocol = "tcp"
+    description = "Allow OCP nodes to pull images"
+    source_security_group_id = sg.security_group_id
+  }]])
   egress_with_cidr_blocks = [{
     from_port = 0
     to_port = 0
