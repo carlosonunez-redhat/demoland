@@ -2,7 +2,6 @@ module "connected-bastion-vm" {
   source = "terraform-aws-modules/ec2-instance/aws"
   name = "bastion-connected"
   ami = data.aws_ami.fedora_x86.id
-  iam_instance_profile = aws_iam_instance_profile.allow_access_bootstrap_bucket.name
   instance_type = local.options.cloud_config.aws.compute.instance_sizes.vm
   key_name = module.ec2_key.key_pair_name
   subnet_id = module.connected_network.public_subnets[local.default_availability_zone_index]

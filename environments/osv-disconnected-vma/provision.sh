@@ -485,10 +485,31 @@ generate_ntp_configuration_files() {
   done
 }
 
+confirm_ignition_bucket_accessible_in_disconnected_network() {
+  local bucket_name want test_file_url got
+  want=howdy
+  bucket_name="$(tofu output -raw ignition_bucket)"
+  test_file_url="https://${bucket_name}.s3.${AWS_DEFAULT_REGION}.amazonaws.com/test_file"
+  echo "$want" > /tmp/file
+  aws s3 cp /tmp/file "s3://${bucket_name}/test_file" >/dev/null
+  got=$(exec_in_disconnected_network "curl -sS $test_file_url")
+  if test "$want" == "$got"
+  then
+    aws s3 rm "s3://${bucket_name}/test_file" >/dev/null
+    return 0
+  fi
+  test "$want" == "$got" && return 0
+
+  error "Unable to access ignition bucket from S3; wanted: '$want', got: '$got'"
+  aws s3 rm "s3://${bucket_name}/test_file" >/dev/null
+  return 1
+}
+
 set -e
 provision_base_infrastructure_and_vms
 provision_oc_mirror_ebs_volume
 initialize_bastions
+confirm_ignition_bucket_accessible_in_disconnected_network
 initialize_registry
 download_packages_in_connected_bastion
 install_oc_client_into_bastions

@@ -13,10 +13,31 @@ module "disconnected_network" {
   }
 }
 
-# Allow instances to access AWS's S3 EPEL repositories.
-resource "aws_vpc_endpoint" "s3" {
+// This enables the OCP nodes to access the S3 bucket containing their ignition files.
+module "vpc_endpoints" {
+  source = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
   vpc_id = module.disconnected_network.vpc_id
-  service_name = data.aws_vpc_endpoint_service.s3.service_name
+  create_security_group = true
+  security_group_name_prefix = "vpce-sg-"
+  security_group_description = "Security group for disconnected VPC endpoints"
+  security_group_rules = {
+    ingress_https = {
+      description = "API access"
+      cidr_blocks = [ module.disconnected_network.vpc_cidr_block ]
+    }
+  }
+  endpoints = {
+    s3 = {
+      service = "s3"
+      subnets = module.disconnected_network.private_subnets
+      private_dns_enabled = true
+      dns_options = {
+        private_dns_only_for_inbound_resolver_argument = true
+        private_dns_preference = "SPECIFIED_DOMAINS_ONLY"
+        private_dns_specified_domains = [ local.options.cloud_config.aws.networking.disconnected.dns.domain_name ]
+      }
+    }
+  }
 }
 
 module "disconnected-sg-bastion" {

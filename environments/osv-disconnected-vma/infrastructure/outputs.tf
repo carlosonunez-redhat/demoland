@@ -7,3 +7,6 @@ output "disconnected_bastion_instance_id" {
 output "disconnected_artifactory_instance_id" {
   value = module.disconnected-artifactory-vm.id
 }
+output "ignition_bucket" {
+  value = local.bootstrap_bucket_name
+}
