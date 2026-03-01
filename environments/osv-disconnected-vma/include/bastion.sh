@@ -19,6 +19,14 @@ _ssh() {
     "$@"
 }
 
+_rsync() {
+  rsync -e "ssh -i '$(_get_file_from_secrets_dir 'ssh-key')' \
+    -o LogLevel=quiet \
+    -o UserKnownHostsFile=/dev/null \
+    -o StrictHostKeyChecking=false" \
+    "$@"
+}
+
 exec_in_connected_network() {
   info "Executing in connected network through '$(_bastion_connected_hostname)': $*"
   _ssh "$(_bastion_user)@$(_bastion_connected_hostname)" "$@"
@@ -43,6 +51,13 @@ exec_in_disconnected_node() {
   local host
   host="$1"
   exec_in_disconnected_network "ssh $host -- '${*:2}'"
+}
+
+rsync_from_connected_network() {
+  local src_remote dest_local
+  src_remote="$1"
+  dest_local="$2"
+  _rsync -azv "$(_bastion_user)@$(_bastion_connected_hostname):$src_remote" "$dest_local"
 }
 
 rsync_into_disconnected_network() {
