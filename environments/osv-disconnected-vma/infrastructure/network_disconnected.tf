@@ -25,6 +25,10 @@ module "vpc_endpoints" {
       description = "API access"
       cidr_blocks = [ module.disconnected_network.vpc_cidr_block ]
     }
+    ingress_http = {
+      description = "API access"
+      cidr_blocks = [ module.disconnected_network.vpc_cidr_block ]
+    }
   }
   endpoints = {
     s3 = {
@@ -68,29 +72,7 @@ module "disconnected-sg-bastion" {
   }]
 }
 
-module "disconnected-sg-mgmt-net" {
-  source = "terraform-aws-modules/security-group/aws"
-  name = "ocp-nodes-sg-disconnected"
-  description = "OCP control plane and workers"
-  vpc_id = module.disconnected_network.vpc_id
-  ingress_with_self = [
-    {
-      self = true
-      from_port = 0
-      to_port = 0
-      protocol = "-1"
-    }
-  ]
-  egress_with_cidr_blocks = [{
-    from_port = 0
-    to_port = 0
-    protocol = -1
-    description = "Allow all outbound"
-    cidr_blocks = local.options.cloud_config.aws.networking.disconnected.cidr
-  }]
-}
-
-module "disconnected-sg-ocp" {
+module "disconnected-sg-ocp-control-plane" {
   source = "terraform-aws-modules/security-group/aws"
   name = "ocp-nodes-sg-disconnected"
   description = "OCP control plane and workers"
@@ -108,6 +90,55 @@ module "disconnected-sg-ocp" {
     to_port = p
     protocol = "tcp"
     source_security_group_id = module.disconnected-sg-bastion.security_group_id
+  } ]
+  ingress_with_source_security_group_id = [ for lb in [
+    module.api-alb,
+    module.api-int.alb
+  ]: {
+    from_port = 6443
+    to_port = 6443
+    protocol = "tcp"
+    source_security_group_id = lb.security_group_id
+  }]
+  ingress_with_source_security_group_id = {
+    from_port = 22623
+    to_port = 22623
+    protocol = "tcp"
+    source_security_group_id = module.machine-config-alb.security_group_id
+  }
+  egress_with_cidr_blocks = [{
+    from_port = 0
+    to_port = 0
+    protocol = -1
+    description = "Allow all outbound"
+    cidr_blocks = local.options.cloud_config.aws.networking.disconnected.cidr
+  }]
+}
+
+module "disconnected-sg-ocp-worker" {
+  source = "terraform-aws-modules/security-group/aws"
+  name = "ocp-nodes-sg-disconnected"
+  description = "OCP control plane and workers"
+  vpc_id = module.disconnected_network.vpc_id
+  ingress_with_self = [
+    {
+      self = true
+      from_port = 0
+      to_port = 0
+      protocol = "-1"
+    }
+  ]
+  ingress_with_source_security_group_id = [ for p in [80,443]: {
+    from_port = p
+    to_port = p
+    protocol = "tcp"
+    source_security_group_id = module.apps-alb.security_group_id
+  } ]
+  ingress_with_source_security_group_id = [ {
+    from_port = 0
+    to_port = 0
+    protocol = -1
+    source_security_group_id = module.disconnected-sg-ocp-control-plane
   } ]
   egress_with_cidr_blocks = [{
     from_port = 0
@@ -165,64 +196,16 @@ module "disconnected-sg-artifactory" {
     protocol = "tcp"
     source_security_group_id = module.disconnected-sg-bastion.security_group_id
   } ]
-  egress_with_cidr_blocks = [{
-    from_port = 0
-    to_port = 0
-    protocol = -1
-    description = "Allow all outbound"
-    cidr_blocks = local.options.cloud_config.aws.networking.disconnected.cidr
-  }]
-}
-
-module "disconnected-sg-ocp-to-artifactory" {
-  source = "terraform-aws-modules/security-group/aws"
-  name = "artifactory-nodes-sg-disconnected"
-  description = "Artifactory host"
-  vpc_id = module.disconnected_network.vpc_id
-  ingress_with_source_security_group_id = flatten([
-    [ for kv in local.allowed_ports.artifactory_nodes : {
-      from_port = tonumber(element(split(":", kv), 0))
-      to_port = tonumber(element(split(":", kv), 0))
-      protocol = length(split(":", kv)) == 3 ? element(split(":", kv), 2) : "tcp"
-      description = length(split(":", kv)) == 2 ? element(split(":", kv), 1) : format("allow port [%s]", element(split(":", kv), 0))
-      source_security_group_id = module.disconnected-sg-ocp.security_group_id
-    }],
-    [{
-      from_port = 22
-      to_port = 22
+  ingress_with_source_security_group_id = [ for sg in [
+      module.disconnected-sg-ocp-control-plane,
+      module.disconnected-sg-ocp-worker
+    ] : {
+      from_port = 443
+      to_port = 443
       protocol = "tcp"
-      source_security_group_id = module.disconnected-sg-bastion.security_group_id
-    }]
-  ])
-  egress_with_cidr_blocks = [{
-    from_port = 0
-    to_port = 0
-    protocol = -1
-    description = "Allow all outbound"
-    cidr_blocks = local.options.cloud_config.aws.networking.disconnected.cidr
+      description = "Allow OCP nodes to pull images"
+      source_security_group_id = sg.security_group_id
   }]
-}
-
-module "disconnected-sg-ocp-to-vsphere" {
-  source = "terraform-aws-modules/security-group/aws"
-  name = "artifactory-nodes-sg-disconnected"
-  description = "Artifactory host"
-  vpc_id = module.disconnected_network.vpc_id
-  ingress_with_source_security_group_id = flatten([
-    [ for kv in local.allowed_ports.vsphere_api_access : {
-      from_port = tonumber(element(split(":", kv), 0))
-      to_port = tonumber(element(split(":", kv), 0))
-      protocol = length(split(":", kv)) == 3 ? element(split(":", kv), 2) : "tcp"
-      description = length(split(":", kv)) == 2 ? element(split(":", kv), 1) : format("allow port [%s]", element(split(":", kv), 0))
-      source_security_group_id = module.disconnected-sg-ocp.security_group_id
-    }],
-    [{
-      from_port = 22
-      to_port = 22
-      protocol = "tcp"
-      source_security_group_id = module.disconnected-sg-bastion.security_group_id
-    }]
-  ])
   egress_with_cidr_blocks = [{
     from_port = 0
     to_port = 0

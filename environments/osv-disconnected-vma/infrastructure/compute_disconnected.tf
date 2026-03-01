@@ -41,7 +41,7 @@ module "disconnected-ocp-cp-nodes-bm" {
   ami = data.aws_ami.ipxe.id
   key_name = module.ec2_key.key_pair_name
   subnet_id = local.provisioning_subnet_disconnected
-  vpc_security_group_ids = [ module.disconnected-sg-ocp-to-artifactory.security_group_id ]
+  vpc_security_group_ids = [ module.disconnected-sg-ocp-control-plane.security_group_id ]
   create_security_group = false
   root_block_device = {
     type       = "gp3"
@@ -68,7 +68,7 @@ module "disconnected-ocp-worker-nodes-bm" {
   ami = data.aws_ami.ipxe.id
   key_name = module.ec2_key.key_pair_name
   subnet_id = module.disconnected_network.private_subnets[count.index]
-  vpc_security_group_ids = [ module.disconnected-sg-ocp-to-artifactory.security_group_id ]
+  vpc_security_group_ids = [ module.disconnected-sg-ocp-worker.security_group_id ]
   create_security_group = false
   root_block_device = {
     type       = "gp3"
