@@ -63,11 +63,22 @@ _pull_secret_for_disconnected_registry() {
 }
 
 provision_base_infrastructure_and_vms() {
-  # time to take that aws bill to the moon!!!!
-  create_bare_metal_instances_sentinel
+  # It can take a very long time for metal instances to provision. They are also relatively very
+  # expensive.
+  #
+  # This exists to speed up preparing for the OpenShift install while keeping costs down a bit.
+  #
+  # Subsequent `provision` runs WILL manage bare metal instances. However, if the "bare metal
+  # sentine"l was deleted manually before running 'destroy', bare metal instances WILL BE DELETED
+  # when this runs.
   exec_tofu apply
 }
 
+provision_bare_metal_instances() {
+  # This repeats `provision_base_infrastructure_and_vms` if the "bare metal sentinel" already exists.
+  create_bare_metal_instances_sentinel
+  exec_tofu apply
+}
 confirm_dns_records() {
   _verify_record() {
     2>/dev/null host "$1"
@@ -546,6 +557,23 @@ upload_rhcos_ignition_files_to_s3_bucket() {
     aws s3 sync "$(_get_file_from_data_dir 'openshift-install')" "$s3_bucket_url"
 }
 
+wait_for_control_plane_available() {
+  info "Waiting an hour for the control plane to become available..."
+  exec_in_disconnected_network 'attempts=0; \
+    max_attempts=3600; \
+    while test "$attempts" -lt "$max_attempts"; \
+    do \
+      num_not_ready=$(oc --request-timeout 1s \
+        --kubeconfig $HOME/openshift_install/auth/kubeconfig \
+        get nodes | grep NotReady); \
+      test "$num_not_ready" -eq 0 && break; \
+      attempts=$((attempts+1)); \
+      sleep 1m; \
+    done;' && return 0
+  error "The control plane never became available."
+  return 1
+}
+
 set -e
 provision_base_infrastructure_and_vms
 provision_oc_mirror_ebs_volume
@@ -580,3 +608,4 @@ generate_ntp_configuration_files
 upload_rhcos_images_to_s3_bucket
 upload_rhcos_ignition_files_to_s3_bucket
 provision_bare_metal_instances
+wait_for_control_plane_available
