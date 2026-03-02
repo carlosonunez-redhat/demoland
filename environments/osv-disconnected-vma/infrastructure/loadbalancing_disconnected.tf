@@ -1,10 +1,20 @@
-resource "aws_acm_certificate" "cert" {
-  domain_name       = local.options.cloud_config.aws.networking.disconnected.dns.domain_name
-  certificate_authority_arn = aws_acmpca_certificate_authority.ca_disconnected.arn
-  subject_alternative_names = [
-    "${local.options.cluster_config.cluster_name}.${local.options.cloud_config.aws.networking.disconnected.dns.domain_name}",
-    "*.${local.options.cluster_config.cluster_name}.${local.options.cloud_config.aws.networking.disconnected.dns.domain_name}"
+resource "tls_private_key" "cert" {
+  algorithm = "ECDSA"
+}
+
+resource "tls_self_signed_cert" "cert" {
+  private_key_pem  = tls_private_key.cert.private_key_pem
+  dns_names = [
+    local.options.cloud_config.aws.networking.disconnected.dns_name,
+    "*.${local.options.cloud_config.aws.networking.disconnected.dns_name}"
   ]
+  validity_period_hours = 8760
+  allowed_uses = [ "key_encipherment", "digital_signature", "server_auth" ]
+}
+
+resource "aws_acm_certificate" "cert" {
+  private_key = tls_private_key.cert.private_key_pem
+  certificate_body = tls_self_signed_cert.cert.cert_pem
 }
 
 resource "aws_lb_target_group_attachment" "api" {
