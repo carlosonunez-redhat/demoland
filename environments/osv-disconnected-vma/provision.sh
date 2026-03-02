@@ -563,11 +563,12 @@ wait_for_control_plane_available() {
     max_attempts=3600; \
     while test "$attempts" -lt "$max_attempts"; \
     do \
-      num_not_ready=$(oc --request-timeout 1s \
+      num_ready=$(2>/dev/null oc --request-timeout 1s \
         --kubeconfig $HOME/openshift_install/auth/kubeconfig \
-        get nodes | grep NotReady); \
-      test "$num_not_ready" -eq 0 && break; \
+        get nodes | grep " Ready " | wc -l); \
+      test "$num_not_ready" -eq 3 && break; \
       attempts=$((attempts+1)); \
+      >&2 echo "Attempt (${attempts}/${max_attempts})"; \
       sleep 1m; \
     done;' && return 0
   error "The control plane never became available."

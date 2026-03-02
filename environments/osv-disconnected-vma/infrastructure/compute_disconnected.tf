@@ -46,15 +46,18 @@ module "disconnected-ocp-cp-nodes-bm" {
     type       = "gp3"
     size       = 100
   }
+  metadata_options = {
+    http_tokens = "optional"
+  }
   user_data = <<-EOF
   #!ipxe
-  set base http://${local.bootstrap_bucket_name}.s3.${data.aws_region.current.region}.amazonaws.com/"
+  set base http://${local.bootstrap_bucket_name}.s3.${data.aws_region.current.region}.amazonaws.com
   kernel $${base}/kernel \
     initrd=main \
     coreos.live.rootfs_url=$${base}/rootfs.img \
     coreos.inst.install_dev=/dev/nvme0n1 \
     coreos.inst.ignition_url=$${base}/openshift_install/bootstrap.ign
-  initrd --name main $${base}/initrd.img
+  initrd --name main $${base}/initramfs.img
   boot
   EOF
 }
@@ -73,15 +76,18 @@ module "disconnected-ocp-worker-nodes-bm" {
     type       = "gp3"
     size       = 100
   }
+  metadata_options = {
+    http_tokens = "optional"
+  }
   user_data = <<-EOF
   #!ipxe
-  set base http://${local.bootstrap_bucket_name}.s3.${data.aws_region.current.region}.amazonaws.com/"
+  set base http://${local.bootstrap_bucket_name}.s3.${data.aws_region.current.region}.amazonaws.com
   kernel $${base}/kernel \
     initrd=main \
     coreos.live.rootfs_url=$${base}/rootfs.img \
     coreos.inst.install_dev=/dev/nvme0n1 \
     coreos.inst.ignition_url=$${base}/openshift_install/bootstrap.ign
-  initrd --name main $${base}/initrd.img
+  initrd --name main $${base}/initramfs.img
   boot
   EOF
 }

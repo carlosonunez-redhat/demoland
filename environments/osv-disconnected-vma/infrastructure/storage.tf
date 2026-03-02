@@ -15,11 +15,7 @@ module "bootstrap_bucket" {
         Effect = "Allow"
         Principal = "*"
         Action = ["s3:GetObject"]
-        Resource = [
-          "arn:aws:s3:::${local.bootstrap_bucket_name}/test_file",
-          "arn:aws:s3:::${local.bootstrap_bucket_name}/*.ign",
-          "arn:aws:s3:::${local.bootstrap_bucket_name}/*.yaml",
-        ]
+        Resource = "arn:aws:s3:::${local.bootstrap_bucket_name}/test_file"
         Condition = {
           IpAddress = {
             "aws:SourceIp" = [
@@ -37,6 +33,8 @@ module "bootstrap_bucket" {
           "arn:aws:s3:::${local.bootstrap_bucket_name}/test_file",
           "arn:aws:s3:::${local.bootstrap_bucket_name}/*.ign",
           "arn:aws:s3:::${local.bootstrap_bucket_name}/*.yaml",
+          "arn:aws:s3:::${local.bootstrap_bucket_name}/*.img",
+          "arn:aws:s3:::${local.bootstrap_bucket_name}/kernel",
         ]
         Condition = {
           IpAddress = {
