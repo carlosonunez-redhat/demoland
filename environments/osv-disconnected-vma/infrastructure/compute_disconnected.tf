@@ -11,7 +11,7 @@ module "disconnected-bastion-vm" {
   create_security_group = false
   root_block_device = {
     type       = "gp3"
-    size       = 100
+    size       = 500
   }
 }
 
@@ -28,7 +28,7 @@ module "disconnected-artifactory-vm" {
   create_security_group = false
   root_block_device = {
     type       = "gp3"
-    size       = 100
+    size       = 500
   }
 }
 
@@ -60,8 +60,10 @@ module "disconnected-ocp-cp-nodes-bm" {
   initrd --name main $${base}/initramfs.img
   boot
   EOF
-  timeouts {
+  timeouts = {
+    create = "15m"
     update = "15m"
+    delete = "15m"
   }
 }
 
@@ -93,8 +95,10 @@ module "disconnected-ocp-worker-nodes-bm" {
   initrd --name main $${base}/initramfs.img
   boot
   EOF
-  timeouts {
+  timeouts = {
+    create = "15m"
     update = "15m"
+    delete = "15m"
   }
 }
 
