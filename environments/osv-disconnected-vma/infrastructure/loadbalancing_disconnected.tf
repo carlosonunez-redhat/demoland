@@ -1,13 +1,16 @@
 resource "tls_private_key" "cert" {
-  algorithm = "ECDSA"
+  algorithm = "RSA"
 }
 
 resource "tls_self_signed_cert" "cert" {
   private_key_pem  = tls_private_key.cert.private_key_pem
   dns_names = [
-    local.options.cloud_config.aws.networking.disconnected.dns_name,
-    "*.${local.options.cloud_config.aws.networking.disconnected.dns_name}"
+    local.options.cloud_config.aws.networking.disconnected.dns.domain_name,
+    "*.${local.options.cloud_config.aws.networking.disconnected.dns.domain_name}"
   ]
+  subject {
+    common_name = local.options.cloud_config.aws.networking.disconnected.dns.domain_name
+  }
   validity_period_hours = 8760
   allowed_uses = [ "key_encipherment", "digital_signature", "server_auth" ]
 }
