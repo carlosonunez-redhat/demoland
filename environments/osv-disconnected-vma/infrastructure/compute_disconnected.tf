@@ -55,11 +55,14 @@ module "disconnected-ocp-cp-nodes-bm" {
   kernel $${base}/kernel \
     initrd=main \
     coreos.live.rootfs_url=$${base}/rootfs.img \
-    coreos.inst.install_dev=/dev/nvme0n1 \
+    coreos.inst.install_dev=/dev/sda1 \
     coreos.inst.ignition_url=$${base}/openshift_install/bootstrap.ign
   initrd --name main $${base}/initramfs.img
   boot
   EOF
+  timeouts {
+    update = "15m"
+  }
 }
 
 module "disconnected-ocp-worker-nodes-bm" {
@@ -85,11 +88,14 @@ module "disconnected-ocp-worker-nodes-bm" {
   kernel $${base}/kernel \
     initrd=main \
     coreos.live.rootfs_url=$${base}/rootfs.img \
-    coreos.inst.install_dev=/dev/nvme0n1 \
+    coreos.inst.install_dev=/dev/sda1 \
     coreos.inst.ignition_url=$${base}/openshift_install/bootstrap.ign
   initrd --name main $${base}/initramfs.img
   boot
   EOF
+  timeouts {
+    update = "15m"
+  }
 }
 
 # module "disconnected-esx-host-bm" {
