@@ -499,19 +499,26 @@ generate_ntp_configuration_files() {
 }
 
 confirm_ignition_bucket_accessible_in_disconnected_network() {
-  local bucket_name want test_file_url got
+  local bucket_name want test_file_url got attempts max_attempts
   want=howdy
   bucket_name="$(tofu output -raw ignition_bucket)"
   test_file_url="https://${bucket_name}.s3.${AWS_DEFAULT_REGION}.amazonaws.com/test_file"
   echo "$want" > /tmp/file
   aws s3 cp /tmp/file "s3://${bucket_name}/test_file" >/dev/null
-  got=$(exec_in_disconnected_network "curl -sS $test_file_url")
-  if test "$want" == "$got"
-  then
-    aws s3 rm "s3://${bucket_name}/test_file" >/dev/null
-    return 0
-  fi
-  test "$want" == "$got" && return 0
+  attempts=0
+  max_attempts=60
+  until test "$attempts" -eq "$max_attempts"
+  do
+    got=$(exec_in_disconnected_network "curl -sS $test_file_url")
+    if test "$want" == "$got"
+    then
+      aws s3 rm "s3://${bucket_name}/test_file" >/dev/null
+      return 0
+    fi
+    attempts=$((attempts+1))
+    info "[attempt ${attempts}/${max_attempts}] Ignition file not accessible yet from disconnected network"
+    sleep 1
+  done
 
   error "Unable to access ignition bucket from S3; wanted: '$want', got: '$got'"
   aws s3 rm "s3://${bucket_name}/test_file" >/dev/null
@@ -604,6 +611,7 @@ generate_install_config
 umount_and_detach_oc_mirror_volume disconnected
 upload_openshift_install_config_to_bastions
 generate_rhcos_ignition_files_in_disconnected_bastion
+upload_rhcos_ignition_files_to_s3_bucket
 generate_openshift_manifest_files_in_disconnected_bastion
 generate_ntp_configuration_files
 upload_rhcos_images_to_s3_bucket
