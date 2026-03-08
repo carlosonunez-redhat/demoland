@@ -37,7 +37,7 @@ module "vpc_endpoints" {
   endpoints = {
     s3 = {
       service = "s3"
-      subnets = module.disconnected_network.private_subnets
+      subnet_ids = module.disconnected_network.private_subnets
       private_dns_enabled = true
       dns_options = {
         private_dns_only_for_inbound_resolver_argument = true
