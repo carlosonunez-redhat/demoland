@@ -5,3 +5,6 @@ variable "ssh_ip" {
 variable "bare_metal_creation_sentinel_file" {
   description = "The path to a file that, when created, provisions bare-metal AWS instances"
 }
+
+variable "control_plane_cert_bundle" {}
+variable "worker_cert_bundle" {}

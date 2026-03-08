@@ -62,6 +62,15 @@ _pull_secret_for_disconnected_registry() {
   exec_in_disconnected_network 'cat $XDG_RUNTIME_DIR/containers/auth.json' > $(_pull_secret_file)
 }
 
+_cluster_certificate_bundle() {
+  local ignition node_type
+  node_type="${1,,}"
+  ignition=$(exec_in_disconnected_network 'test -f $HOME/openshift_install/'"$node_type"'.ign || return 1; \
+    cat $HOME/openshift_install/master.ign')
+  test -z "$ignition" && { echo "[]"; return 0; }
+  jq -cr '.ignition.security.tls.certificateAuthorities | tostring' <<< "$ignition"
+}
+
 provision_base_infrastructure_and_vms() {
   # It can take a very long time for metal instances to provision. They are also relatively very
   # expensive.
@@ -71,14 +80,19 @@ provision_base_infrastructure_and_vms() {
   # Subsequent `provision` runs WILL manage bare metal instances. However, if the "bare metal
   # sentine"l was deleted manually before running 'destroy', bare metal instances WILL BE DELETED
   # when this runs.
+  export TF_VAR_control_plane_cert_bundle="$(_cluster_certificate_bundle master)"
+  export TF_VAR_worker_cert_bundle="$(_cluster_certificate_bundle worker)"
   exec_tofu apply
 }
 
 provision_bare_metal_instances() {
+  export TF_VAR_control_plane_cert_bundle="$(_cluster_certificate_bundle master)"
+  export TF_VAR_worker_cert_bundle="$(_cluster_certificate_bundle worker)"
   # This repeats `provision_base_infrastructure_and_vms` if the "bare metal sentinel" already exists.
   create_bare_metal_instances_sentinel
   exec_tofu apply
 }
+
 confirm_dns_records() {
   _verify_record() {
     2>/dev/null host "$1"
@@ -610,11 +624,9 @@ disk_to_mirror_disconnected_bastion
 generate_install_config
 umount_and_detach_oc_mirror_volume disconnected
 upload_openshift_install_config_to_bastions
-generate_rhcos_ignition_files_in_disconnected_bastion
-upload_rhcos_ignition_files_to_s3_bucket
 generate_openshift_manifest_files_in_disconnected_bastion
 generate_ntp_configuration_files
-upload_rhcos_images_to_s3_bucket
+generate_rhcos_ignition_files_in_disconnected_bastion
 upload_rhcos_ignition_files_to_s3_bucket
 provision_bare_metal_instances
 wait_for_control_plane_available

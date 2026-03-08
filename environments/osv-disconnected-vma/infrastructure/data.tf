@@ -6,6 +6,8 @@ locals {
   provisioning_subnet_disconnected = module.disconnected_network.private_subnets[local.default_availability_zone_index]
   bootstrap_bucket_name = "ignition-bootstrap-${random_string.bootstrap_bucket.result}"
   bastion_bridge_ip = cidrhost(module.disconnected_network.private_subnets_cidr_blocks[local.default_availability_zone_index], 252)
+  openshift_version = local.options.cluster_config.cluster_version
+  openshift_channel = "release-${join(".", slice(split(".", local.openshift_version),0,2))}"
   allowed_ports = {
     openshift_nodes = [
       "67:dnsmasq",
@@ -61,6 +63,10 @@ data "aws_route53_zone" "public" {
 data "aws_vpc_endpoint_service" "s3" {
   service = "s3"
   service_type = "Gateway"
+}
+
+data "http" "rhcos" {
+  url = "https://raw.githubusercontent.com/openshift/installer/${local.openshift_channel}/data/data/coreos/rhcos.json"
 }
 
 data "aws_ami" "ipxe" {
