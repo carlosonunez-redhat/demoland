@@ -5,7 +5,11 @@ _exec_tofu() {
   export TF_PLUGIN_DIR="$(_get_file_from_data_dir 'tofu/plugins')"
   export TF_CLI_ARGS_apply='-auto-approve'
   test -n "$TOFU_QUIET" && export TF_CLI_ARGS_apply="$TF_CLI_ARGS_apply -concise"
-  test -n "$TOFU_DISABLE_REFRESH" && export TF_CLI_ARGS_apply="$TF_CLI_ARGS_apply -refresh=false"
+  if test -n "$TOFU_DISABLE_REFRESH"
+  then
+    warning "OpenTofu will not refresh state against live AWS infrastructure."
+    export TF_CLI_ARGS_apply="$TF_CLI_ARGS_apply -refresh=false"
+  fi
   /usr/local/bin/tofu "$@" || return 1
   >/dev/null popd || return 1
 }
