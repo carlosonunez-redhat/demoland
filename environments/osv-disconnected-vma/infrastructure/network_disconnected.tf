@@ -189,17 +189,18 @@ module "disconnected-sg-artifactory" {
       protocol = "-1"
     }
   ]
-  ingress_with_source_security_group_id = flatten([[for p in [22,8081,8082]: {
+  ingress_with_source_security_group_id = flatten([[for p in [22,443]: {
     from_port = p
     to_port = p
     protocol = "tcp"
     source_security_group_id = module.disconnected-sg-bastion.security_group_id
   }], [ for sg in [
+    module.disconnected-sg-bastion,
     module.disconnected-sg-ocp-control-plane,
     module.disconnected-sg-ocp-worker
   ] : {
-    from_port = 443
-    to_port = 443
+    from_port = 8082
+    to_port = 8082
     protocol = "tcp"
     description = "Allow OCP nodes to pull images"
     source_security_group_id = sg.security_group_id

@@ -21,7 +21,7 @@ resource "aws_acm_certificate" "cert" {
 }
 
 resource "aws_lb_target_group_attachment" "api" {
-  for_each = { for k, v in module.disconnected-ocp-cp-nodes-bm : k => v }
+  for_each = { for k, v in flatten([module.disconnected-ocp-cp-nodes-bm,[module.disconnected-ocp-bootstrap-node]]) : k => v }
   target_group_arn = module.api-alb.target_groups["target-group"].arn
   target_id = each.value.id
   port = 6443
@@ -59,10 +59,17 @@ module "api-alb" {
   }
 }
 resource "aws_lb_target_group_attachment" "api-int" {
-  for_each = { for k, v in module.disconnected-ocp-cp-nodes-bm : k => v }
+  for_each = { for k, v in flatten([module.disconnected-ocp-cp-nodes-bm,[module.disconnected-ocp-bootstrap-node]]) : k => v }
   target_group_arn = module.api-int-alb.target_groups["target-group"].arn
   target_id = each.value.id
   port = 6443
+}
+
+resource "aws_lb_target_group_attachment" "machine-config" {
+  for_each = { for k, v in flatten([module.disconnected-ocp-cp-nodes-bm,[module.disconnected-ocp-bootstrap-node]]) : k => v }
+  target_group_arn = module.api-int-alb.target_groups["target-group-2"].arn
+  target_id = each.value.id
+  port = 22623
 }
 
 # same as api since everything in disco is in private subnets.
@@ -82,10 +89,21 @@ module "api-int-alb" {
         target_group_key = "target-group"
       }
     }
+    ex-machine-config = {
+      port            = 22623
+      protocol        = "HTTPS"
+      certificate_arn = aws_acm_certificate.cert.arn
+      forward = {
+        target_group_key = "target-group-2"
+      }
+    }
   }
 
   target_groups = {
     target-group = {
+      create_attachment = false
+    }
+    target-group-2 = {
       create_attachment = false
     }
   }
@@ -99,11 +117,6 @@ module "api-int-alb" {
 }
 
 
-resource "aws_lb_target_group_attachment" "machine-config" {
-  target_group_arn = module.machine-config-alb.target_groups["target-group"].arn
-  target_id = module.disconnected-ocp-bootstrap-node.id
-  port = 22623
-}
 module "machine-config-alb" {
   source = "terraform-aws-modules/alb/aws"
   name = "machine-config"
