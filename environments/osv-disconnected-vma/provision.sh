@@ -65,8 +65,8 @@ _pull_secret_for_disconnected_registry() {
 _cluster_certificate_bundle() {
   local ignition node_type
   node_type="${1,,}"
-  ignition=$(exec_in_disconnected_network 'test -f $HOME/openshift_install/'"$node_type"'.ign || return 1; \
-    cat $HOME/openshift_install/master.ign')
+  ignition=$(exec_in_disconnected_network 'test -f $HOME/openshift_install/'"$node_type"'.ign || exit 1; \
+    cat $HOME/openshift_install/'"$node_type"'.ign')
   test -z "$ignition" && { echo "[]"; return 0; }
   jq -cr '.ignition.security.tls.certificateAuthorities | tostring' <<< "$ignition"
 }
@@ -596,6 +596,32 @@ wait_for_control_plane_available() {
   return 1
 }
 
+# Tofu will create and attach an empty volume to an instance that has the
+# (externally-created) oc-mirror volume attached to it. This will trigger an unnecessary
+# oc-mirror fetch and extra costs. Detaching the volume before provisioning should solve this.
+ensure_oc_mirror_volume_detached_before_first_provision() {
+  umount_and_detach_oc_mirror_volume disconnected || true
+  umount_and_detach_oc_mirror_volume connected || true
+}
+
+mark_openshift_manifests_generated() {
+  exec_in_disconnected_network "test -f \$HOME/openshift_install/.done || touch \$HOME/openshift_install/.done"
+}
+
+delete_openshift_install_configs_if_stale() {
+  local now last_modified delta threshold
+  exec_in_disconnected_network "test -f \$HOME/openshift_install/.done" || return 0
+  threshold=43200
+  now=$(date +%s)
+  last_modified=$(exec_in_disconnected_network "stat -c '%Y' \$HOME/openshift_install/.done")
+  delta=$((now-last_modified))
+  test "$delta" -lt "$threshold" && return 0
+
+  info "OpenShift install manifests are $delta seconds old and are stale. Deleting."
+  exec_in_disconnected_network "find \$HOME/openshift_install -type f -not -name '*.ign' -exec 'rm -rf {}' \\;"
+}
+
+ensure_oc_mirror_volume_detached_before_first_provision
 set -e
 provision_base_infrastructure_and_vms
 provision_oc_mirror_ebs_volume
@@ -627,6 +653,7 @@ upload_openshift_install_config_to_bastions
 generate_openshift_manifest_files_in_disconnected_bastion
 generate_ntp_configuration_files
 generate_rhcos_ignition_files_in_disconnected_bastion
+mark_openshift_manifests_generated
 upload_rhcos_ignition_files_to_s3_bucket
 provision_bare_metal_instances
 wait_for_control_plane_available
