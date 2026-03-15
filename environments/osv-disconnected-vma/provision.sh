@@ -622,10 +622,10 @@ delete_openshift_install_configs_if_stale() {
 }
 
 export $(log_into_aws) || exit 1
+provision_oc_mirror_ebs_volume
 ensure_oc_mirror_volume_detached_before_first_provision
 set -e
 provision_base_infrastructure_and_vms
-provision_oc_mirror_ebs_volume
 initialize_bastions
 confirm_ignition_bucket_accessible_in_disconnected_network
 initialize_registry
