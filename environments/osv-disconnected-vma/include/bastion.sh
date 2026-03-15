@@ -128,6 +128,17 @@ initialize_bastions() {
     cat "$(_get_file_from_secrets_dir 'ssh-key')" |
       exec_in_disconnected_network 'cat - > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa'
   }
+  _confirm_connected_bastion_resolvable() {
+    info "Waiting 10 minutes for $(_bastion_connected_hostname) to resolve"
+    attempts=0
+    while test "$attempts" -lt 600
+    do
+      test -n "$(dig +short -t A bastion.sandbox5153.opentlc.com)" && return 0
+      attempts="$((attempts+1))"
+      sleep 1
+    done
+    return 1
+  }
   _confirm_connected_bastion_accessible() {
     info "Waiting 300 seconds for connected bastion to become available"
     attempts=0
@@ -138,6 +149,7 @@ initialize_bastions() {
         "telnet://$(_bastion_connected_hostname):22"
       test "$?" -eq 48 && return 0
       attempts="$((attempts+1))"
+      sleep 1
     done
     return 1
   }
@@ -164,6 +176,11 @@ initialize_bastions() {
  
   _bastions_initialized && return 0
 
+  if ! _confirm_connected_bastion_resolvable
+  then
+    error "DNS record for bastion in connected network never resolved"
+    return 1
+  fi
   if ! _confirm_connected_bastion_accessible
   then
     error "Bastion in connected network is inaccessible"
