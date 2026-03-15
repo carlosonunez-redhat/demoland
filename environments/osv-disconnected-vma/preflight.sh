@@ -44,6 +44,7 @@ verify_secrets() {
 }
 
 set -e
+export $(log_into_aws) || exit 1
 verify_config_keys
 verify_secrets
 create_tofu_state_s3

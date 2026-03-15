@@ -621,6 +621,7 @@ delete_openshift_install_configs_if_stale() {
   exec_in_disconnected_network "find \$HOME/openshift_install -type f -not -name '*.ign' -exec 'rm -rf {}' \\;"
 }
 
+export $(log_into_aws) || exit 1
 ensure_oc_mirror_volume_detached_before_first_provision
 set -e
 provision_base_infrastructure_and_vms
