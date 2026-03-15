@@ -4,10 +4,6 @@ source "../../include/helpers/aws.sh"
 source "../../include/helpers/config.sh"
 source "../../include/helpers/logging.sh"
 source "./include/aws.sh"
-pf_log() {
-  eval "$1 '[PREFLIGHT] $2'"
-}
-
 confirm_route_53_public_zone_available() {
   domain_name=$(_get_from_config '.deploy.cloud_config.aws.networking.dns.domain_name')
   pf_log info "Checking that Route53 hosted zone for domain $domain_name is available."

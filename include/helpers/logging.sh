@@ -22,6 +22,9 @@ _log() {
   >&2 echo -e "${color}${level^^}${RESET}: $message"
 }
 
+pf_log() {
+  eval "$1 '[PREFLIGHT] $2'"
+}
 info() { _log info "$1" ; }
 warning() { _log warning "$1" ; }
 error() { _log error "$1" ; }
