@@ -1,7 +1,4 @@
 # shellcheck shell=bash
-source "$(dirname "$0")/../include/helpers/errors.sh"
-source "$(dirname "$0")/../include/helpers/yaml.sh"
-
 _config_file_in_data_dir() {
   printf '%s/openshift-install/install-config.yaml' "$(_get_file_from_data_dir)"
 }
@@ -23,7 +20,7 @@ render_and_save_install_config() {
   info "Writing openshift-install file to $(_config_file_in_data_dir)"
   yaml=$(fail_if_nil \
     "$(render_yaml_template install-config "$@")" \
-    "Couldn't generate AWS install config.") || return 1
+    "Couldn't generate install config.") || return 1
   echo "$yaml" > "$(_config_file_in_data_dir)"
 }
 

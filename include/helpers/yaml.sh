@@ -9,8 +9,7 @@ as_json_string() {
 }
 
 _template_file() {
-  printf "%s/templates/%s.yaml" \
-    "$ENVIRONMENT_INCLUDE_DIR" \
+  printf "./include/templates/%s.yaml" \
     "${1//.y*ml/}"
 }
 
@@ -34,7 +33,10 @@ render_yaml_template() {
   cmd=(ytt)
   while test "$#" -ne 0
   do
-    cmd+=(--data-value-yaml "$1=$2")
+    if grep -Eq '_is_string_value' <<< "${1,,}"
+    then cmd+=(--data-value "${1//_is_string_value/}=$2")
+    else cmd+=(--data-value-yaml "$1=$2")
+    fi
     shift; shift
   done
   cmd+=(-f "$file")

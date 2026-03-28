@@ -1,1 +1,2 @@
 bookmark: openshift-install config
+networking: add dedicated live migration network

@@ -1,0 +1,659 @@
+#!/usr/bin/env bash
+# Provisions an environment!
+#
+# This adds some functions for working with cloud providers, the config file, and
+# other useful things.
+source "../../include/helpers/aws.sh"
+source "../../include/helpers/config.sh"
+source "../../include/helpers/data.sh"
+source "../../include/helpers/errors.sh"
+source "../../include/helpers/logging.sh"
+source "../../include/helpers/install_config.sh"
+source "../../include/helpers/yaml.sh"
+
+# If this environment has includes of its own, use the ./include environment
+# variable, like shown in the comment below.
+#
+source "./include/bastion.sh"
+source "./include/mirror_volume.sh"
+source "./include/osv.sh"
+source "./include/tofu.sh"
+
+_test_image_name() {
+  echo "registry.private.network:8082/$(_get_from_config '.deploy.registry_config.artifactory.repository_name')/hello"
+}
+
+_restart_artifactory() {
+  local cmd
+  cmd="sudo systemctl restart artifactory.service"
+  test "${1,,}" == quiet && cmd="${cmd} --no-block"
+  if ! exec_in_disconnected_node 'fedora@registry.private.network' "$cmd"
+  then
+    warning "Artifactory failed to restart; trying forcefully..."
+    exec_in_disconnected_node 'fedora@registry.private.network' \
+      "ps -ef | grep artifactory | awk '{print \$2}' | xargs sudo kill -9 && $cmd"
+  fi
+  test "${1,,}" == quiet && return 0
+
+  if ! exec_in_disconnected_node 'fedora@registry.private.network' \
+    'timeout 300 sh -c "while true; do curl -o /dev/null -s --connect-timeout 1000 \
+      localhost:8082 && break; sleep 1; done"'
+  then
+    error "Artifactory never started (or took too long to start)"
+    exit 1
+  fi
+}
+
+_restart_artifactory_no_wait() {
+  _restart_artifactory quiet
+}
+
+_artifactory_token_file() {
+  local artifactory_instance_id
+  artifactory_instance_id=$(tofu output -raw disconnected_artifactory_instance_id)
+  _get_file_from_data_dir "artifactory_token_$artifactory_instance_id"
+}
+
+_artifactory_token() {
+  cat "$(_artifactory_token_file)"
+}
+
+_pull_secret_for_disconnected_registry() {
+  exec_in_disconnected_network 'cat $XDG_RUNTIME_DIR/containers/auth.json' > $(_pull_secret_file)
+}
+
+_cluster_certificate_bundle() {
+  local ignition node_type
+  node_type="${1,,}"
+  ignition=$(exec_in_disconnected_network 'test -f $HOME/openshift_install/'"$node_type"'.ign || exit 1; \
+    cat $HOME/openshift_install/'"$node_type"'.ign')
+  test -z "$ignition" && { echo "[]"; return 0; }
+  jq -cr '.ignition.security.tls.certificateAuthorities | tostring' <<< "$ignition"
+}
+
+provision_base_infrastructure_and_vms() {
+  # It can take a very long time for metal instances to provision. They are also relatively very
+  # expensive.
+  #
+  # This exists to speed up preparing for the OpenShift install while keeping costs down a bit.
+  #
+  # Subsequent `provision` runs WILL manage bare metal instances. However, if the "bare metal
+  # sentine"l was deleted manually before running 'destroy', bare metal instances WILL BE DELETED
+  # when this runs.
+  export TF_VAR_control_plane_cert_bundle="$(_cluster_certificate_bundle master)"
+  export TF_VAR_worker_cert_bundle="$(_cluster_certificate_bundle worker)"
+  exec_tofu apply
+}
+
+provision_bare_metal_instances() {
+  export TF_VAR_control_plane_cert_bundle="$(_cluster_certificate_bundle master)"
+  export TF_VAR_worker_cert_bundle="$(_cluster_certificate_bundle worker)"
+  # This repeats `provision_base_infrastructure_and_vms` if the "bare metal sentinel" already exists.
+  create_bare_metal_instances_sentinel
+  exec_tofu apply
+}
+
+confirm_dns_records() {
+  _verify_record() {
+    2>/dev/null host "$1"
+  }
+
+  cluster_name=$(_get_from_config '.deploy.cluster_config.cluster_name')
+  domain_name=$(_get_from_config '.deploy.cloud_config.aws.networking.connected.dns.domain_name')
+  
+  for ocp_component in apps api api-int bootstrap control-plane worker
+  do
+    if test "$ocp_component" == control-plane || test "$ocp_component" == worker
+    then
+      for i in $(seq 1 3)
+      do _verify_record "${ocp_component}-${i}.${cluster_name}.${domain_name}"
+      done
+    else _verify_record "${ocp_component}.${cluster_name}.${domain_name}"
+    fi
+  done
+
+  for ext_component in registry
+  do _verify_record "${ext_component}.${domain_name}"
+  done
+}
+
+initialize_registry() {
+  initialize_disconnected_node 'fedora@registry.private.network'
+}
+
+download_packages_in_connected_bastion() {
+  packages="curl rsync"
+  exec_in_connected_network "sudo dnf -y install $packages"
+}
+
+install_oc_client_into_bastions() {
+  install_ocp_tool_into_bastions openshift-client-linux.tar.gz oc
+}
+
+install_oc_mirror_into_bastions() {
+  install_ocp_tool_into_bastions oc-mirror.tar.gz oc-mirror "oc-mirror --v2 --help"
+}
+
+install_openshift_install_into_bastions() {
+  install_ocp_tool_into_bastions openshift-install-linux.tar.gz openshift-install
+}
+
+install_butane_into_bastions() {
+  install_into_bastions 'butane/latest' butane butane
+}
+
+
+install_artifactory_on_disconnected_registry_instance() {
+  _artifactory_installed_and_running() {
+    local want got
+    want=enabled
+    got=$(exec_in_disconnected_node 'fedora@registry.private.network' 'sudo systemctl is-enabled artifactory')
+    test "$want" == "${got,,}" || return 1
+    exec_in_disconnected_network '2>/dev/null nc -w 1 -z registry.private.network 8082'
+  }
+
+  # https://jfrog.com/help/r/jfrog-installation-setup-documentation/install-artifactory-with-linux-archive
+  # However, these docs do not disambiguate Artifactory from their other
+  # Artifactory-lite SKUs (JCR, X-Ray, etc.)
+  _download_artifactory_archive_into_connected_bastion() {
+    local version
+    version=$(_get_from_config '.deploy.registry_config.artifactory.jcr_version')
+    url="https://releases.jfrog.io/artifactory/artifactory-pro/org/artifactory/pro/\
+jfrog-artifactory-pro/$version/jfrog-artifactory-pro-${version}-linux.tar.gz"
+    exec_in_connected_network "test -f /tmp/jcr.tar.gz || curl -L -o /tmp/jcr.tar.gz '$url'";
+  }
+
+  _rsync_artifactory_archive_into_disconnected_bastion() {
+    rsync_into_disconnected_network /tmp/jcr.tar.gz /tmp/jcr.tar.gz
+  }
+
+  _rsync_artifactory_archive_into_disconnected_registry_instance() {
+    exec_in_disconnected_network 'rsync -avrh /tmp/jcr.tar.gz fedora@registry.private.network:/app/jfrog/jcr.tar.gz'
+  }
+
+  _create_jfrog_home_dir_in_disconnected_registry_instance() {
+    exec_in_disconnected_node \
+      'fedora@registry.private.network' \
+      "sudo mkdir -p /app/jfrog && sudo chown $(_bastion_user) /app/jfrog"
+  }
+
+  _extract_artifactory_in_disconnected_registry_instance() {
+    exec_in_disconnected_node 'fedora@registry.private.network' \
+      'test -d /app/jfrog/artifactory && exit 0; \
+        cd /app/jfrog; tar -xzf jcr.tar.gz ; mv artifactory* artifactory'
+  }
+
+  _install_artifactory_service() {
+    exec_in_disconnected_node 'fedora@registry.private.network' \
+      'cd /app/jfrog/artifactory/app/bin && sudo ./installService.sh'
+    # This wasn't in the docs.
+    exec_in_disconnected_node 'fedora@registry.private.network' \
+      'sudo semanage fcontext -a -t bin_t /app/jfrog && sudo chcon -R -t bin_t /app/jfrog/artifactory/app/bin'
+  }
+
+  # Skip onboarding and work around some bugs in the installer.
+  # "Build this Lego set. The pieces are ALL OVER THE INTERNET. Good luck." -JFrog, probably.
+  _configure_artifactory() {
+    local ip_address
+    ip_address="$(exec_in_disconnected_node 'fedora@registry.private.network' 'hostname -I' |
+      tr -d ' ')"
+    # allowNonPostgresql: The ONLY config param that was documented in the installation docs
+    # jfconnect.enabled = false: UI won't load if this is enabled. Don't know why.
+    # (source: https://stackoverflow.com/questions/78661243/artifactory-oss-wont-start-log-shows-failed-executing-getentitlements-server)
+    # ip address: Weird UI errors due to script using inet6 iface address instead of inet4.
+    # (source: beer, coffee, and https://jfrog.com/help/r/artifactory-how-to-fix-invalid-url-escape-et/artifactory-how-to-fix-invalid-url-escape-et)
+    for modification in ".shared.database.allowNonPostgresql = true" \
+      ".shared.node.ip = \\\"$ip_address\\\"" \
+      ".shared.extraJavaOpts = \\\"-Dartifactory.onboarding.skipWizard=true\\\"" \
+      ".jfconnect.enabled = false"
+    do exec_in_disconnected_node 'fedora@registry.private.network' \
+      'sudo /app/jfrog/artifactory/app/third-party/yq/yq -i \
+        "'"$modification"'" \
+        /app/jfrog/artifactory/var/etc/system.yaml'
+    done
+  }
+
+  _artifactory_installed_and_running && return 0
+
+  set -e
+  _create_jfrog_home_dir_in_disconnected_registry_instance
+  _download_artifactory_archive_into_connected_bastion
+  _rsync_artifactory_archive_into_disconnected_bastion
+  _rsync_artifactory_archive_into_disconnected_registry_instance
+  _extract_artifactory_in_disconnected_registry_instance
+  _install_artifactory_service
+  _configure_artifactory
+  _restart_artifactory
+}
+
+apply_artifactory_license() {
+  _license_applied() {
+    exec_in_disconnected_node 'fedora@registry.private.network' \
+      'sudo test -f /app/jfrog/artifactory/var/etc/artifactory/artifactory.lic'
+  }
+
+  _license_applied && return 0
+
+  cat "$(_get_file_from_secrets_dir 'artifactory-license')" | \
+    exec_in_connected_network sh -c 'cat - > /tmp/artifactory.lic'
+  rsync_into_disconnected_network /tmp/artifactory.lic /tmp/artifactory.lic
+  exec_in_disconnected_network 'rsync -avrh /tmp/artifactory.lic fedora@registry.private.network:/tmp/license'
+  exec_in_disconnected_node 'fedora@registry.private.network' \
+    'sudo cp /tmp/license /app/jfrog/artifactory/var/etc/artifactory/artifactory.lic'
+  _restart_artifactory
+}
+
+
+change_artifactory_default_password() {
+  _password_changed() {
+    local username password
+    username=$(_get_from_config '.deploy.registry_config.artifactory.username')
+    password=$(_get_from_config '.deploy.registry_config.artifactory.password')
+    exec_in_disconnected_node \
+      'fedora@registry.private.network' \
+      "curl -s -u \"${username}:${password}\" http://localhost:8082/artifactory/api/system  | grep -q \"System Info\""
+  }
+
+  _password_changed && return 0
+
+  local username password
+  username=$(_get_from_config '.deploy.registry_config.artifactory.username')
+  password=$(_get_from_config '.deploy.registry_config.artifactory.password')
+  # https://jfrog.com/help/r/artifactory-how-to-create-an-admin-token-without-using-the-ui/artifactory-how-to-create-an-admin-token-without-using-the-ui
+  exec_in_disconnected_node \
+    'fedora@registry.private.network' \
+    "sudo sh -c \"echo '${username}@*=${password}' > /app/jfrog/artifactory/var/etc/access/bootstrap.creds\"" &&
+  exec_in_disconnected_node 'fedora@registry.private.network' \
+    "sudo chown artifactory:artifactory /app/jfrog/artifactory/var/etc/access/bootstrap.creds" &&
+  exec_in_disconnected_node 'fedora@registry.private.network' \
+    "sudo chmod 600 /app/jfrog/artifactory/var/etc/access/bootstrap.creds" &&
+    _restart_artifactory
+}
+
+create_artifactory_admin_token() {
+  _token_created() {
+    test -f "$(_artifactory_token_file)"
+  }
+
+  _token_created && return 0
+  # https://jfrog.com/help/r/artifactory-how-to-create-an-admin-token-without-using-the-ui/artifactory-how-to-create-an-admin-token-without-using-the-ui
+  local token new_token_json
+  exec_in_disconnected_node 'fedora@registry.private.network' \
+    "sudo touch /app/jfrog/artifactory/var/bootstrap/etc/access/keys/generate.token.json" &&
+    _restart_artifactory || return 1
+
+  if ! exec_in_disconnected_node 'fedora@registry.private.network' \
+    "timeout 120 sh -c \"while true; do sudo test -f /app/jfrog/artifactory/var/etc/access/keys/token.json && break; sleep 1; done\""
+  then
+    error "Timed out while waiting for Artifactory to generate a short-lived admin token"
+    return 1
+  fi
+  token_json=$(exec_in_disconnected_node 'fedora@registry.private.network' \
+    'sudo cat /app/jfrog/artifactory/var/etc/access/keys/token.json')
+  if test -z "$token_json"
+  then
+    error "Artifactory failed to create a short-lived admin token."
+    return 1
+  fi
+  token=$(echo "$token_json" | jq -r '.token')
+  attempts=0
+  while test "$attempts" -lt 90
+  do
+    new_token_json=$(exec_in_disconnected_node 'fedora@registry.private.network' \
+      "curl -sS -H \"Authorization: Bearer $token\" \
+        -X POST \
+        http://localhost:8082/access/api/v1/tokens \
+        -d \"scope=applied-permissions/user\"") || true
+    test -n "$new_token_json" && break
+    attempts=$((attempts+1))
+  done
+  access_token=$(jq -r .access_token <<< "$new_token_json")
+  if test -z "$access_token" || test "${access_token,,}" == null
+  then
+    error "Couldn't create an admin token with Artifactory"
+    return 1
+  fi
+  echo "$access_token" > "$(_artifactory_token_file)"
+}
+
+create_artifactory_oci_repo() {
+  _repo_created() {
+    local username password want got
+    username=$(_get_from_config '.deploy.registry_config.artifactory.username')
+    password=$(_get_from_config '.deploy.registry_config.artifactory.password')
+    want=200
+    got=$(exec_in_disconnected_network "curl -sSL -o /dev/null \
+      -u \"${username}:${password}\" \
+      -w \"%{http_code}\" \
+      http://registry.private.network:8082/artifactory/$(_get_from_config '.deploy.registry_config.artifactory.repository_name')")
+    test "$want" == "$got"
+  }
+
+  _repo_created && return 0
+  repo_config=$(cat <<-EOF
+{
+  "key": "$(_get_from_config '.deploy.registry_config.artifactory.repository_name')",
+  "rclass": "local",
+  "packageType": "docker",
+  "description": "The repository."
+}
+EOF
+)
+  repo_config_json=$(jq -cr . <<< "$repo_config") || return 1
+  exec_in_disconnected_network \
+    "curl -sS -H \"Authorization: Bearer $(_artifactory_token)\" \
+      -H \"Content-Type: application/json\" \
+      -X PUT \
+      -d '$repo_config_json' \
+      http://registry.private.network:8082/artifactory/api/repositories/$(_get_from_config '.deploy.registry_config.artifactory.repository_name')"
+}
+
+log_into_artifactory_on_disconnected_bastion() {
+  exec_in_disconnected_network \
+    "podman login --tls-verify=false \
+      -u '$(_get_from_config '.deploy.registry_config.artifactory.username')' \
+      -p '$(_artifactory_token)' \
+      http://registry.private.network:8082"
+}
+
+confirm_artifactory_push_and_pull() {
+  _confirmed() {
+    exec_in_disconnected_network "podman images | grep -q $(_test_image_name)" && return 0
+  }
+
+  _pull_and_save_test_image_in_connected_bastion() {
+    _confirmed && return 0
+
+    exec_in_connected_network \
+      'test -f /tmp/image.tar.gz && exit 0; podman pull hello && podman save -o /tmp/image.tar.gz hello'
+  }
+  
+  _send_test_image_to_disconnected_bastion() {
+    _confirmed && return 0
+
+    rsync_into_disconnected_network /tmp/image.tar.gz /tmp
+  }
+
+  _push_test_image_into_disconnected_registry() {
+    _confirmed && return 0
+
+    exec_in_disconnected_network \
+      "cat /tmp/image.tar.gz | podman load -q && podman tag hello $(_test_image_name)"
+  }
+
+  _confirm_push_and_pull() {
+    _confirmed && return 0
+
+    exec_in_disconnected_network \
+      "podman push --tls-verify=false $(_test_image_name) && \
+      podman rmi $(_test_image_name) && \
+      podman pull --tls-verify=false $(_test_image_name)"
+  }
+
+  _pull_and_save_test_image_in_connected_bastion &&
+    _send_test_image_to_disconnected_bastion &&
+    _push_test_image_into_disconnected_registry &&
+    _confirm_push_and_pull
+}
+
+upload_openshift_install_config_to_bastions() {
+  cat "$(_config_file_in_data_dir)" | exec_in_connected_network 'cat - > /tmp/install-config.yaml'
+  rsync_into_disconnected_network '/tmp/install-config.yaml' '$HOME/openshift_install/'
+}
+
+generate_and_upload_image_set_into_mirror_vol() {
+  local version track channel branch values
+  # TODO: Preflight check this.
+  version="$(_get_from_config '.deploy.cluster_config.cluster_version')"
+  branch="$(cut -f1-2 -d '.' <<< "$version")"
+  track="$(_get_from_config '.deploy.cluster_config.cluster_track')"
+  test -z "$track" && track=stable
+  channel="${track}-${branch}"
+  values=(
+    openshift_channel "${channel}"
+    max_version "$version"
+  )
+  template=$(render_yaml_template image_set "${values[@]}") || return 1
+  echo "$template" | exec_in_connected_network 'cat - > /mnt/mirror/image_set.yaml'
+}
+
+upload_public_pull_secret_into_connected_bastion() {
+  cat "$(_get_file_from_secrets_dir 'public-pull-secret')" |
+    yq -o=y -P . |
+    exec_in_connected_network 'cat - > /tmp/public_pull_secret'
+}
+
+mirror_to_disk_connected_bastion() {
+  exec_in_connected_network 'test -f /mnt/mirror/.m2d_done' && return 0
+  exec_in_connected_network 'oc mirror --v2 -c /mnt/mirror/image_set.yaml \
+      --authfile /tmp/public_pull_secret \
+      --cache-dir /mnt/mirror/cache \
+      file:///mnt/mirror' &&
+    # wait for tar file(s) to settle
+    exec_in_connected_network 'attempts=0; \
+      max_attempts=300; \
+      failed=0; \
+      while true; \
+      do \
+        find /mnt/mirror/mirror*tar | \
+          while read -r file; \
+          do \
+            tar -tf "$file" >/dev/null && continue; \
+            >&2 echo "ERROR: mirror is either corrupted or still being created: $file"; \
+            failed=1; \
+          done; \
+        test "$failed" -eq 0 && exit 0; \
+        >&2 echo "ERROR: Still waiting for mirror TARs to settle (attempt ${attempts}/${max_attempts})"; \
+        sleep 1; \
+        attempts=$((attempts+1)); \
+      done; \
+      >&2 echo "ERROR: mirror TARs never settled."; \
+      exit 1;' &&
+    # clear these directories, as oc-mirror will decompress into them during d2m
+    exec_in_connected_network 'rm -rf /mnt/mirror/{working-dir,cache}'
+    exec_in_connected_network 'touch /mnt/mirror/.m2d_done'
+}
+
+disk_to_mirror_disconnected_bastion() {
+  exec_in_disconnected_network 'test -f /mnt/mirror/.d2m_done && exit 0' ||
+    exec_in_disconnected_network 'oc mirror --v2 -c /mnt/mirror/image_set.yaml \
+        --from file:///mnt/mirror \
+        --dest-tls-verify=false \
+        --cache-dir /mnt/mirror/cache \
+        --image-timeout 60m \
+        docker://registry.private.network:8082/ocp-registry && touch /mnt/mirror/.d2m_done'
+}
+
+create_openshift_install_workspace_in_disconnected_bastion() {
+  exec_in_disconnected_network 'mkdir -p $HOME/openshift_install'
+}
+
+generate_install_config() {
+  local idms values
+  idms="$(exec_in_disconnected_network 'cat /mnt/mirror/working-dir/cluster-resources/idms-oc-mirror.yaml' |
+    yq -o=j -I=0 -r '.spec.imageDigestMirrors[]' |
+    grep -Ev '^null$' |
+    cat)"
+  if test -z "$idms"
+  then
+    error "Couldn't retrieve imageDigestMirrors."
+    return 1
+  fi
+  values=(
+    base_domain "$(_get_from_config '.deploy.cloud_config.aws.networking.disconnected.dns.domain_name')"
+    cluster_name "$(_get_from_config '.deploy.cluster_config.cluster_name')"
+    pull_secret "$(exec_in_disconnected_network 'cat $XDG_RUNTIME_DIR/containers/auth.json' | as_json_string)"
+    ssh_key "$(ssh-keygen -yf "$(_get_file_from_secrets_dir 'ssh-key')")"
+    image_content_sources "$(jq -scr '.' <<< "$idms")"
+  )
+  render_and_save_install_config "${values[@]}"
+}
+
+upload_openshift_install_config_into_disconnected_bastion() {
+  rsync_into_disconnected_network "$(_config_file_in_data_dir)" \
+    '$HOME/openshift_install/'
+}
+
+generate_rhcos_ignition_files_in_disconnected_bastion() {
+  exec_in_disconnected_network 'openshift-install create ignition-configs --dir $HOME/openshift_install'
+}
+
+generate_openshift_manifest_files_in_disconnected_bastion() {
+  exec_in_disconnected_network 'openshift-install create manifests --dir $HOME/openshift_install'
+}
+
+generate_ntp_configuration_files() {
+  for f in worker controlplane
+  do
+    cat "./include/files/99-${f}-chrony.bu" | exec_in_connected_network "cat - > /tmp/99-${f}-chrony.bu" &&
+    exec_in_disconnected_network "test -d \$HOME/openshift_install/openshift && mkdir -p \$HOME/openshift_install/openshift_install"
+    rsync_into_disconnected_network "/tmp/99-${f}-chrony.bu" /tmp &&
+    exec_in_disconnected_network "butane /tmp/99-${f}-chrony.bu -o \$HOME/openshift_install/openshift/99-${f}-chrony.yaml"
+  done
+}
+
+confirm_ignition_bucket_accessible_in_disconnected_network() {
+  local bucket_name want test_file_url got attempts max_attempts
+  want=howdy
+  bucket_name="$(tofu output -raw ignition_bucket)"
+  test_file_url="https://${bucket_name}.s3.${AWS_DEFAULT_REGION}.amazonaws.com/test_file"
+  echo "$want" > /tmp/file
+  aws s3 cp /tmp/file "s3://${bucket_name}/test_file" >/dev/null
+  attempts=0
+  max_attempts=60
+  until test "$attempts" -eq "$max_attempts"
+  do
+    got=$(exec_in_disconnected_network "curl -sS $test_file_url")
+    if test "$want" == "$got"
+    then
+      aws s3 rm "s3://${bucket_name}/test_file" >/dev/null
+      return 0
+    fi
+    attempts=$((attempts+1))
+    info "[attempt ${attempts}/${max_attempts}] Ignition file not accessible yet from disconnected network"
+    sleep 1
+  done
+
+  error "Unable to access ignition bucket from S3; wanted: '$want', got: '$got'"
+  aws s3 rm "s3://${bucket_name}/test_file" >/dev/null
+  return 1
+}
+
+upload_rhcos_images_to_s3_bucket() {
+  local s3_bucket_url all_uploaded
+  all_uploaded=true
+  s3_bucket_url="s3://$(tofu output -raw ignition_bucket)"
+  for f in kernel imitramfs.img rootfs.img
+  do
+    if ! aws s3 ls "$s3_bucket_url/$f"
+    then
+      all_uploaded=false
+      break
+    fi
+  done
+  test "$all_uploaded" == true && return 0
+
+  exec_in_connected_network 'openshift-install coreos print-stream-json' |
+    jq -r '.architectures.x86_64.artifacts.metal.formats.pxe|to_entries[].value.location' |
+    while read img_url
+    do
+      # get just the file name without version info or architecture to simplify
+      # our iPXE config.
+      fname="$(basename "$img_url" | cut -f5 -d '-' | cut -f1,3 -d '.')"
+      fp="$(_get_file_from_data_dir "$fname" |
+        sed 's;//;/;g')"
+      aws s3 ls "$s3_bucket_url/$fname" && continue
+
+      info "Downloading Red Hat CoreOS image [$fp] from [$img_url]"
+      curl -sSLo "$fp" "$img_url" || return 1
+      aws s3 cp "$fp" "$s3_bucket_url"
+    done || return 1
+}
+
+upload_rhcos_ignition_files_to_s3_bucket() {
+  local s3_bucket_url
+  s3_bucket_url="s3://$(tofu output -raw ignition_bucket)"
+  rsync_out_of_disconnected_network "\$HOME/openshift_install" "\$HOME/" &&
+    rsync_from_connected_network openshift_install "$(_get_file_from_data_dir 'openshift-install')/" &&
+    aws s3 sync "$(_get_file_from_data_dir 'openshift-install')" "$s3_bucket_url"
+}
+
+wait_for_control_plane_available() {
+  info "Waiting an hour for the control plane to become available..."
+  exec_in_disconnected_network 'attempts=0; \
+    max_attempts=3600; \
+    while test "$attempts" -lt "$max_attempts"; \
+    do \
+      num_ready=$(2>/dev/null oc --request-timeout 1s \
+        --kubeconfig $HOME/openshift_install/auth/kubeconfig \
+        get nodes | grep " Ready " | wc -l); \
+      test "$num_not_ready" -eq 3 && break; \
+      attempts=$((attempts+1)); \
+      >&2 echo "Attempt (${attempts}/${max_attempts})"; \
+      sleep 1m; \
+    done;' && return 0
+  error "The control plane never became available."
+  return 1
+}
+
+# Tofu will create and attach an empty volume to an instance that has the
+# (externally-created) oc-mirror volume attached to it. This will trigger an unnecessary
+# oc-mirror fetch and extra costs. Detaching the volume before provisioning should solve this.
+ensure_oc_mirror_volume_detached_before_first_provision() {
+  umount_and_detach_oc_mirror_volume disconnected || true
+  umount_and_detach_oc_mirror_volume connected || true
+}
+
+mark_openshift_manifests_generated() {
+  exec_in_disconnected_network "test -f \$HOME/openshift_install/.done || touch \$HOME/openshift_install/.done"
+}
+
+delete_openshift_install_configs_if_stale() {
+  local now last_modified delta threshold
+  exec_in_disconnected_network "test -f \$HOME/openshift_install/.done" || return 0
+  threshold=43200
+  now=$(date +%s)
+  last_modified=$(exec_in_disconnected_network "stat -c '%Y' \$HOME/openshift_install/.done")
+  delta=$((now-last_modified))
+  test "$delta" -lt "$threshold" && return 0
+
+  info "OpenShift install manifests are $delta seconds old and are stale. Deleting."
+  exec_in_disconnected_network "find \$HOME/openshift_install -type f -not -name '*.ign' -exec 'rm -rf {}' \\;"
+}
+
+ensure_oc_mirror_volume_detached_before_first_provision
+set -e
+provision_base_infrastructure_and_vms
+provision_oc_mirror_ebs_volume
+initialize_bastions
+confirm_ignition_bucket_accessible_in_disconnected_network
+initialize_registry
+download_packages_in_connected_bastion
+install_oc_client_into_bastions
+install_oc_mirror_into_bastions
+install_openshift_install_into_bastions
+install_butane_into_bastions
+install_artifactory_on_disconnected_registry_instance
+apply_artifactory_license
+change_artifactory_default_password
+create_artifactory_admin_token
+create_artifactory_oci_repo
+confirm_artifactory_push_and_pull
+upload_public_pull_secret_into_connected_bastion
+attach_and_mount_oc_mirror_volume connected
+generate_and_upload_image_set_into_mirror_vol
+mirror_to_disk_connected_bastion
+umount_and_detach_oc_mirror_volume connected
+attach_and_mount_oc_mirror_volume disconnected
+log_into_artifactory_on_disconnected_bastion
+disk_to_mirror_disconnected_bastion
+generate_install_config
+umount_and_detach_oc_mirror_volume disconnected
+upload_openshift_install_config_to_bastions
+generate_openshift_manifest_files_in_disconnected_bastion
+generate_ntp_configuration_files
+generate_rhcos_ignition_files_in_disconnected_bastion
+mark_openshift_manifests_generated
+upload_rhcos_ignition_files_to_s3_bucket
+provision_bare_metal_instances
+wait_for_control_plane_available

@@ -166,17 +166,15 @@ _execute_containerized environment file ignore_not_found='false' custom_message=
     -v "$(just _container_secrets_vol {{ environment }}):/secrets" \
     -v "$(just _container_vol_shared {{ environment }}):/shared/data" \
     -v "$(just _container_secrets_vol_shared {{ environment }}):/shared/secrets" \
-    -v $PWD/include:/app/include \
+    -v "$PWD/include:/include" \
     -v "$(just _get_environment_directory {{ environment }}):/app/environment" \
-    -e INCLUDE_DIR=/app/include \
-    -e ENVIRONMENT_INCLUDE_DIR=/app/environment/include \
-    -w /app); \
+    -w /app/environment); \
   while read var; \
   do command+=(-e "$var"); \
   done < <(just _run_yq \
     "$(just _get_property_from_env_config {{ environment }} '.deploy.environment_vars')" \
     '.[]'); \
-  command+=($(just _container_image {{ environment }}) /app/environment/{{ file }}); \
+  command+=($(just _container_image {{ environment }}) ./{{ file }}); \
   set +u; \
   test -n "$SHOW_CONTAINER_COMMANDS" && just _log info "Running containerized command: ${command[@]}"; \
   set -u; \
@@ -209,7 +207,20 @@ _ensure_container_secrets_vol_populated environment:
   env_data_enc=$(base64 -w 0 <<< "$env_data"); \
   {{ container_bin }} run --rm \
     -v "$vol:/secrets" \
-    bash:5 -c "echo '$env_data_enc' | base64 -d > /secrets/config.yaml"
+    bash:5 -c "echo '$env_data_enc' | base64 -d > /secrets/config.yaml"; \
+  set -eu; \
+  for k in $(echo "$env_data" | yq -r '.secrets | to_entries[] | .key' | grep -Ev '^null$'); \
+  do \
+    secret="$(yq -r ".secrets.$k" <<< "$env_data")"; \
+    fname=$(yq -r '.name' <<< "$secret" | grep -Ev '^null$'); \
+    mode=$(yq -r '.mode' <<< "$secret" | grep -Ev '^null$'); \
+    secret_data_enc=$(yq -r '.data | @base64' <<< "$secret"); \
+    {{ container_bin }} run --rm \
+      -v "$vol:/secrets" \
+      bash:5 -c "test -f /secrets/$fname && exit 0; \
+  echo '$secret_data_enc' | base64 -d > /secrets/$fname ; \
+  chmod $mode /secrets/$fname"; \
+  done; \
 
 _ensure_container_volume_exists environment:
   set +u; \

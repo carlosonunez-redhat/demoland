@@ -1,0 +1,26 @@
+#@ load("@ytt:data", "data")
+apiVersion: v1
+baseDomain: #@ data.values.base_domain
+compute:
+- hyperthreading: Enabled
+  name: worker
+  replicas: 3
+controlPlane:
+  hyperthreading: Enabled
+  name: master
+  replicas: 3
+metadata:
+  name: #@ data.values.cluster_name
+networking:
+  clusterNetwork:
+  - cidr: 10.128.0.0/14
+    hostPrefix: 23
+  networkType: OVNKubernetes
+  serviceNetwork:
+  - 172.30.0.0/16
+platform:
+  none: {}
+fips: false
+pullSecret: #@ data.values.pull_secret
+sshKey: #@ data.values.ssh_key
+imageContentSources: #@ data.values.image_content_sources
