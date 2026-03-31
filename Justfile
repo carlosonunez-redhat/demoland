@@ -8,6 +8,7 @@ container_vol := 'demo-environment-runner-vol'
 container_secrets_vol := 'demo-environment-runner-secrets-vol'
 config_file := source_dir() + '/config.yaml'
 yq_image := 'mikefarah/yq'
+default_openshift_version := "4.19.27"
 
 [doc("Creates a new environment")]
 create_new_environment environment:
@@ -240,9 +241,14 @@ _ensure_container_image_exists environment:
       just _log error "Containerfile not found at: $container_file"; \
       exit 1; \
     fi; \
-    just _log info "(re)building deployer image '$image_name'"; \
+    openshift_version=$(just _get_property_from_env_config_use_alias \
+      {{ environment }} \
+      '.deploy.cluster_config.openshift_version'); \
+    test -z "$openshift_version" && openshift_version={{ default_openshift_version }}; \
+    just _log info "(re)building deployer image '$image_name' [openshift version: $openshift_version]"; \
     {{ container_bin }} build -t "$image_name" \
       -f "$container_file" \
+      --build-arg OPENSHIFT_VERSION="$openshift_version" \
       $PWD
 
 _confirm_environment environment: \

@@ -1,14 +1,17 @@
 FROM curlimages/curl AS ocp_installer
-ENV OPENSHIFT_VERSION=4.19.9
+ARG OPENSHIFT_VERSION
+ENV OPENSHIFT_VERSION="${OPENSHIFT_VERSION:-4.19}"
 ENV OPENSHIFT_BINARIES_URL="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${OPENSHIFT_VERSION}"
 RUN \
   url="${OPENSHIFT_BINARIES_URL}/openshift-install-linux"; \
   uname -m | grep -Eq 'arm|aarch' && url="${url}-arm64"; \
+  >&2 echo "Downloading OpenShift Installer from URL: $url"; \
   curl -o /tmp/file.tar.gz "${url}.tar.gz"
 RUN tar -xvzf /tmp/file.tar.gz -C /tmp
 
 FROM curlimages/curl AS oc_client
-ENV OPENSHIFT_VERSION=4.19.9
+ARG OPENSHIFT_VERSION
+ENV OPENSHIFT_VERSION="${OPENSHIFT_VERSION:-4.19}"
 ENV OPENSHIFT_BINARIES_URL="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${OPENSHIFT_VERSION}"
 RUN \
   url="${OPENSHIFT_BINARIES_URL}/openshift-client-linux"; \
