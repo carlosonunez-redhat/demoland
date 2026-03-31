@@ -38,7 +38,15 @@ Parameters:
   WorkerInstanceType:
     Default: m5.large
     Type: String
+  NumWorkers:
+    Description: "The number of workers to provision during install (default: 0, max: 3)."
+    Default: 0
+    Type: String
 
+Conditions:
+  CreateOneWorker: !Not [!Equals [!Ref NumWorkers, "0"]]
+  CreateTwoWorkers: !Contains [["2", "3"] !Ref NumWorkers]
+  CreateThreeWorkers: !Equals [!Ref NumWorkers, "3"]
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
@@ -76,9 +84,9 @@ Metadata:
         default: "Ignition CA String"
       WorkerSecurityGroupId:
         default: "Worker Security Group ID"
-
 Resources:
   Worker0:
+    Condition: CreateOneWorker
     Type: AWS::EC2::Instance
     Properties:
       ImageId: !Ref RhcosAmi
@@ -106,6 +114,7 @@ Resources:
       - Key: !Join ["", ["kubernetes.io/cluster/", !Ref InfrastructureName]]
         Value: "shared"
   Worker1:
+    Condition: CreateTwoWorkers
     Type: AWS::EC2::Instance
     Properties:
       ImageId: !Ref RhcosAmi
@@ -133,6 +142,7 @@ Resources:
       - Key: !Join ["", ["kubernetes.io/cluster/", !Ref InfrastructureName]]
         Value: "shared"
   Worker2:
+    Condition: CreateThreeWorkers
     Type: AWS::EC2::Instance
     Properties:
       ImageId: !Ref RhcosAmi

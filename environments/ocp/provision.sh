@@ -354,6 +354,7 @@ create_worker_machines() {
     'CertificateAuthorities' "$cert_authority"
     'WorkerInstanceProfileName' "$instance_profile_name"
     'IgnitionLocation' "https://${api_server_fqdn}:22623/config/worker"
+    'NumWorkers' "$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"
   )
   params_json=$(_create_aws_cf_params_json "${params[@]}")
   _create_aws_resources_from_cfn_stack_with_caps \
