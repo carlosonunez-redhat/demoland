@@ -64,8 +64,7 @@ provision environment:
 
 
 [doc("Destroys an environment")]
-destroy environment:
-  just _execute_containerized '{{ environment }}' 'destroy.sh';
+destroy environment: (_destroy_with_dependencies environment)
 
 _deploy_with_dependencies environment:
   set +u; \
@@ -82,11 +81,39 @@ _deploy_with_dependencies environment:
     for stage in precheck provision expose; \
     do \
       if test "$env" != '{{ environment }}'; \
-      then just _log info "Running operation [$stage] on dependent environment [$env]"; \
-      else just _log info "Running operation [$stage] on environment [$env]"; \
+      then env_details="dependent environments [$env]"; \
+      else env_details="environment [$env]"; \
       fi; \
+      resolved_env=$(just _resolved_environment_name "$env"); \
+      test "$env" != "$resolved_env" && env_details="$env_details (alias of: $resolved_env)"; \
+      just _log info "Running operation [$stage] on $env_details"; \
       just "$stage" "$env"; \
     done; \
+  done
+
+_destroy_with_dependencies environment:
+  set +u; \
+  if test -n "$SKIP_DEPENDENCIES"; \
+  then envs="{{ environment }}"; \
+  else envs="{{ environment }};$(just _get_dependent_environments {{ environment }})"; \
+  fi; \
+  set -eu; \
+  for env in $(echo "$envs" | sed -E 's/^;//' | tr ';' '\n'); \
+  do just _confirm_environment "$env" || exit 1; \
+  done; \
+  for env in $(echo "$envs" | sed -E 's/^;//' | tr ';' '\n'); \
+  do \
+    if test "$env" != '{{ environment }}'; \
+    then env_details="dependent environments [$env]"; \
+    else env_details="environment [$env]"; \
+    fi; \
+    resolved_env=$(just _resolved_environment_name "$env"); \
+    test "$env" != "$resolved_env" && env_details="$env_details (alias of: $resolved_env)"; \
+    just _log info "Destroying $env_details"; \
+    just _execute_containerized "$env" \
+      'destroy.sh' \
+      'true' \
+      'Environment {{ environment }} does not have anything to destroy; skipping.'; \
   done
 
 _get_dependent_environments environment:
@@ -278,20 +305,27 @@ _confirm_environment_directory_exists environment:
   just _log error "Environment directory doesn't exist: {{ environment }}"; \
   exit 1
 
-_get_property_from_env_config environment key:
-  env=$(just _resolved_environment_name '{{ environment }}'); \
-  key=$(echo {{ key }} | \
-    sed -E 's/^\.//' | \
-    tr '.[]' '\n' | \
-    grep -Ev '^$' | \
-    sed -E 's;(.*);["\1"];g' | \
-    sed -E 's;"([0-9]+)";\1;g' | \
-    tr -d '\n'); \
-  key='["environments"]["'"$env"'"]'"$key"; \
-  sops --decrypt --extract "$key" "{{ source_dir() }}/config.yaml" 2>/dev/null || true;
+_get_property_from_env_config environment key use_alias="false":
+  if test "{{ use_alias }}" == 'true'; \
+  then \
+    config=$(just _merge_aliased_environment '{{ environment }}'); \
+    key="{{ key }}"; \
+  else \
+    config=$(sops --decrypt "{{ source_dir() }}/config.yaml"); \
+    key=$(printf '.environments["%s"].%s' \
+      "{{ environment }}" \
+      "$(sed -E 's/^\.//' <<< '{{ key }}')"); \
+  fi; \
+  echo "$config" | \
+    yq -r "$key" | \
+    grep -Ev '^null$' | \
+    cat;
+
+_get_property_from_env_config_use_alias environment key:
+  just _get_property_from_env_config "{{ environment }}" "{{ key }}" "true"
 
 _get_environment_directory environment:
-  echo "{{ source_dir() }}/environments/$(just _environment_name '{{ environment }}')"
+  echo "{{ source_dir() }}/environments/$(just _resolved_environment_name '{{ environment }}')"
 
 _get_environment_directory_file environment fp:
   printf "%s/%s" $(just _get_environment_directory "{{ environment }}") "{{ fp }}"
