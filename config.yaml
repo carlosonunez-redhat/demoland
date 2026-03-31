@@ -18,6 +18,10 @@ environments:
         # these secrets will get mounted into a folder called /secrets within the
         # container that builds your cluster.
         secrets: {}
+    rhoai-opencode:
+        version: 20260124
+        depends_on:
+            - ocp-gpu
     rosa:
         version: 20260124
         depends_on:
@@ -66,6 +70,54 @@ environments:
                     quantity_per_zone: 1
                     instance_type: m5.xlarge
                     spot: false
+    ocp-gpu:
+        alias_of: ocp
+        deploy:
+            cluster_config:
+                name: demoland-ocp-aws-gpu
+                openshift_version: 4.20.14
+            cloud_config:
+                aws:
+                    networking:
+                        dns:
+                            domain_name: sandbox15.opentlc.com
+                        cidr_block: 10.0.0.0/16
+                        region: us-east-2
+                        availability_zones:
+                            bootstrap:
+                                - us-east-2a
+                            control_plane:
+                                - us-east-2a
+                                - us-east-2b
+                                - us-east-2c
+                            workers:
+                                - us-east-2a
+            node_config:
+                bootstrap:
+                    ignition_file_s3_key: bootstrap.ign
+                    instance_type: m5.xlarge
+                    spot: false
+                    quantity_per_zone: 1
+                control_plane:
+                    quantity_per_zone: 1
+                    instance_type: m5.4xlarge
+                    spot: false
+                workers:
+                    quantity_per_zone: 1
+                    instance_type: g3.8xlarge
+                    spot: false
+            environment_vars:
+                # encrypted
+                - ENC[AES256_GCM,data:4W2eZp0IXHl/P7WwFOZsklg6LNrvIQBcIi5aPHKJvM6kLZlnB5w=,iv:ycik0HhR4emt0sKsowPq0Owr1nPQbb6VGhiyjhSAHHM=,tag:kqvg5nW1dK9tG0Or2sSazQ==,type:str]
+                # encrypted
+                - ENC[AES256_GCM,data:sN+eCG4if/BBDYXFhfDUc8N9T5kW4FsmPcD6PnrKpGZHFLb7fBOVV8KVx1dwKWJS4tC/UYiBXnx+n4K4dg0=,iv:djrFkgcsmc30N8n2VlzjjW2r/AD/BENfxLdQ+w1yias=,tag:0conQb9N9czHjCYtpsOqrA==,type:str]
+                - AWS_DEFAULT_REGION=us-east-2
+                - AWS_ROLE_ARN=arn:aws:iam::029882673526:role/admin-access-role
+                # encrypted
+                - ENC[AES256_GCM,data:SjpAiAREYxAqWecIktBNixz3v6+AaXLSHjIpbrUDwT2eV23jhoGoCQ9fxGbz,iv:KGZOSDPNIGrAH2RiwQmDFVQZnqMFeQkCt7JVVp6ePpk=,tag:astXzHcSHbQI3c9LDFVR+w==,type:str]
+                - AWS_PAGER=""
+                - OPENSHIFT_VERSION=4.20
+        secrets: {}
     ocp:
         version: 20250827
         deploy:
@@ -125,31 +177,9 @@ environments:
                     name: ocp-aws-ssh-key
                     # encrypted
                     data: ENC[AES256_GCM,data:U2eobbE6upIEWrxHBbiL1zSEMdXQBDwRWpiZyGog9UJMPT/JwpXKdy5pD0wR2O3Gg/QVR2lJH4pZGJum/Xeuccm6/rFfxLP913xX76Ps+W6AP10YowpbOAjcX/bubm+FA5WZnIs0CFr8LUSzmKzrKxv1ITL5vxECbXOseszrMvBnDUoduAj5b8X31/FmPzPJQ1hBIQm66Ko9qB5yY09MpxeWmWOB4ZjR6n2tbsRve886UEq922SdhaldEozb2zq+OC4U1eKBOc4Rq0JoWCam2NnM/Y8vCrgOd9wo5taB+RAR4v+0WqRZlZtFoRxv8L2BAZkuZ3mObqbb5PcH/a/w5HzJ/V82mm5UN3Ie6rBLR1W2SsdWh4ZHE2qhYMpgU/XreRTGwG+/b3hU/z2ik7wgVo7MIXTvDpGqN8tf70IzmMXX2EpHWQMAO4Re+UB8b7GP7xFREbCjC7hnFQoel3AJNUPVdFFsGFdgDHyRa09BamVfnlhWtVfChrY2xl1X5NroZZT7Qn9uOvw6gj7mJhrmbq0JfCaetecTwqY=,iv:/j7qGCxTK0lBUSONjta9cn2A3X4idjk3zamBgFkFLbc=,tag:IR2K25bjQdDe7+KU/OyyCg==,type:str]
-    --help:
-        version: 2.0260124e+07
-        alias_of: ""
-        depends_on: []
-        common_options:
-            ignore_installconfig_check: false
-        deploy:
-            environment_vars:
-                - SOME_KEY=some value
-                - ANOTHER_KEY=another value
-        secrets: {}
-    rhoai-opencode:
-        version: 2.0260124e+07
-        alias_of: ""
-        depends_on: []
-        common_options:
-            ignore_installconfig_check: false
-        deploy:
-            environment_vars:
-                - SOME_KEY=some value
-                - ANOTHER_KEY=another value
-        secrets: {}
 sops:
-    lastmodified: "2026-03-30T16:36:00Z"
-    mac: ENC[AES256_GCM,data:HGHN2gGaSj9pqwX9wi6I63V3nzKnwz+FJ4IfB0LlZAiyYztPFXG/qHwv2f9MSMg0Hpqv24ntgeP5XBcW1JdOuklPJbgygVAVogt/Qw7JB3ryNLBEUhjmQWZgLI+/Oo/FjV8Fa/pv8DpDtJFLRwxORbzsD/tQnSG7VgbWD9jPgug=,iv:Z94MyDUMCvFoVVQAy1aR0ainDO9xGWEh/hQXBeUUjHo=,tag:yGnupMoEAeJYj+G+3HDoEQ==,type:str]
+    lastmodified: "2026-03-30T18:54:28Z"
+    mac: ENC[AES256_GCM,data:2QRI05nQ37iY7IVOYsYyqWYNzNzM9RtgVJL00ysn3bK2+7caoSGVuqjNf1mAUSZHAj31zZd2itNXdjxuVV0TQFnkuvLPpr9QV0EQZ1xk4Txn3YlWdklNlRY/yajgkktj8kI4aKItaV34Glgw6cGbE5Oy5cjUiIcAHUei2Zh5qo4=,iv:mHIwURAWUEJu+p0iSP43npXeppL8XK6Oo3u9nRW2dFQ=,tag:gG7sMT7cJ54ot15D5YljDQ==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
