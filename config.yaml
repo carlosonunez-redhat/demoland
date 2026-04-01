@@ -33,6 +33,18 @@ environments:
         # 'common.cloud_credentials'.
         cloud_credentials:
             aws: {}
+    appdev_with_vms_made_easy:
+        version: 20260402
+        alias_of: ""
+        depends_on:
+            - ocp-single-worker
+        common_options:
+            ignore_installconfig_check: true
+        deploy:
+            environment_vars: []
+        secrets: {}
+        cloud_credentials:
+            aws: {}
     rosa:
         version: 20260124
         depends_on:
@@ -81,6 +93,22 @@ environments:
                     quantity_per_zone: 1
                     instance_type: m5.xlarge
                     spot: false
+    ocp-single-worker:
+        alias_of: ocp
+        deploy:
+            node_config:
+                bootstrap:
+                    instance_type: t3.xlarge
+                    spot: false
+                    quantity_per_zone: 1
+                control_plane:
+                    quantity_per_zone: 3
+                    instance_type: m8a.4xlarge
+                    spot: false
+                workers:
+                    quantity_per_zone: 1
+                    instance_type: m8a.4xlarge
+                    spot: false
     ocp:
         version: 20250827
         deploy:
@@ -116,7 +144,7 @@ environments:
                     instance_type: t3.xlarge
                     spot: false
                 workers:
-                    quantity_per_zone: 1
+                    quantity_per_zone: 0
                     instance_type: t3.xlarge
                     spot: false
             secrets:
@@ -125,8 +153,8 @@ environments:
                     # encrypted
                     data: ENC[AES256_GCM,data:U2eobbE6upIEWrxHBbiL1zSEMdXQBDwRWpiZyGog9UJMPT/JwpXKdy5pD0wR2O3Gg/QVR2lJH4pZGJum/Xeuccm6/rFfxLP913xX76Ps+W6AP10YowpbOAjcX/bubm+FA5WZnIs0CFr8LUSzmKzrKxv1ITL5vxECbXOseszrMvBnDUoduAj5b8X31/FmPzPJQ1hBIQm66Ko9qB5yY09MpxeWmWOB4ZjR6n2tbsRve886UEq922SdhaldEozb2zq+OC4U1eKBOc4Rq0JoWCam2NnM/Y8vCrgOd9wo5taB+RAR4v+0WqRZlZtFoRxv8L2BAZkuZ3mObqbb5PcH/a/w5HzJ/V82mm5UN3Ie6rBLR1W2SsdWh4ZHE2qhYMpgU/XreRTGwG+/b3hU/z2ik7wgVo7MIXTvDpGqN8tf70IzmMXX2EpHWQMAO4Re+UB8b7GP7xFREbCjC7hnFQoel3AJNUPVdFFsGFdgDHyRa09BamVfnlhWtVfChrY2xl1X5NroZZT7Qn9uOvw6gj7mJhrmbq0JfCaetecTwqY=,iv:/j7qGCxTK0lBUSONjta9cn2A3X4idjk3zamBgFkFLbc=,tag:IR2K25bjQdDe7+KU/OyyCg==,type:str]
 sops:
-    lastmodified: "2026-04-01T22:03:50Z"
-    mac: ENC[AES256_GCM,data:68Z2Vu7X/WbIkBmaUAkx75XMi0AUSuQA5i2nF3wW3eWhcl+xeKbpxjbD9ql1ALrpcZGO4vt0eccszhorlEfQ+a19HbrXLGAYI/pkzyMY9H08iZsPE0VDyYSkmcgF+GmOoZs7eLDglf8EhHyJaSwPfMZJmRie9xiDorqWFYDI+TI=,iv:c2T3MGRbkg2z7hMlHVfqMZxjx2p5jfw9AhepvFpGT9Y=,tag:bYvIKurPVOBsvXohNyOqTg==,type:str]
+    lastmodified: "2026-04-01T22:08:09Z"
+    mac: ENC[AES256_GCM,data:DNOTXlsfhkJa4HOzfOrsfn8B9i6J9JXACTBd3BIsdWB9KxIJEYLipkU6A4ZJSJfFD0GVCIrawTM+U0U+AUGSsZBvA0/MkzTcf2gWo4WCPHmRVx6kvH0U3Zsd+o77QwDjSAAd2OOlnTiN/lYN53beHWLRKZJiMjyrHzcMxvCikZ0=,iv:iFDmPdqcG4g7FCmfWBhoMuaByY3IWobz+h9YTBkfj2Q=,tag:JUAP1LhOD2YYvWcoZYiBZQ==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
