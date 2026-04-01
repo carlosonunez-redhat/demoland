@@ -222,8 +222,8 @@ _create_cfn_stack() {
       'create_in_progress' \
       'create_failed'
   }
-  info_msg="$3"
-  test "$#" -eq 4 && info_msg="$4"
+  info_msg="[$(_cluster_name)] $3"
+  test "$#" -eq 4 && info_msg="[$(_cluster_name)] $4"
   test -z "$info_msg" && info_msg="Creating resources in stack '$1'..."
   if _not_exists "$1"
   then
