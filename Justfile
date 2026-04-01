@@ -1,4 +1,4 @@
-set shell := [ "bash", "-uc" ]
+set shell := [ "bash", "-ucx" ]
 set unstable := true
 set quiet := true
 
@@ -137,8 +137,8 @@ _resolved_environment_name environment: (_confirm_environment_in_config environm
   echo "$alias";
 
 _create_new_env_dir_structure environment:
-  cp -r "$(just _get_environment_directory 'example')" \
-    "$(just _get_environment_directory '{{ environment }}')"
+  cp -r "$(just _get_environment_directory_no_alias 'example')" \
+    "$(just _get_environment_directory_no_alias '{{ environment }}')"
 
 _delete_env_dir environment:
   rm -r "$(just _get_environment_directory '{{ environment }}')"
@@ -325,7 +325,15 @@ _get_property_from_env_config_use_alias environment key:
   just _get_property_from_env_config "{{ environment }}" "{{ key }}" "true"
 
 _get_environment_directory environment:
+  if test "{{ environment }}" == example; \
+  then \
+    just _get_environment_directory_no_alias example; \
+    exit "$?"; \
+  fi; \
   echo "{{ source_dir() }}/environments/$(just _resolved_environment_name '{{ environment }}')"
+
+_get_environment_directory_no_alias environment:
+  echo "{{ source_dir() }}/environments/{{ environment }}"
 
 _get_environment_directory_file environment fp:
   printf "%s/%s" $(just _get_environment_directory "{{ environment }}") "{{ fp }}"
