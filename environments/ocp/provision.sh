@@ -28,10 +28,10 @@ load_keys_into_ssh_agent() {
 upload_key_into_ec2() {
   info "Creating AWS EC2 key pair from SSH private key"
   key_name=$(_get_from_config '.deploy.secrets.ssh_key.name')
-  test -n "$(aws ec2 describe-key-pairs --key-name "$key_name" 2>/dev/null)" && return 0
+  test -n "$(_exec_aws ec2 describe-key-pairs --key-name "$key_name" 2>/dev/null)" && return 0
 
   pubkey="$(ssh-keygen -yf "$(_get_file_from_data_dir 'id_rsa')")"
-  >/dev/null aws ec2 import-key-pair --key-name "$key_name" \
+  >/dev/null _exec_aws ec2 import-key-pair --key-name "$key_name" \
     --public-key-material "$(base64 -w 0 <<< "$pubkey")"
 }
 
@@ -159,16 +159,16 @@ create_bootstrap_machine() {
 }
 
 create_ignition_bucket_in_s3() {
-  test -n "$(2>/dev/null aws s3api head-bucket \
+  test -n "$(2>/dev/null _exec_aws s3api head-bucket \
     --bucket "$(_cluster_ignition_files_bucket)")" &&
     return 0
   info "Creating S3 bucket for ignition files..."
-  aws s3 mb "s3://$(_cluster_ignition_files_bucket)"
+  _exec_aws s3 mb "s3://$(_cluster_ignition_files_bucket)"
 }
 
 sync_bootstrap_ignition_files_with_s3_bucket() {
   info "Syncing ignition files with ignition S3 bucket"
-  aws s3 sync \
+  _exec_aws s3 sync \
     --exclude '*' \
     --include '*.ign' \
     "$(_get_file_from_data_dir 'openshift-install')" \
@@ -218,7 +218,7 @@ create_cluster_iam_user_policies() {
   local policy_doc infra_name policy_arn
   infra_name="$(_cluster_infra_name)"
   policy_name="${infra_name}-cluster_user-policy"
-  policy_arn=$(aws iam list-policies |
+  policy_arn=$(_exec_aws iam list-policies |
     jq --arg name "$policy_name" '.Policies[] | select(.PolicyName == $name) | .Arn')
   test -n "$policy_arn" && return 0
 
@@ -234,10 +234,10 @@ create_cluster_iam_user_policies() {
   for idx in $(seq 1 "$(yq length <<< "$policy_doc")")
   do
     n="${policy_name}-Part${idx}"
-    test -n "$(aws iam list-policies --query 'Policies[?PolicyName==`'"$n"'`]' --output text)" &&
+    test -n "$(_exec_aws iam list-policies --query 'Policies[?PolicyName==`'"$n"'`]' --output text)" &&
       continue
     info "Creating cluster user IAM policy #$idx"
-    aws iam create-policy --policy-name "$n" \
+    _exec_aws iam create-policy --policy-name "$n" \
       --policy-doc "$(yq -o=j -I=0 ".[$((idx-1))]" <<< "$policy_doc")"
   done
 }
@@ -245,7 +245,7 @@ create_cluster_iam_user_policies() {
 create_cluster_iam_user() {
   infra_name="$(_cluster_infra_name)"
   policy_name="${infra_name}-cluster_user-policy"
-  policy_arns=$(aws iam list-policies |
+  policy_arns=$(_exec_aws iam list-policies |
     jq -r --arg name "$policy_name" '.Policies[] | select(.PolicyName|contains($name)) | .Arn'  |
     grep -v null |
     cat)
@@ -285,7 +285,7 @@ create_control_plane_machines() {
   private_hosted_zone_id=$(fail_if_nil \
     "$(_get_param_from_aws_cfn_stack networking 'PrivateHostedZoneId')" \
     "Private hosted zone ID not found.")
-  private_hosted_zone_name=$(aws route53 get-hosted-zone --id "$private_hosted_zone_id" --query 'HostedZone.Name'\
+  private_hosted_zone_name=$(_exec_aws route53 get-hosted-zone --id "$private_hosted_zone_id" --query 'HostedZone.Name'\
     --output text)
   if test -z "$private_hosted_zone_name"
   then
@@ -369,13 +369,13 @@ wait_for_bootstrap_complete() {
 
 wait_for_worker_csrs_to_register() {
   local num_worker_nodes max_attempts num_worker_nodes
-  num_worker_nodes=$(aws ec2 describe-instances \
+  num_worker_nodes=$(_exec_aws ec2 describe-instances \
     --query 'Reservations[].Instances[?(State.Name == `running`) &&
 (@.Tags[?Key==`aws:cloudformation:logical-id` &&
 contains(Value, `Worker`)])].InstanceId' --output text | wc -l)
   approved_csrs=$(_exec_oc get csr | grep -E 'node-bootstrapper.*Approved' | wc -l)
   test "$approved_csrs" -ge "$num_worker_nodes" && return 0
-  num_worker_nodes=$(aws ec2 describe-instances \
+  num_worker_nodes=$(_exec_aws ec2 describe-instances \
     --query 'Reservations[].Instances[?(State.Name == `running`) && 
 (@.Tags[?Key==`aws:cloudformation:logical-id` &&
 contains(Value, `Worker`)])].InstanceId' --output text | wc -l)
@@ -408,7 +408,7 @@ accept_pending_csrs() {
 
 wait_for_workers_to_become_ready() {
   local num_worker_nodes max_attempts
-  num_worker_nodes=$(aws ec2 describe-instances \
+  num_worker_nodes=$(_exec_aws ec2 describe-instances \
     --query 'Reservations[].Instances[?(State.Name == `running`) && 
 (@.Tags[?Key==`aws:cloudformation:logical-id` &&
 contains(Value, `Worker`)])].InstanceId' --output text | wc -l)
