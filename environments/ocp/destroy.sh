@@ -45,12 +45,12 @@ delete_ignition_files() {
 
 delete_ignition_bucket_from_s3() {
   test -z "$(2>/dev/null aws s3api head-bucket \
-    --bucket "$(_get_from_config '.deploy.node_config.common.ignition_file_s3_bucket')")" &&
+    --bucket "$(_cluster_ignition_files_bucket)")" &&
     return 0
 
   info "Deleting S3 bucket for ignition files..."
-  aws s3 rm --recursive "s3://$(_get_from_config '.deploy.node_config.common.ignition_file_s3_bucket')" &&
-    aws s3 rb "s3://$(_get_from_config '.deploy.node_config.common.ignition_file_s3_bucket')"
+  aws s3 rm --recursive "s3://$(_cluster_ignition_files_bucket)" &&
+    aws s3 rb "s3://$(_cluster_ignition_files_bucket)"
 }
 
 delete_cluster_iam_user() {
@@ -59,7 +59,7 @@ delete_cluster_iam_user() {
 
 delete_cluster_iam_user_policy() {
   local infra_name policy_arns
-  infra_name="$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
+  infra_name="$(_cluster_infra_name)"
   policy_name="${infra_name}-cluster_user-policy"
   policy_arns=$(aws iam list-policies |
     jq -r --arg name "$policy_name" '.Policies[] | select(.PolicyName | contains($name)) | .Arn'|

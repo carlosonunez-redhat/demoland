@@ -81,8 +81,9 @@ _create_aws_cf_params_json() {
 }
 
 _aws_cf_stack_name() {
-  printf '%s-%s' \
-    "$(_get_from_config '.deploy.cloud_config.aws.cloudformation.stack_name')" \
+  printf '%s-%s-%s' \
+    "$(_get_top_level_environment_name)" \
+    "$(_get_top_level_environment_id)" \
     "$1" | tr -c '[:alnum:]' '-'
 }
 

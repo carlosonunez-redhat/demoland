@@ -80,8 +80,8 @@ create_networking_resources() {
     return 1
   fi
   params=(
-    'ClusterName' "$(_get_from_config '.deploy.cluster_config.names.cluster')"
-    'InfrastructureName' "$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
+    'ClusterName' "$(_cluster_name)"
+    'InfrastructureName' "$(_cluster_infra_name)"
     'HostedZoneId' "$(_hosted_zone_id)"
     'HostedZoneName' "$(_hosted_zone_name)"
     'PublicSubnets' "$public_subnets"
@@ -108,7 +108,7 @@ create_security_group_rules() {
     return 1
   fi
   params=(
-    'InfrastructureName' "$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
+    'InfrastructureName' "$(_cluster_infra_name)"
     'VpcId' "$vpc_id"
     'VpcCidr' "$(_get_from_config '.deploy.cloud_config.aws.networking.cidr_block')"
     'PrivateSubnets' "$private_subnets"
@@ -138,13 +138,13 @@ create_bootstrap_machine() {
     "$(_get_param_from_aws_cfn_stack networking 'InternalServiceTargetGroupArn')" \
     'Internal service NLB target group ARN not found')
   params=(
-    'InfrastructureName' "$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
+    'InfrastructureName' "$(_cluster_infra_name)"
     'RhcosAmi' "$(fail_if_nil "$(_rhcos_ami_id)" "CoreOS AMI ID not found")"
     'AllowedBootstrapSshCidr' "$(fail_if_nil "$(_this_ip)/32" "Couldn't resolve IP address")"
     'PublicSubnet' "$(_bootstrap_subnet)"
     'MasterSecurityGroupId' "$sg_id"
     'BootstrapInstanceType' "$(_get_from_config '.deploy.node_config.bootstrap.instance_type')"
-    'BootstrapIgnitionLocation' "s3://$(_get_from_config '.deploy.node_config.common.ignition_file_s3_bucket')/bootstrap.ign"
+    'BootstrapIgnitionLocation' "s3://$(_cluster_ignition_files_bucket)/bootstrap.ign"
     'AutoRegisterELB' 'yes'
     'RegisterNlbIpTargetsLambdaArn' "$lambda_arn"
     'ExternalApiTargetGroupArn' "$ext_api_target_group_arn"
@@ -160,10 +160,10 @@ create_bootstrap_machine() {
 
 create_ignition_bucket_in_s3() {
   test -n "$(2>/dev/null aws s3api head-bucket \
-    --bucket "$(_get_from_config '.deploy.node_config.common.ignition_file_s3_bucket')")" &&
+    --bucket "$(_cluster_ignition_files_bucket)")" &&
     return 0
   info "Creating S3 bucket for ignition files..."
-  aws s3 mb "s3://$(_get_from_config '.deploy.node_config.common.ignition_file_s3_bucket')"
+  aws s3 mb "s3://$(_cluster_ignition_files_bucket)"
 }
 
 sync_bootstrap_ignition_files_with_s3_bucket() {
@@ -172,7 +172,7 @@ sync_bootstrap_ignition_files_with_s3_bucket() {
     --exclude '*' \
     --include '*.ign' \
     "$(_get_file_from_data_dir 'openshift-install')" \
-    "s3://$(_get_from_config '.deploy.node_config.common.ignition_file_s3_bucket')"
+    "s3://$(_cluster_ignition_files_bucket)"
 }
 
 create_openshift_install_config_file() {
@@ -193,7 +193,7 @@ create_openshift_install_config_file() {
     base_domain "$(_hosted_zone_name)"
     aws_hosted_zone_id "$(_hosted_zone_id)"
     rhcos_ami_id "$(_rhcos_ami_id)"
-    cluster_name "$(_get_from_config '.deploy.cluster_config.names.cluster')"
+    cluster_name "$(_cluster_name)"
     aws_region "$(_get_from_config '.deploy.cloud_config.aws.networking.region')"
     pull_secret "$(_get_from_config '.deploy.node_config.common.pull_secret' | as_json_string)"
     control_plane_node_azs "$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones.control_plane[]' | as_yaml_list)"
@@ -216,7 +216,7 @@ create_openshift_install_config_file() {
 # validation error. The YAML template splits them up into policies with 80 actions each.
 create_cluster_iam_user_policies() {
   local policy_doc infra_name policy_arn
-  infra_name="$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
+  infra_name="$(_cluster_infra_name)"
   policy_name="${infra_name}-cluster_user-policy"
   policy_arn=$(aws iam list-policies |
     jq --arg name "$policy_name" '.Policies[] | select(.PolicyName == $name) | .Arn')
@@ -243,7 +243,7 @@ create_cluster_iam_user_policies() {
 }
 
 create_cluster_iam_user() {
-  infra_name="$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
+  infra_name="$(_cluster_infra_name)"
   policy_name="${infra_name}-cluster_user-policy"
   policy_arns=$(aws iam list-policies |
     jq -r --arg name "$policy_name" '.Policies[] | select(.PolicyName|contains($name)) | .Arn'  |
@@ -255,8 +255,8 @@ create_cluster_iam_user() {
     return 0
   fi
   params=(
-    InfrastructureName "$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
-    UserNameBase "$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
+    InfrastructureName "$(_cluster_infra_name)"
+    UserNameBase "$(_cluster_infra_name)"
     PolicyArns "$(as_csv <<< "$policy_arns")"
   )
   params_json=$(_create_aws_cf_params_json "${params[@]}")
@@ -305,7 +305,7 @@ create_control_plane_machines() {
     "$(_get_param_from_aws_cfn_stack networking 'ApiServerDnsName')" \
     "Couldn't get API server DNS name.")
   params=(
-    'InfrastructureName' "$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
+    'InfrastructureName' "$(_cluster_infra_name)"
     'RhcosAmi' "$(fail_if_nil "$(_rhcos_ami_id)" "CoreOS AMI ID not found")"
     'MasterSecurityGroupId' "$sg_id"
     'MasterInstanceType' "$(_get_from_config '.deploy.node_config.control_plane.instance_type')"
@@ -344,7 +344,7 @@ create_worker_machines() {
     "$(_get_param_from_aws_cfn_stack security WorkerInstanceProfile)" \
     "Couldn't obtain instance profile for primary node.")
   params=(
-    'InfrastructureName' "$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
+    'InfrastructureName' "$(_cluster_infra_name)"
     'RhcosAmi' "$(fail_if_nil "$(_rhcos_ami_id)" "CoreOS AMI ID not found")"
     'Subnet0' "$(cut -f1 -d ',' <<< "$private_subnets")"
     'Subnet1' "$(cut -f2 -d ',' <<< "$private_subnets")"

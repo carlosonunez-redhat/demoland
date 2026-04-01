@@ -1,5 +1,4 @@
 _get_cloud_cred() {
-  set -x
   local provider cred_key q
   provider="$1"
   cred_key="$2"

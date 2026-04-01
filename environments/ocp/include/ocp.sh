@@ -1,3 +1,15 @@
+_cluster_name() {
+  printf "demoland-%s" "$(_get_top_level_environment_name)"
+}
+
+_cluster_infra_name() {
+  printf "demoland-%s" "$(_get_top_level_environment_id)"
+}
+
+_cluster_ignition_files_bucket() {
+  printf "%s_ocp_ignition_files" "$(_cluster_name | base64 -w 0 | tr -d '=' | tr '[:upper:]' '[:lower:]')"
+}
+
 _rhcos_ami_id() {
   f="$(_get_file_from_data_dir 'rhcos_ami_id')"
   region="$(_get_from_config '.deploy.cloud_config.aws.networking.region')"
