@@ -6,6 +6,7 @@ container_bin := env("CONTAINER_BIN", which('podman'))
 container_image := 'demo-environment-runner'
 container_vol := 'demo-environment-runner-vol'
 container_secrets_vol := 'demo-environment-runner-secrets-vol'
+container_environment_info_vol := 'demo-environment-runner-env-info-vol'
 config_file := source_dir() + '/config.yaml'
 yq_image := 'mikefarah/yq'
 default_openshift_version := "4.19.27"
@@ -66,7 +67,7 @@ provision environment:
 [doc("Destroys an environment")]
 destroy environment: (_destroy_with_dependencies environment)
 
-_deploy_with_dependencies environment:
+_deploy_with_dependencies environment: (_generate_toplevel_environment_info environment)
   set +u; \
   if test -n "$SKIP_DEPENDENCIES"; \
   then envs="{{ environment }}"; \
@@ -91,7 +92,7 @@ _deploy_with_dependencies environment:
     done; \
   done
 
-_destroy_with_dependencies environment:
+_destroy_with_dependencies environment: (_generate_toplevel_environment_info environment)
   set +u; \
   if test -n "$SKIP_DEPENDENCIES"; \
   then envs="{{ environment }}"; \
@@ -191,6 +192,7 @@ _execute_containerized environment file ignore_not_found='false' custom_message=
   fi; \
   command=({{ container_bin }} run --rm -it \
     -v "$(just _container_vol {{ environment }}):/data" \
+    -v "{{ container_environment_info_vol }}:/environment_info" \
     -v "$(just _container_secrets_vol {{ environment }}):/secrets" \
     -v "$(just _container_vol_shared {{ environment }}):/shared/data" \
     -v "$(just _container_secrets_vol_shared {{ environment }}):/shared/secrets" \
@@ -243,6 +245,23 @@ _merge_cloud_creds environment:
   fi; \
   env_cloud_data_enc=$(base64 -w 0 <<< $env_cloud_data); \
   just _do_yq_encoded_merge "$cloud_data_enc" "$env_cloud_data_enc"
+
+# the environment info volume stores information about the environment that executed
+# a deploy/destroy run that can be consumed by an environment's dependencies (kind of like
+# the Downward API in Kubernetes).
+_generate_toplevel_environment_info environment:
+  set +u; \
+  {{ container_bin }} volume ls | grep -q "{{ container_environment_info_vol }}" || \
+    {{ container_bin }} volume create "{{ container_environment_info_vol }}"; \
+  for kvp in "root_environment_name:{{ environment }}" \
+      "root_environment_id:$(base64 -w 0 <<< '{{ environment }}' | tr -d '=')"; \
+  do \
+    k=$(cut -f1 -d ':' <<< "$kvp"); \
+    v=$(sed -E "s/^${k}://" <<< "$kvp"); \
+    {{ container_bin }} run --rm \
+      -v "{{ container_environment_info_vol }}:/info" \
+      bash:5 -c "echo '$v' > /info/$k"; \
+  done
 
 _ensure_container_secrets_vol_populated environment:
   set +u; \
