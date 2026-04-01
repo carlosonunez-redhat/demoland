@@ -224,6 +224,26 @@ _merge_aliased_environment environment:
   target_env_data_enc=$(base64 -w 0 <<< $target_env_data); \
   just _do_yq_encoded_merge "$target_env_data_enc" "$env_data_enc"
 
+_merge_cloud_creds environment:
+  set +u; \
+  cloud_data=$(sops --decrypt --extract '["common"]["cloud_credentials"]' \
+    --output-type yaml "{{ config_file }}"); \
+  if test -z "$cloud_data" || test "$cloud_data" == "null"; \
+  then \
+    just _log info "This config doesn't have any cloud config data. Skipping cloud config generation."; \
+    exit 0; \
+  fi; \
+  cloud_data_enc=$(base64 -w 0 <<< $cloud_data); \
+  env_data=$(just _merge_aliased_environment "{{ environment }}") || exit 1; \
+  env_cloud_data=$(just _run_yq "$env_data" '.cloud_credentials'); \
+  if test -z "$env_cloud_data" || test "$env_cloud_data" == null; \
+  then \
+    echo "$cloud_data"; \
+    exit 0; \
+  fi; \
+  env_cloud_data_enc=$(base64 -w 0 <<< $env_cloud_data); \
+  just _do_yq_encoded_merge "$cloud_data_enc" "$env_cloud_data_enc"
+
 _ensure_container_secrets_vol_populated environment:
   set +u; \
   vol=$(just _container_secrets_vol {{ environment }}); \
@@ -234,10 +254,15 @@ _ensure_container_secrets_vol_populated environment:
     {{ container_bin }} volume create "$vol" >/dev/null; \
   fi; \
   env_data=$(just _merge_aliased_environment '{{ environment }}'); \
+  cloud_creds_data=$(just _merge_cloud_creds '{{ environment }}'); \
   env_data_enc=$(base64 -w 0 <<< "$env_data"); \
+  cloud_creds_data_enc=$(base64 -w 0 <<< "$cloud_creds_data"); \
   {{ container_bin }} run --rm \
     -v "$vol:/secrets" \
-    bash:5 -c "echo '$env_data_enc' | base64 -d > /secrets/config.yaml"
+    bash:5 -c "echo '$env_data_enc' | base64 -d > /secrets/config.yaml" && \
+  {{ container_bin }} run --rm \
+    -v "$vol:/secrets" \
+    bash:5 -c "echo '$cloud_creds_data_enc' | base64 -d > /secrets/cloud_creds.yaml"
 
 _ensure_container_volume_exists environment:
   set +u; \

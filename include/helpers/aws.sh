@@ -1,5 +1,20 @@
 # shellcheck shell=bash
 SESSION_FILE=/data/aws_session
+_aws_sts_assumerole() {
+  local ak sk region role_arn external_id
+  ak=$(_get_cloud_cred 'aws.sts' aws_access_key_id) || return 1
+  sk=$(_get_cloud_cred 'aws.sts' aws_secret_access_key) || return 1
+  region=$(_get_cloud_cred 'aws.sts' aws_default_region) || return 1
+  role_arn=$(_get_cloud_cred 'aws.sts' aws_role_arn) || return 1
+  external_id=$(_get_cloud_cred 'aws.sts' aws_role_external_id) || return 1
+  export AWS_ACCESS_KEY_ID="$ak"
+  export AWS_SECRET_ACCESS_KEY="$sk"
+  export AWS_DEFAULT_REGION="$region"
+  info "[aws] Assuming role [$role_arn] using access key [$ak]"
+  aws sts assume-role --role-arn "$role_arn" \
+    --external-id "$external_id" \
+    --role-session-name "session-$(date +%s)"
+}
 log_into_aws() {
   for required in AWS_ROLE_ARN AWS_ROLE_EXTERNAL_ID
   do
@@ -18,9 +33,7 @@ log_into_aws() {
     fi
   fi
   info "Creating temporary AWS credentials."
-  session_creds=$(aws sts assume-role --role-arn "$AWS_ROLE_ARN" \
-    --external-id "$AWS_ROLE_EXTERNAL_ID" \
-    --role-session-name "session-$(date +%s)")
+  session_creds=$(_aws_sts_assumerole)
   if test -z "$session_creds"
   then
     error "Couldn't create an AWS STS session."

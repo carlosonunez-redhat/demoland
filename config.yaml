@@ -1,6 +1,17 @@
+common:
+    cloud_credentials:
+        aws:
+            # aws.sts: AWS credentials for assuming into another role.
+            # encrypted
+            sts:
+                aws_access_key_id: ENC[AES256_GCM,data:gM+RJt6ReeHUGzJA2C+jRI9Esi8=,iv:nypR43kBLeSolhQRTJ1PYxhSnTJUFjhVH3YLUfrOCIc=,tag:loLoIh08PjUwMKUHvhNY9g==,type:str]
+                aws_secret_access_key: ENC[AES256_GCM,data:OiW+GJkO/yYcg1aSBEx+z+SUDl8crUi9fBbNmatzfTlzBkqfggPk5Q==,iv:IF8qx1VbSG0CwgznIT8wQHTr30NTpnDRvvLQV3zCELE=,tag:OTetTsacYGLvEHDdk6slbw==,type:str]
+                aws_default_region: ENC[AES256_GCM,data:yhbppXp4Emsv,iv:PoWpnhgYk18InCtqBcLK5yrI8vrHqTX9BDR2kQ0Kya0=,tag:7Jooayomp5o2DNnbqlvfFg==,type:str]
+                aws_role_arn: ENC[AES256_GCM,data:FjVGndd2Y0BP9NxjeGL6g6v4aQxpMviETtG4ioR4RsM3cXMU+nCrqY2wDpnWG1vl,iv:Rh7QZDsLZip/3qrwEzQv9mCoNHuVowbmUI0+TPAajp4=,tag:pWRtrIX0H3n4fOlHyfp7FA==,type:str]
+                aws_role_external_id: ENC[AES256_GCM,data:CE/kXZadb+1L4PRIED1o5FQndFXJxgeI,iv:Wew/tIrrm41xIk29+p0tll5aXE2HWn8z1hkAMlpTUjo=,tag:BRuhdSkoeKZtbqktHxi37A==,type:str]
 environments:
     example:
-        version: 20260124
+        version: 20260402
         # alias_of: Alias of an existing environment. Keys defined here will be
         # merged with that of the aliased environment.
         alias_of: ""
@@ -18,6 +29,10 @@ environments:
         # these secrets will get mounted into a folder called /secrets within the
         # container that builds your cluster.
         secrets: {}
+        # cloud_credentials: Overrides the default cloud configs set by
+        # 'common.cloud_credentials'.
+        cloud_credentials:
+            aws: {}
     rosa:
         version: 20260124
         depends_on:
@@ -70,14 +85,6 @@ environments:
         version: 20250827
         deploy:
             environment_vars:
-                # encrypted
-                - ENC[AES256_GCM,data:3z4FU12AZl9uceVSoLie6iwTT5n4f5YfmhIBXTAAk5qFC7mArFA=,iv:KauXDI8Wx0eP1RVpwSsiLMTepe2bRhARSCyosPZrDPE=,tag:CcPIIUjeW3ossv+OzEYD9g==,type:str]
-                # encrypted
-                - ENC[AES256_GCM,data:G2dMcqPWsKUL0KpLsAI5k99JgKM/1Ol962AGMVxsWrbHHXmZ7ah0HDSmtp46IBFIMkwnNMAg63M/2Aqy53A=,iv:wTTO+TDrAVh44ICgwJ37spE2u/6I+8LXPJB6MRmypEo=,tag:O49BlmGXP8r7HkkG7PnYTA==,type:str]
-                - AWS_DEFAULT_REGION=us-east-2
-                - AWS_ROLE_ARN=arn:aws:iam::829168431290:role/admin-access-role
-                # encrypted
-                - ENC[AES256_GCM,data:UvIKwAXZ8YeatpIm1yCEOksEMK/kuk0oJo+cNQ7TI/vmcnpY6JC22Dm6UJCC/D3ZeJ7Ft8U=,iv:ye1xbwLiAmhOjI8db+971grozYU8JTXN5dR9n+Cc5fw=,tag:IzdRi9HYk6nMWBTbv4C4hw==,type:str]
                 - AWS_PAGER=""
             cloud_config:
                 aws:
@@ -126,8 +133,8 @@ environments:
                     # encrypted
                     data: ENC[AES256_GCM,data:U2eobbE6upIEWrxHBbiL1zSEMdXQBDwRWpiZyGog9UJMPT/JwpXKdy5pD0wR2O3Gg/QVR2lJH4pZGJum/Xeuccm6/rFfxLP913xX76Ps+W6AP10YowpbOAjcX/bubm+FA5WZnIs0CFr8LUSzmKzrKxv1ITL5vxECbXOseszrMvBnDUoduAj5b8X31/FmPzPJQ1hBIQm66Ko9qB5yY09MpxeWmWOB4ZjR6n2tbsRve886UEq922SdhaldEozb2zq+OC4U1eKBOc4Rq0JoWCam2NnM/Y8vCrgOd9wo5taB+RAR4v+0WqRZlZtFoRxv8L2BAZkuZ3mObqbb5PcH/a/w5HzJ/V82mm5UN3Ie6rBLR1W2SsdWh4ZHE2qhYMpgU/XreRTGwG+/b3hU/z2ik7wgVo7MIXTvDpGqN8tf70IzmMXX2EpHWQMAO4Re+UB8b7GP7xFREbCjC7hnFQoel3AJNUPVdFFsGFdgDHyRa09BamVfnlhWtVfChrY2xl1X5NroZZT7Qn9uOvw6gj7mJhrmbq0JfCaetecTwqY=,iv:/j7qGCxTK0lBUSONjta9cn2A3X4idjk3zamBgFkFLbc=,tag:IR2K25bjQdDe7+KU/OyyCg==,type:str]
 sops:
-    lastmodified: "2026-01-25T21:55:05Z"
-    mac: ENC[AES256_GCM,data:mQ9zmHZ+c6CW8KsA/Us/Ir5wAGSc/eV5m3NxmuvsHeHNQ4Un6h2C0kDbXhIMOSqWjrFPgDZRPeFvnXhetfU/Vf3Z0e+iApMswjT+z5hBw63/HFrKlRJ1WhrRCoNh+GRKqjNZ62TLgz43LYJXHjLu+YkzFYGdiw6dIiKGEsaAIV4=,iv:C7BUy38Ob/XS1YmA63+kz78rElCv+tEY4AHVbJx7GNw=,tag:vYyMdoYSyhmshMyu/n6kjQ==,type:str]
+    lastmodified: "2026-04-01T20:39:06Z"
+    mac: ENC[AES256_GCM,data:w/aJmVtFp0jQjb2RBSDq8EwUcMBLYZl3jvBZvVwTwsdNFjb9UYdoNJMTCmFhcAJpPNYNBvTDR/BqxvGrBTj6U+bcW8zevfv51JaD0IN+P+R0K60EbCopl0RpNkATYsWYMTyH/x0D1uld04aUmRE53xi74YJRr+1mHBGnhXH+42w=,iv:yJWKL4I3AE3fODV8yQx0falshnEUjwtt+yBf1gegOag=,tag:Pti9i71G91UPmQbcRXqP1w==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
