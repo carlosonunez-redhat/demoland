@@ -1,5 +1,5 @@
 _cluster_name() {
-  printf "demoland-%s" "$(_get_top_level_environment_name)"
+  printf "demoland-%s" "$(_get_top_level_environment_name)" | wc -c 26
 }
 
 _cluster_infra_name() {
