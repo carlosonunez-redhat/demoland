@@ -3,7 +3,7 @@ _cluster_name() {
 }
 
 _cluster_infra_name() {
-  printf "demoland-%s" "$(_get_top_level_environment_id)"
+  printf "demoland-%s" "$(_get_top_level_environment_id | tr '[:upper:]' '[:lower:]' | head -c 8)"
 }
 
 _cluster_ignition_files_bucket() {

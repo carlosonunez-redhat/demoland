@@ -81,9 +81,8 @@ _create_aws_cf_params_json() {
 }
 
 _aws_cf_stack_name() {
-  printf '%s-%s-%s' \
+  printf '%s-cfn-%s' \
     "$(_get_top_level_environment_name)" \
-    "$(_get_top_level_environment_id)" \
     "$1" | tr -c '[:alnum:]' '-'
 }
 
