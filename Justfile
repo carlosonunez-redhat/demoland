@@ -34,7 +34,7 @@ delete_environment environment: (_confirm_environment environment)
   just _delete_env_dir '{{ environment }}' && just _delete_env_from_config '{{ environment }}';
 
 [doc("Deploys an environment")]
-deploy environment: (_deploy_with_dependencies environment )
+deploy environment: (_run_stage_with_dependencies environment "precheck" "provision" "expose")
 
 [doc("Runs preflight checks defined in an environment, if any.")]
 precheck environment:
@@ -50,6 +50,10 @@ precheck environment:
     'true' \
     'Environment {{ environment }} does not have preflight checks; skipping.';
 
+[doc("Same as 'precheck', but environment dependencies are considered.")]
+precheck_with_dependencies environment: \
+  (_run_stage_with_dependencies environment "precheck")
+
 [doc("Exposes secrets created by the environment, if any.")]
 expose environment:
   just _execute_containerized '{{ environment }}' \
@@ -57,65 +61,35 @@ expose environment:
     'true' \
     'Environment {{ environment }} does not have anything to expose; skipping.';
 
-
-
 [doc("Provisions an environment")]
 provision environment:
   just _execute_containerized '{{ environment }}' 'provision.sh';
 
 
 [doc("Destroys an environment")]
-destroy environment: (_destroy_with_dependencies environment)
+destroy environment: (_run_stage_with_dependencies environment "destroy")
 
-_deploy_with_dependencies environment: (_generate_toplevel_environment_info environment)
+_run_stage_with_dependencies environment +stages:\
+    (_generate_toplevel_environment_info environment)
   set +u; \
-  if test -n "$SKIP_DEPENDENCIES"; \
-  then envs="{{ environment }}"; \
-  else envs="$(just _get_dependent_environments {{ environment }});{{ environment }}"; \
-  fi; \
+  envs="{{ environment }}"; \
+  test -z "$SKIP_DEPENDENCIES" && envs="$(just _get_dependent_environments {{ environment }});{{ environment }}"; \
   set -eu; \
   for env in $(echo "$envs" | sed -E 's/^;//' | tr ';' '\n'); \
   do just _confirm_environment "$env" || exit 1; \
   done; \
   for env in $(echo "$envs" | sed -E 's/^;//' | tr ';' '\n'); \
   do \
-    for stage in precheck provision expose; \
+    for stage in {{ stages }}; \
     do \
-      if test "$env" != '{{ environment }}'; \
-      then env_details="dependent environments [$env]"; \
-      else env_details="environment [$env]"; \
-      fi; \
+      env_details="environment [$env]"; \
+      test "$env" != '{{ environment }}' && env_details="dependent environment [$env]"; \
       resolved_env=$(just _resolved_environment_name "$env"); \
       test "$env" != "$resolved_env" && env_details="$env_details (alias of: $resolved_env)"; \
       just _log info "Running operation [$stage] on $env_details"; \
       just "$stage" "$env"; \
     done; \
-  done
-
-_destroy_with_dependencies environment: (_generate_toplevel_environment_info environment)
-  set +u; \
-  if test -n "$SKIP_DEPENDENCIES"; \
-  then envs="{{ environment }}"; \
-  else envs="{{ environment }};$(just _get_dependent_environments {{ environment }})"; \
-  fi; \
-  set -eu; \
-  for env in $(echo "$envs" | sed -E 's/^;//' | tr ';' '\n'); \
-  do just _confirm_environment "$env" || exit 1; \
-  done; \
-  for env in $(echo "$envs" | sed -E 's/^;//' | tr ';' '\n'); \
-  do \
-    if test "$env" != '{{ environment }}'; \
-    then env_details="dependent environments [$env]"; \
-    else env_details="environment [$env]"; \
-    fi; \
-    resolved_env=$(just _resolved_environment_name "$env"); \
-    test "$env" != "$resolved_env" && env_details="$env_details (alias of: $resolved_env)"; \
-    just _log info "Destroying $env_details"; \
-    just _execute_containerized "$env" \
-      'destroy.sh' \
-      'true' \
-      'Environment {{ environment }} does not have anything to destroy; skipping.'; \
-  done
+  done;
 
 _get_dependent_environments environment:
   set +u; \
