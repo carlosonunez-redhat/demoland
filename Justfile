@@ -36,6 +36,9 @@ delete_environment environment: (_confirm_environment environment)
 [doc("Deploys an environment")]
 deploy environment: (_run_stage_with_dependencies environment "precheck" "provision" "expose")
 
+[doc("Destroys an environment")]
+destroy environment: (_run_stage_with_dependencies environment "_destroy")
+
 [doc("Runs preflight checks defined in an environment, if any.")]
 precheck environment:
   set +u; \
@@ -66,8 +69,8 @@ provision environment:
   just _execute_containerized '{{ environment }}' 'provision.sh';
 
 
-[doc("Destroys an environment")]
-destroy environment: (_run_stage_with_dependencies environment "destroy")
+_destroy environment:
+  just _execute_containerized '{{ environment }}' 'destroy.sh';
 
 _run_stage_with_dependencies environment +stages:\
     (_generate_toplevel_environment_info environment)
