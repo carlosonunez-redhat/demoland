@@ -31,6 +31,10 @@ exec_oc() {
   _exec_oc "$(_get_file_from_shared_secret_dir "kubeconfigs/$(_cluster_name)").kubeconfig" "$@"
 }
 
+exec_oc_postinstall() {
+  _exec_oc "$(_get_file_from_data_dir 'openshift-install/auth/kubeconfig')" "$@"
+}
+
 print_oc_command() {
   _oc_cmd "kubeconfigs/$(_cluster_name).kubeconfig" "$@"
 }

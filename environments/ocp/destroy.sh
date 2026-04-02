@@ -84,8 +84,14 @@ delete_worker_machines() {
     "Deleting the workers..."
 }
 
+delete_ingress_dns_records() {
+  _delete_aws_resources_from_cfn_stack ingress \
+    "Deleting ingress DNS records..."
+}
+
 
 export $(log_into_aws) || exit 1
+delete_ingress_dns_records
 delete_worker_machines
 delete_control_plane_machines
 delete_bootstrap_machine
