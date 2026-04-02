@@ -448,6 +448,11 @@ create_ingress_dns_records() {
     "Creating DNS records for ingress into the cluster..."
 }
 
+delete_bootstrap_machine() {
+  _delete_aws_resources_from_cfn_stack bootstrap_machine \
+    "Install complete; deleting bootstrap machine..."
+}
+
 export $(log_into_aws) || exit 1
 create_ssh_key
 load_keys_into_ssh_agent
@@ -469,3 +474,4 @@ wait_for_worker_csrs_to_register
 accept_pending_csrs
 wait_for_workers_to_become_ready
 create_ingress_dns_records
+delete_bootstrap_machine

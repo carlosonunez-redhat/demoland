@@ -6,6 +6,7 @@ source "$INCLUDE_DIR/helpers/data.sh"
 source "$INCLUDE_DIR/helpers/logging.sh"
 source "$INCLUDE_DIR/helpers/ocp.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/aws.sh"
+source "$ENVIRONMENT_INCLUDE_DIR/ocp.sh"
 
 delete_aws_ec2_key_pair() {
   key_name=$(_get_from_config '.deploy.secrets.ssh_key.name')
@@ -89,12 +90,36 @@ delete_ingress_dns_records() {
     "Deleting ingress DNS records..."
 }
 
+delete_router_lbs() {
+  _exec_aws resourcegroupstaggingapi get-resources \
+    --tag-filters "Key=kubernetes.io/cluster/$(_cluster_infra_name),Values=owned" |
+  jq -r '.ResourceTagMappingList[].ResourceARN' |
+  while read -r arn
+  do
+    resource_name=$(echo "$arn" | awk -F '/' '{print $NF}')
+    case "$arn" in
+      *loadbalancer*)
+        info "Deleting router load balancer [$resource_name]"
+        _exec_aws elb delete-load-balancer --load-balancer-name "$resource_name"
+        ;;
+      *security-group*)
+        info "Deleting router security group [$resource_name]"
+        _exec_aws ec2 delete-security-group --group-id "$resource_name"
+        ;;
+      *)
+        error "This resource has an unexpected type: $arn"
+        continue
+        ;;
+    esac
+  done
+}
+
 
 export $(log_into_aws) || exit 1
 delete_ingress_dns_records
 delete_worker_machines
 delete_control_plane_machines
-delete_bootstrap_machine
+delete_router_lbs
 delete_aws_ec2_key_pair
 delete_security_groups
 delete_ignition_bucket_from_s3
