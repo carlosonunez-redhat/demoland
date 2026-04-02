@@ -369,12 +369,15 @@ wait_for_bootstrap_complete() {
 }
 
 wait_for_worker_csrs_to_register() {
-  local num_worker_nodes max_attempts num_worker_nodes
+  local num_worker_nodes max_attempts num_worker_nodes ready_workers
   num_worker_nodes=$(_exec_aws ec2 describe-instances \
     --query 'Reservations[].Instances[?(State.Name == `running`) &&
 (@.Tags[?Key==`aws:cloudformation:logical-id` &&
 contains(Value, `Worker`)])].InstanceId' --output text | wc -l)
-  approved_csrs=$(_exec_oc get csr | grep -E 'node-bootstrapper.*Approved' | wc -l)
+  ready_workers=$(exec_oc_postinstall get node | grep -E ' Ready.*worker ' | wc -l)
+  test "$ready_workers" == "$num_worker_nodes" && return 0
+
+  approved_csrs=$(exec_oc_postinstall get csr | grep -E 'node-bootstrapper.*Approved' | wc -l)
   test "$approved_csrs" -ge "$num_worker_nodes" && return 0
   num_worker_nodes=$(_exec_aws ec2 describe-instances \
     --query 'Reservations[].Instances[?(State.Name == `running`) && 
@@ -383,7 +386,7 @@ contains(Value, `Worker`)])].InstanceId' --output text | wc -l)
   max_attempts=100
   while test "$max_attempts" -ne 0
   do
-    num_registered=$(_exec_oc get csr |
+    num_registered=$(exec_oc_postinstall get csr |
       grep -E 'node-bootstrapper.*Pending' |
       wc -l)
     test "$num_registered" -ge "$num_worker_nodes" && return 0
@@ -394,12 +397,15 @@ contains(Value, `Worker`)])].InstanceId' --output text | wc -l)
 }
 
 accept_pending_csrs() {
-  csrs=$(_exec_oc get csr | grep -E 'node-bootstrapper.*Pending' | cut -f1 -d ' ')
+  csrs=$(exec_oc_postinstall get csr 2>&1 |
+    grep -v "No resources found" |
+    grep -E 'node-bootstrapper.*Pending' |
+    cut -f1 -d ' ')
   test -z "$csrs" && return 0
   while read -r csr
   do
     info "Approving worker node CSR '$csr'"
-    if ! _exec_oc adm certificate approve "$csr"
+    if ! exec_oc_postinstall adm certificate approve "$csr"
     then
       error "Failed to approve '$csr'"
       return 1
@@ -416,7 +422,7 @@ contains(Value, `Worker`)])].InstanceId' --output text | wc -l)
   max_attempts=100
   while test "$max_attempts" -gt 0
   do
-    ready_workers=$(_exec_oc get node | grep -E ' Ready.*worker ' | wc -l)
+    ready_workers=$(exec_oc_postinstall get node | grep -E ' Ready.*worker ' | wc -l)
     test "$ready_workers" == "$num_worker_nodes" && return 0
     info "[$((100-max_attempts))] Waiting for nodes to become ready (want: $num_worker_nodes, got: $ready_workers)"
     max_attempts=$((max_attempts-1))
