@@ -3,6 +3,7 @@ set -e
 source "$INCLUDE_DIR/helpers/aws.sh"
 source "$INCLUDE_DIR/helpers/config.sh"
 source "$INCLUDE_DIR/helpers/logging.sh"
+source "$INCLUDE_DIR/helpers/ocp.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/aws.sh"
 pf_log() {
   eval "$1 '[PREFLIGHT] $2'"

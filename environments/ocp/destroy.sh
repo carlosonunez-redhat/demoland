@@ -4,8 +4,8 @@ source "$INCLUDE_DIR/helpers/aws.sh"
 source "$INCLUDE_DIR/helpers/config.sh"
 source "$INCLUDE_DIR/helpers/data.sh"
 source "$INCLUDE_DIR/helpers/logging.sh"
+source "$INCLUDE_DIR/helpers/ocp.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/aws.sh"
-source "$ENVIRONMENT_INCLUDE_DIR/ocp.sh"
 
 delete_aws_ec2_key_pair() {
   key_name=$(_get_from_config '.deploy.secrets.ssh_key.name')
