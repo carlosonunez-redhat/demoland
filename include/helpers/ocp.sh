@@ -28,7 +28,7 @@ _exec_oc() {
 }
 
 exec_oc() {
-  _exec_oc "$(_get_file_from_shared_secret_dir "kubeconfigs/$(_cluster_name)").kubeconfig" "$@"
+  _exec_oc "$(cat /environment_info/kubeconfig_path)" "$@"
 }
 
 exec_oc_postinstall() {
@@ -37,4 +37,18 @@ exec_oc_postinstall() {
 
 print_oc_command() {
   _oc_cmd "kubeconfigs/$(_cluster_name).kubeconfig" "$@"
+}
+
+# saves a kubeconfig into the secret dir while also writing a reference to
+# it in the toplevel environment volume.
+expose_kubeconfig() {
+  local kubeconfig_ref kubeconfig_path
+  kubeconfig_ref="/environment_info/kubeconfig_path"
+  if test -f "$kubeconfig_ref"
+  then kubeconfig_path=$(cat "$kubeconfig_ref")
+  else kubeconfig_path=$(mktemp -u "$(_get_file_from_shared_secret_dir "kubeconfigs")/XXXXXXXXXXXXXXXX.kubeconfig")
+  fi
+  info "Saving cluster kubeconfig to '$kubeconfig_path'"
+  test -d "$(dirname "$kubeconfig_path")" || mkdir -p "$(dirname "$kubeconfig_path")"
+  echo "$1" > "$kubeconfig_path" && echo "$kubeconfig_path" > "$kubeconfig_ref"
 }

@@ -16,6 +16,13 @@ environments:
         # merged with that of the aliased environment.
         alias_of: ""
         # depends_on: Deploys (and destroys) any environments in this list, in order.
+        #
+        # EXAMPLE
+        #
+        # ```yaml
+        # depends_on:
+        # - ocp-single-worker
+        # ```
         depends_on: []
         common_options:
             # common_options.ignore_installconfig_check: Ignores checking for an installconfig in this
@@ -31,20 +38,35 @@ environments:
         secrets: {}
         # cloud_credentials: Overrides the default cloud configs set by
         # 'common.cloud_credentials'.
+        #
+        # EXAMPLE:
+        #
+        # ```yaml
+        # cloud_credentials:
+        #   aws:
+        #     aws_access_key_id: AKIA12345...
+        #     aws_secret_access_key: superdupersecret
+        #     aws_default_region: us-west-1
+        # ```
         cloud_credentials:
             aws: {}
-    appdev_with_vms_made_easy:
-        version: 20260402
-        alias_of: ""
-        depends_on:
-            - ocp-single-worker
-        common_options:
-            ignore_installconfig_check: true
-        deploy:
-            environment_vars: []
-        secrets: {}
-        cloud_credentials:
-            aws: {}
+        # components: Additional components to install into your cluster.
+        # Installed via Kustomize. Customize your components by adding
+        # Kustomize YAML files to the 'overlays/[COMPONENT_NAME]' directory
+        # within your environment.
+        #
+        # (See the 'example' environment for more details.)
+        #
+        # EXAMPLE:
+        #
+        # ```yaml
+        # components:
+        # - aap
+        # - openshift-gitops
+        # - advanced-developer-suite
+        # ```
+        components:
+            - example
     rosa:
         version: 20260124
         depends_on:
@@ -151,8 +173,8 @@ environments:
                     # encrypted
                     data: ENC[AES256_GCM,data:U2eobbE6upIEWrxHBbiL1zSEMdXQBDwRWpiZyGog9UJMPT/JwpXKdy5pD0wR2O3Gg/QVR2lJH4pZGJum/Xeuccm6/rFfxLP913xX76Ps+W6AP10YowpbOAjcX/bubm+FA5WZnIs0CFr8LUSzmKzrKxv1ITL5vxECbXOseszrMvBnDUoduAj5b8X31/FmPzPJQ1hBIQm66Ko9qB5yY09MpxeWmWOB4ZjR6n2tbsRve886UEq922SdhaldEozb2zq+OC4U1eKBOc4Rq0JoWCam2NnM/Y8vCrgOd9wo5taB+RAR4v+0WqRZlZtFoRxv8L2BAZkuZ3mObqbb5PcH/a/w5HzJ/V82mm5UN3Ie6rBLR1W2SsdWh4ZHE2qhYMpgU/XreRTGwG+/b3hU/z2ik7wgVo7MIXTvDpGqN8tf70IzmMXX2EpHWQMAO4Re+UB8b7GP7xFREbCjC7hnFQoel3AJNUPVdFFsGFdgDHyRa09BamVfnlhWtVfChrY2xl1X5NroZZT7Qn9uOvw6gj7mJhrmbq0JfCaetecTwqY=,iv:/j7qGCxTK0lBUSONjta9cn2A3X4idjk3zamBgFkFLbc=,tag:IR2K25bjQdDe7+KU/OyyCg==,type:str]
 sops:
-    lastmodified: "2026-04-02T20:19:58Z"
-    mac: ENC[AES256_GCM,data:wJpnF9x5pGMzC8z/0LhVVGUcfTdidWE1Lh4jxrglc2xgTpMsfpelNbdYzNTUCzzK1cXoXw8HzjY7vdBfq5WAjm5rH0TLN5YxsjS8wYsbhS8bbg7QFqyKVON71XkYewGmpo7HMKti/Fc3ezfjDLLqB/U/odRf1waNeApnPb7PMBk=,iv:1gUjpN8Ot3OOTStdDKjlwXhGM/zJ3ycYQnyX6RiVhdo=,tag:TrCR1ZJ/gmfQhfPmBOK1JA==,type:str]
+    lastmodified: "2026-04-03T22:54:29Z"
+    mac: ENC[AES256_GCM,data:dsKzS+XtZiOWQB24Mqs+gwYO62LjXOUZyyONA2iDMRTmwgGr5DGqSwT8rYO2mkQywHtbPrj3ShH0E7/sz2goteSHBMAw4nKU0bqWRoqO755EhR+BOCvoB5a2NhAyPV0ZoZLJrpfld3eiSLSGgPEGqDsi2LBqkw1dKslQrsghk8s=,iv:xlgYVfqLDEK8C4cH4biWEByzPxzytrAXf6iq3y9tLlU=,tag:vznkywVviCALPiF4FT1ULQ==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-

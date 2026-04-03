@@ -4,9 +4,11 @@ set quiet := true
 
 container_bin := env("CONTAINER_BIN", which('podman'))
 container_image := 'demo-environment-runner'
+oc_container_image := 'openshift-client'
 container_vol := 'demo-environment-runner-vol'
 container_secrets_vol := 'demo-environment-runner-secrets-vol'
 container_environment_info_vol := 'demo-environment-runner-env-info-vol'
+container_postinstall_vol := 'demo-environment-postinstall-vol'
 config_file := source_dir() + '/config.yaml'
 yq_image := 'mikefarah/yq'
 default_openshift_version := "4.19.27"
@@ -33,44 +35,19 @@ delete_environment environment: (_confirm_environment environment)
   fi; \
   just _delete_env_dir '{{ environment }}' && just _delete_env_from_config '{{ environment }}';
 
+
+[doc("Checks an environment before a deployment.")]
+precheck environment: \
+  (_run_stage_with_dependencies environment "_precheck")
+
 [doc("Deploys an environment")]
-deploy environment: (_run_stage_with_dependencies environment "precheck" "provision" "expose")
+deploy environment: (_run_stage_with_dependencies environment "_precheck" "_expose" "_postinstall")
 
 [doc("Destroys an environment")]
 destroy environment: (_run_stage_with_dependencies environment "_destroy")
 
-[doc("Runs preflight checks defined in an environment, if any.")]
-precheck environment:
-  set +u; \
-  if test -n "$SKIP_PRECHECK"; \
-  then \
-    just _log info "Preflight checks skipped for environment '{{ environment }}'"; \
-    exit 0; \
-  fi; \
-  set -u; \
-  just _execute_containerized '{{ environment }}' \
-    'preflight.sh' \
-    'true' \
-    'Environment {{ environment }} does not have preflight checks; skipping.';
-
-[doc("Same as 'precheck', but environment dependencies are considered.")]
-precheck_with_dependencies environment: \
-  (_run_stage_with_dependencies environment "precheck")
-
-[doc("Exposes secrets created by the environment, if any.")]
-expose environment:
-  just _execute_containerized '{{ environment }}' \
-    'expose.sh' \
-    'true' \
-    'Environment {{ environment }} does not have anything to expose; skipping.';
-
-[doc("Provisions an environment")]
-provision environment:
-  just _execute_containerized '{{ environment }}' 'provision.sh';
-
-
-_destroy environment:
-  just _execute_containerized '{{ environment }}' 'destroy.sh';
+[doc("Performs post-install steps, like installing operators and such.")]
+postinstall environment: (_run_stage_with_dependencies environment "_postinstall")
 
 _run_stage_with_dependencies environment +stages:\
     (_generate_toplevel_environment_info environment)
@@ -85,14 +62,126 @@ _run_stage_with_dependencies environment +stages:\
   do \
     for stage in {{ stages }}; \
     do \
+      stage_friendly_name=$(sed -E 's/^_//' <<< "$stage"); \
       env_details="environment [$env]"; \
       test "$env" != '{{ environment }}' && env_details="dependent environment [$env]"; \
       resolved_env=$(just _resolved_environment_name "$env"); \
       test "$env" != "$resolved_env" && env_details="$env_details (alias of: $resolved_env)"; \
-      just _log info "Running operation [$stage] on $env_details"; \
+      just _log info "Running operation [$stage_friendly_name] on $env_details"; \
       just "$stage" "$env"; \
     done; \
   done;
+
+_precheck environment:
+  set +u; \
+  if test -n "$SKIP_PRECHECK"; \
+  then \
+    just _log info "Preflight checks skipped for environment '{{ environment }}'"; \
+    exit 0; \
+  fi; \
+  set -u; \
+  just _execute_containerized '{{ environment }}' \
+    'preflight.sh' \
+    'true' \
+    'Environment {{ environment }} does not have preflight checks; skipping.';
+
+_provision environment: (_ensure_toplevel_environment_info_available)
+  just _execute_containerized '{{ environment }}' 'provision.sh';
+
+_expose environment: (_ensure_toplevel_environment_info_available)
+  just _execute_containerized '{{ environment }}' \
+    'expose.sh' \
+    'true' \
+    'Environment {{ environment }} does not have anything to expose; skipping.';
+
+_postinstall environment: (_ensure_toplevel_environment_info_available) \
+  (_ensure_toplevel_environment_has_kubeconfig environment) \
+  (_ensure_container_postinstall_volume_exists environment) \
+  (_ensure_openshift_client_image environment ) \
+  (_clear_postinstall_volume environment) \
+  (_install_components_into_environment environment)
+
+_install_components_into_environment environment:
+  just _get_environment_components '{{ environment }}' | \
+    while read -r component; \
+    do \
+      for stage in _ensure_component_exists _stage_component _create_component_kustomization _install_component; \
+      do just "$stage" '{{ environment }}' "$component" || exit 1; \
+      done; \
+    done
+
+_stage_component environment component:
+  {{ container_bin }} run --rm \
+      -v "$(just _container_postinstall_vol '{{ environment }}'):/vol" \
+      -v "$PWD/components:/components" \
+      bash:5 -c "mkdir -p /vol/base && cp -r /components/{{ component }}/* /vol/base/"
+
+_get_environment_components environment:
+  env_data=$(just _merge_aliased_environment "{{ environment }}") || exit 1; \
+  just _run_yq "$env_data" '.components[]'
+
+_create_component_kustomization environment component:
+  k="$(echo -en 'resources:\n- ./base')"; \
+  for overlay_f in $(just _component_overlays '{{ environment }}' '{{ component }}'); \
+  do \
+    fname=$(basename "$overlay_f"); \
+    just _log info "[postinstall] Adding overlay to component '{{ component }}': $overlay_f"; \
+    overlay=$(grep -Eiv '^apiversion:' "$overlay_f" | grep -Eiv '^kind:'); \
+    k=$(echo -e "${k}\n${overlay}"); \
+  done; \
+  k_enc=$(base64 -w 0 <<< "$k"); \
+  {{ container_bin }} run --rm -v "$(just _container_postinstall_vol '{{ environment }}'):/vol" \
+      bash:5 -c "echo '$k_enc' | base64 -d > /vol/kustomization.yaml"
+
+_install_component environment component:
+  env=$(just _resolved_environment_name '{{ environment }}'); \
+  set -x; \
+  just _log info "[postinstall] Installing component '{{ component }}' in environment '$env'"; \
+  {{ container_bin }} run --rm \
+    -v "$(just _container_postinstall_vol '{{ environment }}'):/vol" \
+    -v "$(just _container_secrets_vol_shared):/shared/secrets" \
+    {{ oc_container_image }} \
+    --kubeconfig $(just _toplevel_environment_kubeconfig '{{ environment }}') apply -k /vol
+
+
+_ensure_openshift_client_image environment:
+  set +u; \
+  test -z "$REBUILD_OPENSHIFT_CLIENT_IMAGE" && \
+    {{ container_bin }} image ls | grep -q "{{ oc_container_image }}" && exit 0; \
+  set -u; \
+  openshift_version=$(just _get_property_from_env_config_use_alias \
+    {{ environment }} \
+    '.deploy.cluster_config.openshift_version'); \
+  test -z "$openshift_version" && openshift_version={{ default_openshift_version }}; \
+  just _log info "(re)building OpenShift client image [openshift version: $openshift_version]"; \
+  {{ container_bin }} image build -t "{{ oc_container_image }}" \
+    --build-arg OPENSHIFT_VERSION="$openshift_version" - < "$PWD/include/containerfiles/client.Dockerfile"
+
+_ensure_component_exists environment component:
+  test -d "$PWD/components/{{ component }}" && exit 0; \
+  just _log error "Environment '{{ environment }}' wants component '{{ component }}', which doesn't exist"; \
+  exit 1;
+
+_ensure_container_postinstall_volume_exists environment:
+  set +u; \
+  vol=$(just _container_postinstall_vol {{ environment }}); \
+  {{ container_bin }} volume ls | grep -q "$vol" && \
+    test -z "$REBUILD_POSTINSTALL_VOLUME" && \
+    exit 0; \
+  test -n "$REBUILD_POSTINSTALL_VOLUME" && {{ container_bin }} volume rm -f "$vol" >/dev/null; \
+  {{ container_bin }} volume create "$vol" >/dev/null; \
+
+_clear_postinstall_volume environment:
+  {{ container_bin }} run --rm -v "$(just _container_postinstall_vol '{{ environment }}'):/vol" \
+      bash:5 -c "rm -rf /vol/*"
+
+_component_overlays environment component:
+  overlays_dir="$(just _get_environment_directory '{{ environment }}')/overlays/{{ component }}"; \
+  test -d "$overlays_dir" || exit 0; \
+  find "$overlays_dir" -type f;
+
+_destroy environment:
+  just _execute_containerized '{{ environment }}' 'destroy.sh';
 
 _get_dependent_environments environment:
   set +u; \
@@ -137,13 +226,15 @@ _container_secrets_vol environment:
   env=$(just _resolved_environment_name '{{ environment }}'); \
   echo "{{ container_secrets_vol }}-$env"
 
-_container_vol_shared environment:
+_container_postinstall_vol environment:
   env=$(just _resolved_environment_name '{{ environment }}'); \
-  echo "{{ container_vol }}-shared-$env"
+  echo "{{ container_postinstall_vol }}-$env"
 
-_container_secrets_vol_shared environment:
-  env=$(just _resolved_environment_name '{{ environment }}'); \
-  echo "{{ container_secrets_vol }}-shared-$env"
+_container_vol_shared:
+  echo "{{ container_vol }}-shared"
+
+_container_secrets_vol_shared:
+  echo "{{ container_secrets_vol }}-shared-secrets"
 
 _container_image environment:
   env=$(just _resolved_environment_name '{{ environment }}'); \
@@ -171,8 +262,8 @@ _execute_containerized environment file ignore_not_found='false' custom_message=
     -v "$(just _container_vol {{ environment }}):/data" \
     -v "{{ container_environment_info_vol }}:/environment_info" \
     -v "$(just _container_secrets_vol {{ environment }}):/secrets" \
-    -v "$(just _container_vol_shared {{ environment }}):/shared/data" \
-    -v "$(just _container_secrets_vol_shared {{ environment }}):/shared/secrets" \
+    -v "$(just _container_vol_shared):/shared/data" \
+    -v "$(just _container_secrets_vol_shared):/shared/secrets" \
     -v $PWD/include:/app/include \
     -v "$(just _get_environment_directory {{ environment }}):/app/environment" \
     -e INCLUDE_DIR=/app/include \
@@ -224,8 +315,13 @@ _merge_cloud_creds environment:
   just _do_yq_encoded_merge "$cloud_data_enc" "$env_cloud_data_enc"
 
 # the environment info volume stores information about the environment that executed
-# a deploy/destroy run that can be consumed by an environment's dependencies (kind of like
+# a deploy/destroy run that can be consumed by dependencies of an environment (kind of like
 # the Downward API in Kubernetes).
+_toplevel_environment:
+    {{ container_bin }} run --rm \
+      -v "{{ container_environment_info_vol }}:/info" \
+      bash:5 -c "test -f /info/root_environment_name && cat /info/root_environment_name"; \
+
 _generate_toplevel_environment_info environment:
   set +u; \
   {{ container_bin }} volume ls | grep -q "{{ container_environment_info_vol }}" || \
@@ -239,6 +335,20 @@ _generate_toplevel_environment_info environment:
       -v "{{ container_environment_info_vol }}:/info" \
       bash:5 -c "echo '$v' > /info/$k"; \
   done
+
+_ensure_toplevel_environment_info_available:
+  {{ container_bin }} volume ls | grep -q "{{ container_environment_info_vol }}" && \
+    {{ container_bin }} run --rm \
+      -v "{{ container_environment_info_vol }}:/info" \
+      bash:5 -c 'test -n "$(cat /info/root_environment_name)"' && \
+      exit 0; \
+  just _log error "Toplevel environment info hasn't been created yet"; \
+  exit 1
+
+_ensure_toplevel_environment_has_kubeconfig environment:
+  test -n "$(just _toplevel_environment_kubeconfig '{{ environment }}')" && exit 0; \
+  just _log error "A kubeconfig isn't available yet for environment '$(just _toplevel_environment)'"; \
+  exit 1
 
 _ensure_container_secrets_vol_populated environment:
   set +u; \
@@ -263,7 +373,7 @@ _ensure_container_secrets_vol_populated environment:
 _ensure_container_volume_exists environment:
   set +u; \
   data=$(just _container_vol {{ environment }}); \
-  shared=$(just _container_vol_shared {{ environment }}); \
+  shared=$(just _container_vol_shared); \
   for vol in "$data" "$shared"; \
   do \
     {{ container_bin }} volume ls | grep -q "$vol" && \
@@ -358,6 +468,12 @@ _get_environment_directory_no_alias environment:
 
 _get_environment_directory_file environment fp:
   printf "%s/%s" $(just _get_environment_directory "{{ environment }}") "{{ fp }}"
+
+_toplevel_environment_kubeconfig environment:
+  {{ container_bin }} run --rm \
+      -v "$(just _container_secrets_vol_shared):/shared/secrets" \
+      -v "{{ container_environment_info_vol }}:/environment_info" \
+      bash:5 -c 'test -f /environment_info/kubeconfig_path && cat /environment_info/kubeconfig_path'
 
 _run_yq input query:
   echo "{{ input }}" | {{ container_bin }} run --rm -i {{ yq_image }} '{{ query }}'
