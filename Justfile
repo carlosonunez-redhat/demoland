@@ -186,7 +186,7 @@ _destroy environment:
 _get_dependent_environments environment:
   set +u; \
   env_data=$(sops --decrypt --extract '["environments"]["{{ environment }}"]' \
-    --output-type yaml "{{ config_file }}") || exit 1; \
+    --output-type yaml "{{ config_file }}" | grep -Ev '^[ ]{0,}#') || exit 1; \
   just _run_yq "$env_data" '.depends_on | join(";")' | grep -Ev '^null$'; \
   exit 0;
 
@@ -196,7 +196,7 @@ _environment_name environment:
 _resolved_environment_name environment: (_confirm_environment_in_config environment)
   set +u; \
   env_data=$(sops --decrypt --extract '["environments"]["{{ environment }}"]' \
-    --output-type yaml "{{ config_file }}") || exit 1; \
+    --output-type yaml "{{ config_file }}" | grep -Ev '^[ ]{0,}#') || exit 1; \
   alias=$(just _run_yq "$env_data" '.alias_of'); \
   if test -z "$alias" || test "$alias" == 'null'; \
   then echo '{{ environment }}' && exit 0; \
@@ -212,7 +212,7 @@ _delete_env_dir environment:
 
 _add_env_to_config environment:
   conf=$(sops --decrypt --extract '["environments"]["example"]' \
-    --output-type json {{ config_file }}); \
+    --output-type json {{ config_file }} | grep -Ev '^[ ]{0,}#'); \
   sops set {{ config_file }} '["environments"]["{{ environment }}"]' "$conf"
 
 _delete_env_from_config environment:
@@ -283,7 +283,7 @@ _execute_containerized environment file ignore_not_found='false' custom_message=
 _merge_aliased_environment environment:
   set +u; \
   env_data=$(sops --decrypt --extract '["environments"]["{{ environment }}"]' \
-    --output-type yaml "{{ config_file }}") || exit 1; \
+    --output-type yaml "{{ config_file }}" | grep -Ev '^[ ]{0,}#') || exit 1; \
   env_data_enc=$(base64 -w 0 <<< $env_data); \
   alias=$(just _run_yq "$env_data" '.alias_of'); \
   if test -z "$alias" || test "$alias" == 'null'; \
@@ -415,7 +415,7 @@ _confirm_environment environment: \
     ( _confirm_environment_has_install_config environment )
 
 _confirm_environment_has_install_config environment:
-  ignore_installconfig_check=$(just _run_yq "$(cat {{ config_file }})" \
+  ignore_installconfig_check=$(just _run_yq "$(grep -Ev '^[ ]{0,}#' {{ config_file }})" \
     '.environments["{{ environment}}"].common_options.ignore_installconfig_check'); \
   test "${ignore_installconfig_check,,}" == true && exit 0; \
   f="$(just _get_environment_directory '{{ environment }}')/include/templates/install-config.yaml"; \
@@ -426,7 +426,7 @@ _confirm_environment_has_install_config environment:
   fi;
 
 _confirm_environment_in_config environment:
-  grep -q '^{{ environment }}$' <(just _run_yq "$(cat {{ config_file }})" '.environments | to_entries[] | .key') && \
+  grep -q '^{{ environment }}$' <(just _run_yq "$(grep -Ev '^[ ]{0,}#' {{ config_file }})" '.environments | to_entries[] | .key') && \
     exit 0; \
   just _log error "Environment not in config: {{ environment }}"; \
   exit 1
