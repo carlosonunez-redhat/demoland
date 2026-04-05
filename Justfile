@@ -41,7 +41,7 @@ precheck environment: \
   (_run_stage_with_dependencies environment "_precheck")
 
 [doc("Deploys an environment")]
-deploy environment: (_run_stage_with_dependencies environment "_precheck" "_expose" "_postinstall")
+deploy environment: (_run_stage_with_dependencies environment "_precheck" "_provision" "_expose" "_postinstall")
 
 [doc("Destroys an environment")]
 destroy environment: (_run_stage_with_dependencies environment "_destroy")

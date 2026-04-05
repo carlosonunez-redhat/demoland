@@ -96,6 +96,7 @@ delete_router_lbs() {
   jq -r '.ResourceTagMappingList[].ResourceARN' |
   while read -r arn
   do
+    info "Deleting OpenShift router ELB resource [$arn]..."
     resource_name=$(echo "$arn" | awk -F '/' '{print $NF}')
     case "$arn" in
       *loadbalancer*)
@@ -119,6 +120,7 @@ export $(log_into_aws) || exit 1
 delete_ingress_dns_records
 delete_worker_machines
 delete_control_plane_machines
+delete_ingress_dns_records
 delete_router_lbs
 delete_aws_ec2_key_pair
 delete_security_groups

@@ -4,11 +4,11 @@
 #@   l = []
 #@   num_perms_per_chunk = 80
 #@   for idx in range(len(perms)):
-#@     if idx != 0 and idx % num_perms_per_chunk == 0:
+#@     l.append(perms[idx])
+#@     if idx == len(perms)-1 or (idx > 1 and idx % num_perms_per_chunk == 0):
 #@       ls.append(l)
 #@       l = []
 #@     end
-#@     l.append(perms[idx])
 #@   end
 #@   return ls
 #@ end
