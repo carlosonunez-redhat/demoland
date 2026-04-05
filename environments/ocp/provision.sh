@@ -6,6 +6,7 @@ source "$INCLUDE_DIR/helpers/data.sh"
 source "$INCLUDE_DIR/helpers/errors.sh"
 source "$INCLUDE_DIR/helpers/logging.sh"
 source "$INCLUDE_DIR/helpers/install_config.sh"
+source "$INCLUDE_DIR/helpers/ocp.sh"
 source "$INCLUDE_DIR/helpers/yaml.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/aws.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/ocp.sh"
@@ -28,10 +29,10 @@ load_keys_into_ssh_agent() {
 upload_key_into_ec2() {
   info "Creating AWS EC2 key pair from SSH private key"
   key_name=$(_get_from_config '.deploy.secrets.ssh_key.name')
-  test -n "$(aws ec2 describe-key-pairs --key-name "$key_name" 2>/dev/null)" && return 0
+  test -n "$(_exec_aws ec2 describe-key-pairs --key-name "$key_name" 2>/dev/null)" && return 0
 
   pubkey="$(ssh-keygen -yf "$(_get_file_from_data_dir 'id_rsa')")"
-  >/dev/null aws ec2 import-key-pair --key-name "$key_name" \
+  >/dev/null _exec_aws ec2 import-key-pair --key-name "$key_name" \
     --public-key-material "$(base64 -w 0 <<< "$pubkey")"
 }
 
@@ -218,7 +219,7 @@ create_cluster_iam_user_policies() {
   local policy_doc infra_name policy_arn
   infra_name="$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
   policy_name="${infra_name}-cluster_user-policy"
-  policy_arn=$(aws iam list-policies |
+  policy_arn=$(_exec_aws iam list-policies |
     jq --arg name "$policy_name" '.Policies[] | select(.PolicyName == $name) | .Arn')
   test -n "$policy_arn" && return 0
 
@@ -234,10 +235,10 @@ create_cluster_iam_user_policies() {
   for idx in $(seq 1 "$(yq length <<< "$policy_doc")")
   do
     n="${policy_name}-Part${idx}"
-    test -n "$(aws iam list-policies --query 'Policies[?PolicyName==`'"$n"'`]' --output text)" &&
+    test -n "$(_exec_aws iam list-policies --query 'Policies[?PolicyName==`'"$n"'`]' --output text)" &&
       continue
     info "Creating cluster user IAM policy #$idx"
-    aws iam create-policy --policy-name "$n" \
+    _exec_aws iam create-policy --policy-name "$n" \
       --policy-doc "$(yq -o=j -I=0 ".[$((idx-1))]" <<< "$policy_doc")"
   done
 }
@@ -245,7 +246,7 @@ create_cluster_iam_user_policies() {
 create_cluster_iam_user() {
   infra_name="$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
   policy_name="${infra_name}-cluster_user-policy"
-  policy_arns=$(aws iam list-policies |
+  policy_arns=$(_exec_aws iam list-policies |
     jq -r --arg name "$policy_name" '.Policies[] | select(.PolicyName|contains($name)) | .Arn'  |
     grep -v null |
     cat)
@@ -285,7 +286,7 @@ create_control_plane_machines() {
   private_hosted_zone_id=$(fail_if_nil \
     "$(_get_param_from_aws_cfn_stack networking 'PrivateHostedZoneId')" \
     "Private hosted zone ID not found.")
-  private_hosted_zone_name=$(aws route53 get-hosted-zone --id "$private_hosted_zone_id" --query 'HostedZone.Name'\
+  private_hosted_zone_name=$(_exec_aws route53 get-hosted-zone --id "$private_hosted_zone_id" --query 'HostedZone.Name'\
     --output text)
   if test -z "$private_hosted_zone_name"
   then
@@ -368,21 +369,24 @@ wait_for_bootstrap_complete() {
 }
 
 wait_for_worker_csrs_to_register() {
-  local num_worker_nodes max_attempts num_worker_nodes
-  num_worker_nodes=$(aws ec2 describe-instances \
+  local num_worker_nodes max_attempts num_worker_nodes ready_workers
+  num_worker_nodes=$(_exec_aws ec2 describe-instances \
     --query 'Reservations[].Instances[?(State.Name == `running`) &&
 (@.Tags[?Key==`aws:cloudformation:logical-id` &&
 contains(Value, `Worker`)])].InstanceId' --output text | wc -l)
-  approved_csrs=$(_exec_oc get csr | grep -E 'node-bootstrapper.*Approved' | wc -l)
+  ready_workers=$(exec_oc_postinstall get node | grep -E ' Ready.*worker ' | wc -l)
+  test "$ready_workers" == "$num_worker_nodes" && return 0
+
+  approved_csrs=$(exec_oc_postinstall get csr | grep -E 'node-bootstrapper.*Approved' | wc -l)
   test "$approved_csrs" -ge "$num_worker_nodes" && return 0
-  num_worker_nodes=$(aws ec2 describe-instances \
+  num_worker_nodes=$(_exec_aws ec2 describe-instances \
     --query 'Reservations[].Instances[?(State.Name == `running`) && 
 (@.Tags[?Key==`aws:cloudformation:logical-id` &&
 contains(Value, `Worker`)])].InstanceId' --output text | wc -l)
   max_attempts=100
   while test "$max_attempts" -ne 0
   do
-    num_registered=$(_exec_oc get csr |
+    num_registered=$(exec_oc_postinstall get csr |
       grep -E 'node-bootstrapper.*Pending' |
       wc -l)
     test "$num_registered" -ge "$num_worker_nodes" && return 0
@@ -393,12 +397,15 @@ contains(Value, `Worker`)])].InstanceId' --output text | wc -l)
 }
 
 accept_pending_csrs() {
-  csrs=$(_exec_oc get csr | grep -E 'node-bootstrapper.*Pending' | cut -f1 -d ' ')
+  csrs=$(exec_oc_postinstall get csr 2>&1 |
+    grep -v "No resources found" |
+    grep -E 'node-bootstrapper.*Pending' |
+    cut -f1 -d ' ')
   test -z "$csrs" && return 0
   while read -r csr
   do
     info "Approving worker node CSR '$csr'"
-    if ! _exec_oc adm certificate approve "$csr"
+    if ! exec_oc_postinstall adm certificate approve "$csr"
     then
       error "Failed to approve '$csr'"
       return 1
@@ -408,14 +415,14 @@ accept_pending_csrs() {
 
 wait_for_workers_to_become_ready() {
   local num_worker_nodes max_attempts
-  num_worker_nodes=$(aws ec2 describe-instances \
+  num_worker_nodes=$(_exec_aws ec2 describe-instances \
     --query 'Reservations[].Instances[?(State.Name == `running`) && 
 (@.Tags[?Key==`aws:cloudformation:logical-id` &&
 contains(Value, `Worker`)])].InstanceId' --output text | wc -l)
   max_attempts=100
   while test "$max_attempts" -gt 0
   do
-    ready_workers=$(_exec_oc get node | grep -E ' Ready.*worker ' | wc -l)
+    ready_workers=$(exec_oc_postinstall get node | grep -E ' Ready.*worker ' | wc -l)
     test "$ready_workers" == "$num_worker_nodes" && return 0
     info "[$((100-max_attempts))] Waiting for nodes to become ready (want: $num_worker_nodes, got: $ready_workers)"
     max_attempts=$((max_attempts-1))
