@@ -44,9 +44,20 @@ Parameters:
     Type: String
 
 Conditions:
-  CreateOneWorker: !Not [!Equals [!Ref NumWorkers, "0"]]
-  CreateTwoWorkers: !Contains [["2", "3"] !Ref NumWorkers]
-  CreateThreeWorkers: !Equals [!Ref NumWorkers, "3"]
+  CreateOneWorker: !Not
+    - !Equals
+      - !Ref NumWorkers
+      - "0"
+  CreateTwoWorkers: !Or
+    - !Equals
+      - !Ref NumWorkers
+      - "2"
+    - !Equals
+      - !Ref NumWorkers
+      - "3"
+  CreateThreeWorkers: !Equals
+    - !Ref NumWorkers
+    - "3"
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:

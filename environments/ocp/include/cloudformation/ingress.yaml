@@ -1,0 +1,42 @@
+#! vim: set syntax=cloudformation:
+AWSTemplateFormatVersion: 2010-09-09
+Description: Template for Best Practice VPC with 1-3 AZs
+
+Parameters:
+  HostedZoneId:
+    Description: The Route53 public zone ID to register the targets with, such as Z21IXYZABCZ2A4.
+    Type: String
+  RouterELBFQDN:
+    Description: The address of the ELB created by openshift-router.
+    Type: String
+  RouterELBHostedZoneId:
+    Description: The ID of the hosted zone holding the DNS record for the ELB.
+    Type: String
+  ClusterName:
+    AllowedPattern: ^([a-zA-Z][a-zA-Z0-9\-]{0,26})$
+    MaxLength: 27
+    MinLength: 1
+    ConstraintDescription: Cluster name must be alphanumeric, start with a letter, and have a maximum of 27 characters.
+    Description: A short, representative cluster name to use for host names and other identifying names.
+    Type: String
+  HostedZoneName:
+    Description: The Route53 zone to register the targets with, such as example.com. Omit the trailing period.
+    Type: String
+
+Resources:
+  IngressRecord:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      Comment: Alias record for OpenShift Ingress
+      HostedZoneId: !Ref HostedZoneId
+      RecordSets:
+      - Name:
+          !Join [
+            ".",
+            ["*", "apps", !Ref ClusterName, !Join ["", [!Ref HostedZoneName, "."]]],
+          ]
+        Type: A
+        AliasTarget:
+          HostedZoneId: !Ref RouterELBHostedZoneId
+          DNSName: !Ref RouterELBFQDN
+          EvaluateTargetHealth: false

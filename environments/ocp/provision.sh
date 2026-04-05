@@ -430,6 +430,29 @@ contains(Value, `Worker`)])].InstanceId' --output text | wc -l)
   done
 }
 
+create_ingress_dns_records() {
+  local router_elb_hosted_zone_id
+  router_elb_fqdn=$(_cluster_router_fqdn) || return 1
+  router_elb_hosted_zone_id=$(_exec_aws elb describe-load-balancers |
+    jq -r '.LoadBalancerDescriptions[] | select(.DNSName == "'"$router_elb_fqdn"'").CanonicalHostedZoneNameID') || return 1
+  params=(
+    'ClusterName' "$(_cluster_name)"
+    'HostedZoneId' "$(_hosted_zone_id)"
+    'HostedZoneName' "$(_hosted_zone_name)"
+    'RouterELBHostedZoneId' "$router_elb_hosted_zone_id"
+    'RouterELBFQDN' "$(_cluster_router_fqdn)"
+  )
+  params_json=$(_create_aws_cf_params_json "${params[@]}")
+  _create_aws_resources_from_cfn_stack_with_caps ingress "$params_json" \
+    "CAPABILITY_NAMED_IAM" \
+    "Creating DNS records for ingress into the cluster..."
+}
+
+delete_bootstrap_machine() {
+  _delete_aws_resources_from_cfn_stack bootstrap_machine \
+    "Install complete; deleting bootstrap machine..."
+}
+
 export $(log_into_aws) || exit 1
 create_ssh_key
 load_keys_into_ssh_agent
@@ -450,3 +473,5 @@ wait_for_bootstrap_complete
 wait_for_worker_csrs_to_register
 accept_pending_csrs
 wait_for_workers_to_become_ready
+create_ingress_dns_records
+delete_bootstrap_machine
