@@ -17,3 +17,11 @@ _get_file_from_shared_data_dir() {
 _get_file_from_shared_secret_dir() {
   echo "/shared/secrets/$1" | sed 's;//;/;g'
 }
+
+_get_top_level_environment_name() {
+  cat "/environment_info/root_environment_name"
+}
+
+_get_top_level_environment_id() {
+  cat "/environment_info/root_environment_id"
+}

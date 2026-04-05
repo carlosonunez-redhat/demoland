@@ -29,7 +29,7 @@ _exec_openshift_install_aws() {
     openshift-install --dir "$dir" "$@"
 }
 
-_exec_oc() {
-  oc --kubeconfig "$(_get_file_from_data_dir 'openshift-install/auth/kubeconfig')" "$@"
+_cluster_router_fqdn() {
+  exec_oc_postinstall get service -n openshift-ingress router-default \
+    -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
 }
-

@@ -60,7 +60,7 @@ delete_cluster_iam_user() {
 
 delete_cluster_iam_user_policy() {
   local infra_name policy_arns
-  infra_name="$(_get_from_config '.deploy.cluster_config.names.infrastructure')"
+  infra_name="$(_cluster_infra_name)"
   policy_name="${infra_name}-cluster_user-policy"
   policy_arns=$(_exec_aws iam list-policies |
     jq -r --arg name "$policy_name" '.Policies[] | select(.PolicyName | contains($name)) | .Arn'|

@@ -3,6 +3,7 @@ set -e
 source "$INCLUDE_DIR/helpers/aws.sh"
 source "$INCLUDE_DIR/helpers/config.sh"
 source "$INCLUDE_DIR/helpers/logging.sh"
+source "$INCLUDE_DIR/helpers/ocp.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/aws.sh"
 pf_log() {
   eval "$1 '[PREFLIGHT] $2'"
@@ -25,12 +26,8 @@ confirm_config_is_correct() {
     'cloud_config.aws.networking.availability_zones.bootstrap' \
     'cloud_config.aws.networking.availability_zones.control_plane' \
     'cloud_config.aws.networking.availability_zones.workers' \
-    'cloud_config.aws.cloudformation.stack_name' \
     'secrets.ssh_key.name' \
     'secrets.ssh_key.data' \
-    'cluster_config.names.cluster' \
-    'cluster_config.names.infrastructure' \
-    'node_config.common.ignition_file_s3_bucket' \
     'node_config.common.pull_secret' \
     'node_config.bootstrap.quantity_per_zone' \
     'node_config.control_plane.quantity_per_zone' \
@@ -45,8 +42,19 @@ confirm_config_is_correct() {
   done
 }
 
+confirm_cluster_name_matches_regex() {
+  local regex
+  regex='[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*'
+  pf_log info "Checking that cluster name is valid: $(_cluster_name) [infra name: $(_cluster_infra_name)]"
+  grep -Eq "^$regex$" <<< "$(_cluster_name)" && return 0
+
+  error "Cluster name isn't valid: $(_cluster_name) (name must conform to regex '$regex'"
+  return 1
+}
+
 # won't export correctly if quoted
 # shellcheck disable=SC2046
 export $(log_into_aws) || exit 1
 confirm_config_is_correct
 confirm_route_53_public_zone_available
+confirm_cluster_name_matches_regex
