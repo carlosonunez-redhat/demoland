@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 _cluster_name() {
   printf "demoland-%s" "$(_get_top_level_environment_name | tr -dc '[:alnum:]')" |
-    head -c 26
+    head -c 18
 }
 
 _cluster_infra_name() {
