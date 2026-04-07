@@ -13,7 +13,7 @@ _rhcos_ami_id() {
 }
 
 _exec_openshift_install_aws() {
-  dir=$(_get_file_from_data_dir 'openshift-install')
+  dir=$(_openshift_install_dir)
   test -d "$dir" || mkdir -p "$dir"
   region="$(_get_from_config '.deploy.cloud_config.aws.networking.region')"
   cluster_user_ak=$(fail_if_nil \
