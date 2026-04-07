@@ -12,7 +12,7 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/aws.sh"
 
 expose_cluster_kubeconfig() {
-  expose_kubeconfig "$(cat "$(_get_file_from_data_dir "openshift-install/auth/kubeconfig")")"
+  expose_kubeconfig "$(cat "$(_get_file_from_openshift_install_dir 'auth/kubeconfig')")"
 }
 
 yay_success() {
@@ -24,7 +24,7 @@ yay_success() {
 $(print_oc_command get console cluster -o jsonpath='{.status.consoleURL}')"
     return 0
   fi
-  kubeadmin_password=$(cat "$(_get_file_from_data_dir 'openshift-install/auth/kubeadmin-password')")
+  kubeadmin_password=$(cat "$(_get_file_from_openshift_install_dir 'auth/kubeadmin-password')")
   info "Your OpenShift cluster is ready! Here are your login details:
 
 URL: $console_url

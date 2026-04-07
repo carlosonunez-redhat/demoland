@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 _cluster_name() {
   printf "demoland-%s" "$(_get_top_level_environment_name | tr -dc '[:alnum:]')" |
-    head -c 26
+    head -c 18
 }
 
 _cluster_infra_name() {
@@ -32,7 +32,7 @@ exec_oc() {
 }
 
 exec_oc_postinstall() {
-  _exec_oc "$(_get_file_from_data_dir 'openshift-install/auth/kubeconfig')" "$@"
+  _exec_oc "$(_get_file_from_openshift_install_dir 'auth/kubeconfig')" "$@"
 }
 
 print_oc_command() {

@@ -172,7 +172,7 @@ sync_bootstrap_ignition_files_with_s3_bucket() {
   _exec_aws s3 sync \
     --exclude '*' \
     --include '*.ign' \
-    "$(_get_file_from_data_dir 'openshift-install')" \
+    "$(_openshift_install_dir)"
     "s3://$(_cluster_ignition_files_bucket)"
 }
 

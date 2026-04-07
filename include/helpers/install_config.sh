@@ -2,8 +2,18 @@
 source "$(dirname "$0")/../include/helpers/errors.sh"
 source "$(dirname "$0")/../include/helpers/yaml.sh"
 
+_openshift_install_dir() {
+  printf '%s/%s' \
+    "$(_get_file_from_data_dir 'openshift-install')" \
+    "$(_cluster_name)"
+}
+
+_get_file_from_openshift_install_dir() {
+  printf '%s/%s' "$(_openshift_install_dir)" "$1"
+}
+
 _config_file_in_data_dir() {
-  printf '%s/openshift-install/install-config.yaml' "$(_get_file_from_data_dir)"
+  _get_file_from_openshift_install_dir 'install-config.yaml'
 }
 
 _config_file_dir() {
@@ -35,7 +45,7 @@ get_data_from_ignition_file() {
     error "Need to provide ignition type"
     return 1
   fi
-  ign_file="$(_get_file_from_data_dir "openshift-install/${ign_type}.ign")"
+  ign_file=$(_get_file_from_openshift_install_dir "${ign_type}.ign")
   if ! test -f "$ign_file"
   then
     error "Couldn't find ignition file: $ign_file"
