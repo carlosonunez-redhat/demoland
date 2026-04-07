@@ -40,8 +40,9 @@ delete_security_groups() {
     "Deleting security groups..."
 }
 
-delete_ignition_files() {
-  rm -rf /data/ignition
+delete_openshift_install_directory() {
+  info "Deleting openshift-install directory '$(_openshift_install_dir)'"
+  rm -rf "$(_openshift_install_dir)"
 }
 
 delete_ignition_bucket_from_s3() {
@@ -90,37 +91,144 @@ delete_ingress_dns_records() {
     "Deleting ingress DNS records..."
 }
 
-delete_router_lbs() {
+delete_router_resources() {
+  _delete_with_wait() {
+    attempts=0
+    max_attempts=180
+    terminated=false
+    while test "$attempts" -lt "$max_attempts"
+    do
+      lb=$(_exec_aws elb describe-load-balancers --load-balancer-names "$1" || true)
+      test -z "$lb" && return 0
+      if test "$terminated" == false
+      then
+        info "Deleting load balancer [$1] (attempt $attempts of $max_attempts)"
+        _exec_aws elb delete-load-balancer --load-balancer-name "$1"
+      else
+        info "Confirming that load balancer [$1] has been deleted \
+(attempt $attempts of $max_attempts)"
+      fi
+      sleep 1
+      attempts=$((attempts+1))
+    done
+  }
   _exec_aws resourcegroupstaggingapi get-resources \
     --tag-filters "Key=kubernetes.io/cluster/$(_cluster_infra_name),Values=owned" |
-  jq -r '.ResourceTagMappingList[].ResourceARN' |
-  while read -r arn
-  do
-    info "Deleting OpenShift router ELB resource [$arn]..."
-    resource_name=$(echo "$arn" | awk -F '/' '{print $NF}')
-    case "$arn" in
-      *loadbalancer*)
-        info "Deleting router load balancer [$resource_name]"
-        _exec_aws elb delete-load-balancer --load-balancer-name "$resource_name"
-        ;;
-      *security-group*)
-        info "Deleting router security group [$resource_name]"
-        _exec_aws ec2 delete-security-group --group-id "$resource_name"
-        ;;
-      *)
-        error "This resource has an unexpected type: $arn"
-        continue
-        ;;
-    esac
+    jq -r '.ResourceTagMappingList[].ResourceARN' |
+    sort -r |
+    while read -r arn
+    do
+      info "Deleting OpenShift router ELB resource [$arn]..."
+      resource_name=$(echo "$arn" | awk -F '/' '{print $NF}')
+      case "$arn" in
+        *loadbalancer*)
+          info "Deleting router load balancer [$resource_name]"
+          _delete_with_wait "$resource_name"
+          ;;
+        *security-group*)
+          info "Deleting router security group [$resource_name]"
+          _exec_aws ec2 delete-security-group --group-id "$resource_name"
+          ;;
+        *)
+          error "This resource has an unexpected type: $arn"
+          continue
+          ;;
+      esac
+    done
+}
+
+delete_extra_cluster_associated_machines() {
+  _terminate_with_wait() {
+    attempts=0
+    max_attempts=180
+    terminated=false
+    while test "$attempts" -lt "$max_attempts"
+    do
+      state=$(_exec_aws ec2 describe-instances --instance-id "$1" \
+        --query 'Reservations[0].Instances[0].State.Name' \
+        --output text)
+      test "$state" == terminated && break
+
+      if test "$terminated" == false
+      then
+        info "Deleting cluster-related node [$1] (attempt $attempts of $max_attempts)"
+        _exec_aws ec2 terminate-instances --instance-id "$1" && terminated=true
+      else
+        info "Confirming that cluster-related node [$1] has been terminated \
+(attempt $attempts of $max_attempts)"
+      fi
+      sleep 1
+      attempts=$((attempts+1))
+    done
+  }
+  _exec_aws ec2 describe-instances --filter "Name=tag:Name,Values=*$(_cluster_name)*" \
+    --query 'Reservations[*].Instances[*].InstanceId' \
+    --output text |
+  while read -r instance
+  do _terminate_with_wait "$instance" || return 1
   done
+}
+
+clear_extra_cluster_associated_sg_rules() {
+  _delete_rules_wait_until_deleted() {
+    local rules_deleted attempt max_attempts rules
+    attempt=0
+    max_attempts=60
+    rules_deleted=false
+    while test "$attempt" -lt "$max_attempts"
+    do
+      rules=$(_exec_aws ec2 describe-security-groups --group-ids "$1" |
+        jq -r '.SecurityGroups[].IpPermissions')
+      num_rules=$(jq -r length <<< "$rules")
+      test "$rules" == '[]' && break
+      if test "$rules_deleted" == false
+      then
+        info "Deleting $num_rules rules for cluster-related sg [$1] (attempt $attempt of $max_attempts)..."
+        _exec_aws ec2 revoke-security-group-ingress --group-id "$1" \
+          --ip-permissions "$rules" &&
+          rules_deleted=true
+      else
+        info "Waiting for $num_rules rule(s) for cluster-related sg [$1] to delete (attempt $attempt of $max_attempts)..."
+        sleep 1
+      fi
+      attempt=$((attempt+1))
+    done
+  }
+  local cluster_sgs_json cf_sgs_json all_sgs_json rules
+  cluster_sgs_json=$(_exec_aws ec2 describe-security-groups --filter "Name=tag:kubernetes.io/cluster/$(_cluster_infra_name),Values=owned" | jq -cr .)
+  cf_sgs_json=$(_exec_aws ec2 describe-security-groups --filter "Name=tag:aws:cloudformation:stack-name,Values=$(_aws_cf_stack_name)*" | jq -cr .)
+  all_sgs_json=$(echo "[$cluster_sgs_json,$cf_sgs_json]" | jq -cr flatten)
+  jq -r '.[].SecurityGroups[].GroupId' <<< "$all_sgs_json" |
+    while read -r sg
+    do
+      info "[$sg] Deleting rules..."
+      _delete_rules_wait_until_deleted "$sg" || return 1
+    done
+}
+
+delete_extra_cluster_associated_sgs() {
+  local cluster_sgs_json cf_sgs_json all_sgs_json rules
+  cluster_sgs_json=$(_exec_aws ec2 describe-security-groups --filter "Name=tag:kubernetes.io/cluster/$(_cluster_infra_name),Values=owned" | jq -cr .)
+  cf_sgs_json=$(_exec_aws ec2 describe-security-groups --filter "Name=tag:aws:cloudformation:stack-name,Values=$(_cluster_name)*" | jq -cr .)
+  all_sgs_json=$(echo "[$cluster_sgs_json,$cf_sgs_json]" | jq -cr flatten)
+  jq -r '.[].SecurityGroups[].GroupId' <<< "$all_sgs_json" |
+    while read -r sg
+    do
+      info "[$sg] Deleting group..."
+      _exec_aws ec2 delete-security-group --group-id "$sg"
+    done
 }
 
 
 export $(log_into_aws) || exit 1
 delete_worker_machines
 delete_control_plane_machines
+delete_bootstrap_machine
+delete_router_resources
+delete_extra_cluster_associated_machines
+clear_extra_cluster_associated_sg_rules
+delete_extra_cluster_associated_sgs
 delete_ingress_dns_records
-delete_router_lbs
 delete_aws_ec2_key_pair
 delete_security_groups
 delete_ignition_bucket_from_s3
@@ -129,4 +237,4 @@ delete_aws_vpc
 delete_cluster_iam_user
 delete_cluster_iam_user_policy
 delete_ssh_key
-delete_ignition_files
+delete_openshift_install_directory
