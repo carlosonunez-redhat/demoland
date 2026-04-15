@@ -36,6 +36,22 @@ upload_key_into_ec2() {
     --public-key-material "$(base64 -w 0 <<< "$pubkey")"
 }
 
+create_installation_manifests() {
+  info "Creating installation manifests"
+  _exec_openshift_install_aws create manifests
+}
+
+remove_default_machinesets_from_installation_manifests() {
+  for f in '99_openshift-cluster-api_master-machines' \
+    '99_openshift-machine-api_master-control-plane-machine-set' \
+    '99_openshift-cluster-api_worker-machineset'
+  do
+    info "Deleting manifests from install dir: $f"
+    find "$(_openshift_install_dir)/openshift" -type f -name "*$f*" \
+      -exec rm -rf {} \;
+  done
+}
+
 create_ignition_files() {
   info "Creating Red Hat CoreOS Ignition files"
   _exec_openshift_install_aws create ignition-configs || return 1
@@ -172,7 +188,7 @@ sync_bootstrap_ignition_files_with_s3_bucket() {
   _exec_aws s3 sync \
     --exclude '*' \
     --include '*.ign' \
-    "$(_openshift_install_dir)"
+    "$(_openshift_install_dir)" \
     "s3://$(_cluster_ignition_files_bucket)"
 }
 
@@ -331,6 +347,13 @@ create_control_plane_machines() {
 
 create_worker_machines() {
   set -e
+  num_workers="$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"
+  if test -z "$num_workers" || test "$num_workers" -eq 0
+  then
+    info "Config for this environment requested no workers; continuing."
+    return 0
+  fi
+
   sg_id=$(fail_if_nil "$(_get_param_from_aws_cfn_stack security 'WorkerSecurityGroupId')" \
     "Master security group ID not found")
   private_subnets=$(fail_if_nil "$(_get_param_from_aws_cfn_stack vpc 'PrivateSubnetIds')" \
@@ -344,28 +367,35 @@ create_worker_machines() {
   instance_profile_name=$(fail_if_nil \
     "$(_get_param_from_aws_cfn_stack security WorkerInstanceProfile)" \
     "Couldn't obtain instance profile for primary node.")
-  params=(
-    'InfrastructureName' "$(_cluster_infra_name)"
-    'RhcosAmi' "$(fail_if_nil "$(_rhcos_ami_id)" "CoreOS AMI ID not found")"
-    'Subnet0' "$(cut -f1 -d ',' <<< "$private_subnets")"
-    'Subnet1' "$(cut -f2 -d ',' <<< "$private_subnets")"
-    'Subnet2' "$(cut -f3 -d ',' <<< "$private_subnets")"
-    'WorkerSecurityGroupId' "$sg_id"
-    'WorkerInstanceType' "$(_get_from_config '.deploy.node_config.workers.instance_type')"
-    'CertificateAuthorities' "$cert_authority"
-    'WorkerInstanceProfileName' "$instance_profile_name"
-    'IgnitionLocation' "https://${api_server_fqdn}:22623/config/worker"
-    'NumWorkers' "$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"
-  )
-  params_json=$(_create_aws_cf_params_json "${params[@]}")
-  _create_aws_resources_from_cfn_stack_with_caps \
-    worker_nodes "$params_json" \
-    "CAPABILITY_NAMED_IAM" \
-    "Creating the workers..."
+  for idx in $(seq 0 "$num_workers")
+  do
+    params=(
+      'InfrastructureName' "$(_cluster_infra_name)"
+      'RhcosAmi' "$(fail_if_nil "$(_rhcos_ami_id)" "CoreOS AMI ID not found")"
+      'Subnet0' "$(cut -f1 -d ',' <<< "$private_subnets")"
+      'Subnet1' "$(cut -f2 -d ',' <<< "$private_subnets")"
+      'Subnet2' "$(cut -f3 -d ',' <<< "$private_subnets")"
+      'WorkerSecurityGroupId' "$sg_id"
+      'WorkerInstanceType' "$(_get_from_config '.deploy.node_config.workers.instance_type')"
+      'CertificateAuthorities' "$cert_authority"
+      'WorkerInstanceProfileName' "$instance_profile_name"
+      'IgnitionLocation' "https://${api_server_fqdn}:22623/config/worker"
+      'NumWorkers' "$num_workers"
+    )
+    params_json=$(_create_aws_cf_params_json "${params[@]}")
+    _create_aws_resources_from_cfn_stack_with_caps \
+      worker_nodes "$params_json" \
+      "CAPABILITY_NAMED_IAM" \
+      "Creating $num_workers workers..."
+  done
 }
 
 wait_for_bootstrap_complete() {
   _exec_openshift_install_aws wait-for bootstrap-complete --log-level debug
+}
+
+wait_for_install_to_complete() {
+  _exec_openshift_install_aws wait-for install-complete --log-level debug
 }
 
 wait_for_worker_csrs_to_register() {
@@ -462,7 +492,10 @@ create_cluster_iam_user
 create_vpc
 create_networking_resources
 create_security_group_rules
+create_ingress_dns_records
 create_openshift_install_config_file
+create_installation_manifests
+remove_default_machinesets_from_installation_manifests
 create_ignition_bucket_in_s3
 create_ignition_files
 sync_bootstrap_ignition_files_with_s3_bucket
@@ -473,5 +506,5 @@ wait_for_bootstrap_complete
 wait_for_worker_csrs_to_register
 accept_pending_csrs
 wait_for_workers_to_become_ready
-create_ingress_dns_records
+wait_for_install_to_complete
 delete_bootstrap_machine
