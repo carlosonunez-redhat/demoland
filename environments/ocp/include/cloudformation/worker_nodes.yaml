@@ -124,6 +124,8 @@ Resources:
       Tags:
       - Key: !Join ["", ["kubernetes.io/cluster/", !Ref InfrastructureName]]
         Value: "shared"
+      - Key: Name
+        Value: !Join ["-", [!Ref InfrastructureName, "worker0"] ]
   Worker1:
     Condition: CreateTwoWorkers
     Type: AWS::EC2::Instance
@@ -152,6 +154,8 @@ Resources:
       Tags:
       - Key: !Join ["", ["kubernetes.io/cluster/", !Ref InfrastructureName]]
         Value: "shared"
+      - Key: Name
+        Value: !Join ["-", [!Ref InfrastructureName, "worker1"] ]
   Worker2:
     Condition: CreateThreeWorkers
     Type: AWS::EC2::Instance
@@ -180,7 +184,8 @@ Resources:
       Tags:
       - Key: !Join ["", ["kubernetes.io/cluster/", !Ref InfrastructureName]]
         Value: "shared"
-
+      - Key: Name
+        Value: !Join ["-", [!Ref InfrastructureName, "worker2" ]]
 Outputs:
   PrivateIP:
     Description: The compute node private IP address.
