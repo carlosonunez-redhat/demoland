@@ -50,7 +50,6 @@ Parameters:
   MasterInstanceType:
     Default: m5.xlarge
     Type: String
-
   AutoRegisterELB:
     Default: "yes"
     AllowedValues:
@@ -160,6 +159,8 @@ Resources:
       Tags:
       - Key: !Join ["", ["kubernetes.io/cluster/", !Ref InfrastructureName]]
         Value: "shared"
+      - Key: Name
+        Value: !Join ["-", [!Ref InfrastructureName, "cp0"] ]
 
   RegisterMaster0:
     Condition: DoRegistration
@@ -212,6 +213,8 @@ Resources:
       Tags:
       - Key: !Join ["", ["kubernetes.io/cluster/", !Ref InfrastructureName]]
         Value: "shared"
+      - Key: Name
+        Value: !Join ["-", [!Ref InfrastructureName, "cp1"] ]
 
   RegisterMaster1:
     Condition: DoRegistration
@@ -264,6 +267,8 @@ Resources:
       Tags:
       - Key: !Join ["", ["kubernetes.io/cluster/", !Ref InfrastructureName]]
         Value: "shared"
+      - Key: Name
+        Value: !Join ["-", [!Ref InfrastructureName, "cp2"] ]
 
   RegisterMaster2:
     Condition: DoRegistration
