@@ -398,49 +398,34 @@ wait_for_install_to_complete() {
   _exec_openshift_install_aws wait-for install-complete --log-level debug
 }
 
-wait_for_worker_csrs_to_register() {
-  local num_worker_nodes max_attempts num_worker_nodes ready_workers
-  num_worker_nodes=$(_exec_aws ec2 describe-instances \
-    --query 'Reservations[].Instances[?(State.Name == `running`) &&
-(@.Tags[?Key==`aws:cloudformation:logical-id` &&
-contains(Value, `Worker`)])].InstanceId' --output text | wc -l)
-  ready_workers=$(exec_oc_postinstall get node | grep -E ' Ready.*worker ' | wc -l)
-  test "$ready_workers" == "$num_worker_nodes" && return 0
-
-  approved_csrs=$(exec_oc_postinstall get csr | grep -E 'node-bootstrapper.*Approved' | wc -l)
-  test "$approved_csrs" -ge "$num_worker_nodes" && return 0
-  num_worker_nodes=$(_exec_aws ec2 describe-instances \
-    --query 'Reservations[].Instances[?(State.Name == `running`) && 
-(@.Tags[?Key==`aws:cloudformation:logical-id` &&
-contains(Value, `Worker`)])].InstanceId' --output text | wc -l)
-  max_attempts=100
-  while test "$max_attempts" -ne 0
+wait_for_and_register_worker_node_csrs() {
+  local attempts max_attempts
+  max_attempts=180
+  attempts=0
+  while test "$attempts" -lt "$max_attempts"
   do
-    num_registered=$(exec_oc_postinstall get csr |
-      grep -E 'node-bootstrapper.*Pending' |
-      wc -l)
-    test "$num_registered" -ge "$num_worker_nodes" && return 0
-    info "[$((100-max_attempts))/100] Waiting for workers to generate CSRs with control plane ($num_registered registered, want $num_worker_nodes or more)"
-    max_attempts=$((max_attempts-1))
+    approved_csrs="$(exec_oc_postinstall get csr 2>&1 |
+      grep -v "No resources found" |
+      grep -E '(node-bootstrapper|kubelet-serving).*Approved' |
+      cut -f1 -d ' ')"
+    num_approved=$(echo -n "$approved_csrs" | wc -l)
+    pending_csrs="$(exec_oc_postinstall get csr 2>&1 |
+      grep -v "No resources found" |
+      grep -E '(node-bootstrapper|kubelet-serving).*Pending' |
+      cut -f1 -d ' ')"
+    num_pending=$(echo -n "$pending_csrs" | wc -l)
+    info "[Attempt $attempts/$max_attempts] Registering worker node CSRs: \
+approved: $num_approved, pending: $num_pending"
+    test "$num_approved" -gt 0 && test "$num_pending" -eq 0 && return 0
+    echo "$pending_csrs" |
+      while read -r csr
+      do
+        info "--> Approving pending CSR [$csr]"
+        exec_oc_postinstall adm certificate approve "$csr"
+      done
+    attempts=$((attempts+1))
     sleep 1
   done
-}
-
-accept_pending_csrs() {
-  csrs=$(exec_oc_postinstall get csr 2>&1 |
-    grep -v "No resources found" |
-    grep -E 'node-bootstrapper.*Pending' |
-    cut -f1 -d ' ')
-  test -z "$csrs" && return 0
-  while read -r csr
-  do
-    info "Approving worker node CSR '$csr'"
-    if ! exec_oc_postinstall adm certificate approve "$csr"
-    then
-      error "Failed to approve '$csr'"
-      return 1
-    fi
-  done < <(echo "$csrs")
 }
 
 wait_for_workers_to_become_ready() {
@@ -487,6 +472,7 @@ export $(log_into_aws) || exit 1
 create_ssh_key
 load_keys_into_ssh_agent
 upload_key_into_ec2
+create_ignition_bucket_in_s3
 create_cluster_iam_user_policies
 create_cluster_iam_user
 create_vpc
@@ -495,15 +481,13 @@ create_security_group_rules
 create_openshift_install_config_file
 create_installation_manifests
 remove_default_machinesets_from_installation_manifests
-create_ignition_bucket_in_s3
 create_ignition_files
 sync_bootstrap_ignition_files_with_s3_bucket
 create_bootstrap_machine
 create_control_plane_machines
 create_worker_machines
 wait_for_bootstrap_complete
-wait_for_worker_csrs_to_register
-accept_pending_csrs
+wait_for_and_register_worker_node_csrs
 wait_for_workers_to_become_ready
 wait_for_install_to_complete
 create_ingress_dns_records
