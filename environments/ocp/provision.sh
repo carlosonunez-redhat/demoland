@@ -399,32 +399,57 @@ wait_for_install_to_complete() {
 }
 
 wait_for_and_register_worker_node_csrs() {
-  local attempts max_attempts
-  max_attempts=180
-  attempts=0
-  while test "$attempts" -lt "$max_attempts"
-  do
-    approved_csrs="$(exec_oc_postinstall get csr 2>&1 |
+  _get_csrs() {
+    local query state
+    query=$1
+    state=$2
+    exec_oc_postinstall get csr 2>&1 |
       grep -v "No resources found" |
-      grep -E '(node-bootstrapper|kubelet-serving).*Approved' |
-      cut -f1 -d ' ')"
-    num_approved=$(echo -n "$approved_csrs" | wc -l)
-    pending_csrs="$(exec_oc_postinstall get csr 2>&1 |
-      grep -v "No resources found" |
-      grep -E '(node-bootstrapper|kubelet-serving).*Pending' |
-      cut -f1 -d ' ')"
-    num_pending=$(echo -n "$pending_csrs" | wc -l)
-    info "[Attempt $attempts/$max_attempts] Registering worker node CSRs: \
-approved: $num_approved, pending: $num_pending"
-    test "$num_approved" -gt 0 && test "$num_pending" -eq 0 && return 0
-    echo "$pending_csrs" |
+      grep -E "${query}.*$state" |
+      cut -f1 -d ' '
+  }
+  _num_csrs() {
+    echo -n "$1" | wc -l
+  }
+  _approve_csrs() {
+    echo -n "$1" |
       while read -r csr
       do
-        info "--> Approving pending CSR [$csr]"
+        info "--> Approving pending '$2' CSR [$csr]"
         exec_oc_postinstall adm certificate approve "$csr"
       done
+  }
+  local attempts max_attempts successes successes_required
+  successes_required=10
+  max_attempts=180
+  attempts=0
+  successes=0
+  while test "$attempts" -lt "$max_attempts"
+  do
+    test "$successes" == "$successes_required" && return 0
+
+    approved_bootstrapper_csrs=$(_get_csrs 'node-bootstrapper' 'Approved')
+    approved_serving_csrs=$(_get_csrs 'kubelet-serving' 'Approved')
+    pending_bootstrapper_csrs=$(_get_csrs 'node-bootstrapper' 'Pending')
+    pending_serving_csrs=$(_get_csrs 'kubelet-serving' 'Pending')
+    info "[Attempt $attempts/$max_attempts] Registering worker node CSRs:
+      approved (bootstrapper): $(_num_csrs "$approved_bootstrapper_csrs")
+      approved (kubelet serving): $(_num_csrs "$approved_serving_csrs")
+      pending (bootstrapper): $(_num_csrs "$pending_bootstrapper_csrs")
+      pending (kubelet serving): $(_num_csrs "$pending_serving_csrs")
+      zero-CSR confirmations remaining: $((successes_required-successes))"
+    if test "$(_num_csrs pending_bootstrapper_csrs)" == 0 &&
+       test "$(_num_csrs pending_serving_csrs)" == 0
+    then
+      successes=$((successes+1))
+      sleep 0.5
+      continue
+    else
+      successes=0
+    fi
+    _approve_csrs "$pending_bootstrapper_csrs" 'bootstrapper'
+    _approve_csrs "$pending_serving_csrs" 'kubelet serving'
     attempts=$((attempts+1))
-    sleep 1
   done
 }
 
