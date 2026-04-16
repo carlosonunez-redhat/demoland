@@ -3,6 +3,7 @@ set -e
 source "$INCLUDE_DIR/helpers/aws.sh"
 source "$INCLUDE_DIR/helpers/config.sh"
 source "$INCLUDE_DIR/helpers/data.sh"
+source "$INCLUDE_DIR/helpers/install_config.sh"
 source "$INCLUDE_DIR/helpers/logging.sh"
 source "$INCLUDE_DIR/helpers/install_config.sh"
 source "$INCLUDE_DIR/helpers/ocp.sh"
@@ -267,8 +268,8 @@ delete_ingress_dns_records
 delete_worker_machines
 delete_control_plane_machines
 delete_bootstrap_machine
-delete_router_resources
 delete_extra_cluster_associated_machines
+delete_router_resources
 clear_extra_cluster_associated_sg_rules
 delete_extra_cluster_associated_sgs
 delete_ingress_dns_records

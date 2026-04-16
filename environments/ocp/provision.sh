@@ -492,7 +492,6 @@ create_cluster_iam_user
 create_vpc
 create_networking_resources
 create_security_group_rules
-create_ingress_dns_records
 create_openshift_install_config_file
 create_installation_manifests
 remove_default_machinesets_from_installation_manifests
@@ -507,4 +506,5 @@ wait_for_worker_csrs_to_register
 accept_pending_csrs
 wait_for_workers_to_become_ready
 wait_for_install_to_complete
+create_ingress_dns_records
 delete_bootstrap_machine
