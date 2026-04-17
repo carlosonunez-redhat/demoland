@@ -12,12 +12,17 @@ controlPlane:
   additionalSecurityGroupIDs: #@ data.values.control_plane_security_groups
   iamProfile: #@ data.values.control_plane_instance_profile
 compute:
+  #@ if data.values.disable_workers == "true"
+  - name: worker
+    replicas: 0
+  #@ else:
   - zones: #@ data.values.worker_node_azs
     instanceType: #@ data.values.worker_node_instance_type
     amiID: #@ data.values.rhcos_ami_id
     additionalSecurityGroupIDs: #@ data.values.worker_security_groups
     iamProfile: #@ data.values.worker_instance_profile
     name: worker
+  #@ end
 platform:
   aws:
     region: #@ data.values.aws_region

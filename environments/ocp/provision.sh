@@ -204,28 +204,52 @@ create_openshift_install_config_file() {
   local values file external_subnet_ids internal_subnet_ids
   external_subnet_ids=$(_subnet_ids_as_yaml_list "$(_get_param_from_aws_cfn_stack vpc 'PublicSubnetIds')")
   internal_subnet_ids=$(_subnet_ids_as_yaml_list "$(_get_param_from_aws_cfn_stack vpc 'PrivateSubnetIds')")
-  values=(
-    ssh_key "$(fail_if_nil "$(ssh-keygen -yf "$(_get_file_from_data_dir 'id_rsa')")" \
-      "Couldn't obtain public key from SSH private key.")"
-    base_domain "$(_hosted_zone_name)"
-    aws_hosted_zone_id "$(_hosted_zone_id)"
-    rhcos_ami_id "$(_rhcos_ami_id)"
-    cluster_name "$(_cluster_name)"
-    aws_region "$(_get_from_config '.deploy.cloud_config.aws.networking.region')"
-    pull_secret "$(_get_from_config '.deploy.node_config.common.pull_secret' | as_json_string)"
-    control_plane_node_azs "$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones.control_plane[]' | as_yaml_list)"
-    control_plane_node_instance_type "$(_get_from_config '.deploy.node_config.control_plane.instance_type')"
-    control_plane_security_groups "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId' | as_yaml_list)"
-    worker_node_azs "$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones.workers[]'|
-      as_yaml_list)"
-    worker_node_instance_type "$(_get_from_config '.deploy.node_config.workers.instance_type')"
-    worker_security_groups "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId' | as_yaml_list)"
-    bootstrap_node_subnet_id "$(_bootstrap_subnet)"
-    control_plane_instance_profile "$(_get_param_from_aws_cfn_stack security 'MasterInstanceProfile')"
-    worker_instance_profile "$(_get_param_from_aws_cfn_stack security 'WorkerInstanceProfile')"
-    external_subnet_ids "$external_subnet_ids"
-    internal_subnet_ids "$internal_subnet_ids"
-  )
+  num_workers="$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"
+  if test "$num_workers" -eq 0
+  then
+    values=(
+      ssh_key "$(fail_if_nil "$(ssh-keygen -yf "$(_get_file_from_data_dir 'id_rsa')")" \
+        "Couldn't obtain public key from SSH private key.")"
+      base_domain "$(_hosted_zone_name)"
+      aws_hosted_zone_id "$(_hosted_zone_id)"
+      rhcos_ami_id "$(_rhcos_ami_id)"
+      cluster_name "$(_cluster_name)"
+      aws_region "$(_get_from_config '.deploy.cloud_config.aws.networking.region')"
+      pull_secret "$(_get_from_config '.deploy.node_config.common.pull_secret' | as_json_string)"
+      control_plane_node_azs "$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones.control_plane[]' | as_yaml_list)"
+      control_plane_node_instance_type "$(_get_from_config '.deploy.node_config.control_plane.instance_type')"
+      control_plane_security_groups "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId' | as_yaml_list)"
+      bootstrap_node_subnet_id "$(_bootstrap_subnet)"
+      control_plane_instance_profile "$(_get_param_from_aws_cfn_stack security 'MasterInstanceProfile')"
+      external_subnet_ids "$external_subnet_ids"
+      internal_subnet_ids "$internal_subnet_ids"
+      disable_workers "true"
+    )
+  else
+    values=(
+      ssh_key "$(fail_if_nil "$(ssh-keygen -yf "$(_get_file_from_data_dir 'id_rsa')")" \
+        "Couldn't obtain public key from SSH private key.")"
+      base_domain "$(_hosted_zone_name)"
+      aws_hosted_zone_id "$(_hosted_zone_id)"
+      rhcos_ami_id "$(_rhcos_ami_id)"
+      cluster_name "$(_cluster_name)"
+      aws_region "$(_get_from_config '.deploy.cloud_config.aws.networking.region')"
+      pull_secret "$(_get_from_config '.deploy.node_config.common.pull_secret' | as_json_string)"
+      control_plane_node_azs "$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones.control_plane[]' | as_yaml_list)"
+      control_plane_node_instance_type "$(_get_from_config '.deploy.node_config.control_plane.instance_type')"
+      control_plane_security_groups "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId' | as_yaml_list)"
+      worker_node_azs "$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones.workers[]'|
+        as_yaml_list)"
+      worker_node_instance_type "$(_get_from_config '.deploy.node_config.workers.instance_type')"
+      worker_security_groups "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId' | as_yaml_list)"
+      bootstrap_node_subnet_id "$(_bootstrap_subnet)"
+      control_plane_instance_profile "$(_get_param_from_aws_cfn_stack security 'MasterInstanceProfile')"
+      worker_instance_profile "$(_get_param_from_aws_cfn_stack security 'WorkerInstanceProfile')"
+      external_subnet_ids "$external_subnet_ids"
+      internal_subnet_ids "$internal_subnet_ids"
+      disable_workers "false"
+    )
+  fi
   render_and_save_install_config "${values[@]}"
 }
 
@@ -350,7 +374,7 @@ create_worker_machines() {
   num_workers="$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"
   if test -z "$num_workers" || test "$num_workers" -eq 0
   then
-    info "Config for this environment requested no workers; continuing."
+    info "No workers in this environment; control plane will be schedulable"
     return 0
   fi
 
@@ -409,10 +433,10 @@ wait_for_and_register_worker_node_csrs() {
       cut -f1 -d ' '
   }
   _num_csrs() {
-    echo -n "$1" | wc -l
+    grep -Evc '^$' <<< "$1"
   }
   _approve_csrs() {
-    echo -n "$1" |
+    grep -Ev '^$' <<< "$1" |
       while read -r csr
       do
         info "--> Approving pending '$2' CSR [$csr]"
@@ -438,8 +462,8 @@ wait_for_and_register_worker_node_csrs() {
       pending (bootstrapper): $(_num_csrs "$pending_bootstrapper_csrs")
       pending (kubelet serving): $(_num_csrs "$pending_serving_csrs")
       zero-CSR confirmations remaining: $((successes_required-successes))"
-    if test "$(_num_csrs pending_bootstrapper_csrs)" == 0 &&
-       test "$(_num_csrs pending_serving_csrs)" == 0
+    if test "$(_num_csrs "$pending_bootstrapper_csrs")" == 0 &&
+       test "$(_num_csrs "$pending_serving_csrs")" == 0
     then
       successes=$((successes+1))
       sleep 0.5
