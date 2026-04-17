@@ -135,7 +135,6 @@ _create_component_kustomization environment component:
 
 _install_component environment component:
   env=$(just _resolved_environment_name '{{ environment }}'); \
-  set -x; \
   just _log info "[postinstall] Installing component '{{ component }}' in environment '$env'"; \
   {{ container_bin }} run --rm \
     -v "$(just _container_postinstall_vol '{{ environment }}'):/vol" \
