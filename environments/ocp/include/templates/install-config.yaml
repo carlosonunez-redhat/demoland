@@ -12,7 +12,7 @@ controlPlane:
   additionalSecurityGroupIDs: #@ data.values.control_plane_security_groups
   iamProfile: #@ data.values.control_plane_instance_profile
 compute:
-  #@ if data.values.disable_workers == "true"
+  #@ if data.values.disable_workers == "true":
   - name: worker
     replicas: 0
   #@ else:

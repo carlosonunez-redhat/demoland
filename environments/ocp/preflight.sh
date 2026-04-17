@@ -65,9 +65,18 @@ zero, then, in your environment, add a MachineSet with a single replica in it"
   return 1
 }
 
+confirm_control_plane_nodes_valid() {
+  pf_log info "Checking that control plane is set to one or three nodes"
+  num_nodes="$(_get_from_config '.deploy.node_config.control_plane.quantity_per_zone')"
+  { test "$num_nodes" -eq 1 || test "$num_nodes" -eq 3; } && return 0
+  error "You want '$num_nodes' control plane nodes, but only one or three are supported."
+  return 1
+}
+
 # won't export correctly if quoted
 # shellcheck disable=SC2046
 confirm_config_is_correct
 confirm_route_53_public_zone_available
 confirm_cluster_name_matches_regex
 confirm_more_than_two_workers_if_greater_than_zero
+confirm_control_plane_nodes_valid
