@@ -323,16 +323,6 @@ create_control_plane_machines() {
   int_svc_target_group_arn=$(fail_if_nil \
     "$(_get_param_from_aws_cfn_stack networking 'InternalServiceTargetGroupArn')" \
     'Internal service NLB target group ARN not found')
-  private_hosted_zone_id=$(fail_if_nil \
-    "$(_get_param_from_aws_cfn_stack networking 'PrivateHostedZoneId')" \
-    "Private hosted zone ID not found.")
-  private_hosted_zone_name=$(_exec_aws route53 get-hosted-zone --id "$private_hosted_zone_id" --query 'HostedZone.Name'\
-    --output text)
-  if test -z "$private_hosted_zone_name"
-  then
-    error "Hosted zone name not found from ID $private_hosted_zone_id"
-    return 1
-  fi
   cert_authority=$(get_data_from_ignition_file master '.ignition.security.tls.certificateAuthorities[0].source')
   if test -z "$cert_authority"
   then
@@ -354,8 +344,6 @@ create_control_plane_machines() {
     'ExternalApiTargetGroupArn' "$ext_api_target_group_arn"
     'InternalApiTargetGroupArn' "$int_api_target_group_arn"
     'InternalServiceTargetGroupArn' "$int_svc_target_group_arn"
-    'PrivateHostedZoneId' "$private_hosted_zone_id"
-    'PrivateHostedZoneName' "$private_hosted_zone_name"
     'Master0Subnet' "$(cut -f1 -d ',' <<< "$private_subnets")"
     'Master1Subnet' "$(cut -f2 -d ',' <<< "$private_subnets")"
     'Master2Subnet' "$(cut -f3 -d ',' <<< "$private_subnets")"
@@ -495,7 +483,17 @@ contains(Value, `Worker`)])].InstanceId' --output text | wc -l)
 }
 
 create_ingress_dns_records() {
-  local router_elb_hosted_zone_id
+  local router_elb_hosted_zone_id private_hosted_zone_id private_hosted_zone_name
+  private_hosted_zone_id=$(fail_if_nil \
+    "$(_get_param_from_aws_cfn_stack networking 'PrivateHostedZoneId')" \
+    "Private hosted zone ID not found.")
+  private_hosted_zone_name=$(_exec_aws route53 get-hosted-zone --id "$private_hosted_zone_id" --query 'HostedZone.Name'\
+    --output text | sed -E 's/\.$//')
+  if test -z "$private_hosted_zone_name"
+  then
+    error "Hosted zone name not found from ID $private_hosted_zone_id"
+    return 1
+  fi
   router_elb_fqdn=$(_cluster_router_fqdn) || return 1
   router_elb_hosted_zone_id=$(_exec_aws elb describe-load-balancers |
     jq -r '.LoadBalancerDescriptions[] | select(.DNSName == "'"$router_elb_fqdn"'").CanonicalHostedZoneNameID') || return 1
@@ -504,7 +502,9 @@ create_ingress_dns_records() {
     'HostedZoneId' "$(_hosted_zone_id)"
     'HostedZoneName' "$(_hosted_zone_name)"
     'RouterELBHostedZoneId' "$router_elb_hosted_zone_id"
-    'RouterELBFQDN' "$(_cluster_router_fqdn)"
+    'RouterELBFQDN' "$(_cluster_router_fqdn)."
+    'PrivateHostedZoneId' "$private_hosted_zone_id"
+    'PrivateHostedZoneName' "$private_hosted_zone_name"
   )
   params_json=$(_create_aws_cf_params_json "${params[@]}")
   _create_aws_resources_from_cfn_stack_with_caps ingress "$params_json" \
