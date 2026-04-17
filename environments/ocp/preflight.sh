@@ -67,7 +67,6 @@ zero, then, in your environment, add a MachineSet with a single replica in it"
 
 # won't export correctly if quoted
 # shellcheck disable=SC2046
-export $(log_into_aws) || exit 1
 confirm_config_is_correct
 confirm_route_53_public_zone_available
 confirm_cluster_name_matches_regex

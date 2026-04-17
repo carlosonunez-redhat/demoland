@@ -3,12 +3,14 @@ source "$(dirname "$0")/../include/helpers/cloud_creds.sh"
 SESSION_FILE=/data/aws_session
 
 _exec_aws() {
+  export $(log_into_aws)
   AWS_PAGER="" aws "$@"
 }
 
 _aws_region() {
   _get_cloud_cred 'aws.sts' aws_default_region || return 1
 }
+
 
 _aws_sts_assumerole() {
   local ak sk role_arn external_id
@@ -19,11 +21,13 @@ _aws_sts_assumerole() {
   export AWS_ACCESS_KEY_ID="$ak"
   export AWS_SECRET_ACCESS_KEY="$sk"
   export AWS_DEFAULT_REGION="$(_aws_region)"
+  export AWS_SESSION_TOKEN=""
   info "[aws] Assuming role [$role_arn] using access key [$ak]"
-  _exec_aws sts assume-role --role-arn "$role_arn" \
+  AWS_PAGER="" aws sts assume-role --role-arn "$role_arn" \
     --external-id "$external_id" \
     --role-session-name "session-$(date +%s)"
 }
+
 log_into_aws() {
   if test -f "$SESSION_FILE"
   then

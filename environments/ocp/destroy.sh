@@ -261,7 +261,6 @@ delete_extra_cluster_associated_sgs() {
 }
 
 
-export $(log_into_aws) || exit 1
 delete_ingress_dns_records
 delete_worker_machines
 delete_control_plane_machines
