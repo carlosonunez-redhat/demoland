@@ -65,11 +65,9 @@ EOF
   fi
   for sg_info in $sg_list
   do
-    set -x
     sg_id=$(jq -r '.id' <<< "$sg_info")
     sg_rule=$(jq -cr '.rule' <<< "$sg_info")
     _delete_sg_rules_wait_until_deleted "$sg_id" "[$sg_rule]"
-    set +x
   done
 }
 
