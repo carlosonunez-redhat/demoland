@@ -22,6 +22,8 @@ contains(Value, `Master`)])].InstanceId' --output text | wc -l)
 
 worker_nodes_exist() {
   num_worker_nodes_want="$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"
+  { test -z "$num_worker_nodes_want" || test "$num_worker_nodes_want" -eq 0; } && return 0
+
   num_worker_nodes_got=$(_exec_aws ec2 describe-instances \
     --query 'Reservations[].Instances[?(State.Name == `running`) &&
 (@.Tags[?Key==`aws:cloudformation:logical-id` &&
