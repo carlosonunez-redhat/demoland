@@ -11,6 +11,38 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/aws.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/ocp.sh"
 
+control_plane_nodes_exist() {
+  num_worker_nodes_want="$(_get_from_config '.deploy.node_config.control_plane.quantity_per_zone')"
+  num_worker_nodes_got=$(_exec_aws ec2 describe-instances \
+    --query 'Reservations[].Instances[?(State.Name == `running`) &&
+(@.Tags[?Key==`aws:cloudformation:logical-id` &&
+contains(Value, `Master`)])].InstanceId' --output text | wc -l)
+  test "$num_worker_nodes_got" == "$num_worker_nodes_want"
+}
+
+worker_nodes_exist() {
+  num_worker_nodes_want="$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"
+  num_worker_nodes_got=$(_exec_aws ec2 describe-instances \
+    --query 'Reservations[].Instances[?(State.Name == `running`) &&
+(@.Tags[?Key==`aws:cloudformation:logical-id` &&
+contains(Value, `Worker`)])].InstanceId' --output text | wc -l)
+  test "$num_worker_nodes_got" == "$num_worker_nodes_want"
+}
+
+create_installconfig_data() {
+  _ignition_files_present() {
+    for t in master worker bootstrap
+    do
+      test -f "$(_get_file_from_openshift_install_dir "$t.ign")" || return 1
+    done
+  }
+  { control_plane_nodes_exist && worker_nodes_exist; } && return 1
+  _ignition_files_present || return 0
+  { install_config_data_stale && { ! control_plane_nodes_exist && ! worker_nodes_exist ; } ; } && return 0
+  warning "Install config data is stale but cluster is in an inconsistent state; keeping current data for safety"
+  return 1
+}
+
 create_ssh_key() {
   f="$(_get_file_from_data_dir 'id_rsa')"
   test -f "$f" && test "$(stat -c %a "$f")" -eq 600 && return 0
@@ -37,11 +69,21 @@ upload_key_into_ec2() {
 }
 
 create_installation_manifests() {
+  if ! create_installconfig_data
+  then
+    info "Skipping creating installation manifests"
+    return 0
+  fi
   info "Creating installation manifests"
   _exec_openshift_install_aws create manifests
 }
 
 remove_default_machinesets_from_installation_manifests() {
+  if ! create_installconfig_data
+  then
+    info "Skipping openshift install manifest modification"
+    return 0
+  fi
   for f in '99_openshift-cluster-api_master-machines' \
     '99_openshift-machine-api_master-control-plane-machine-set' \
     '99_openshift-cluster-api_worker-machineset'
@@ -53,6 +95,11 @@ remove_default_machinesets_from_installation_manifests() {
 }
 
 create_ignition_files() {
+  if ! create_installconfig_data
+  then
+    info "Skipping creating Red Hat CoreOS ignition files"
+    return 0
+  fi
   info "Creating Red Hat CoreOS Ignition files"
   _exec_openshift_install_aws create ignition-configs || return 1
   for file in bootstrap master worker
@@ -410,6 +457,33 @@ wait_for_install_to_complete() {
   _exec_openshift_install_aws wait-for install-complete --log-level debug
 }
 
+wait_for_first_worker_csr() {
+  done_file="$(_get_file_from_openshift_install_dir '.first_worker_joined')"
+  test -f "$done_file" && return 0
+
+  attempts=0
+  max_attempts=180
+  while test "$attempts" -lt "$max_attempts"
+  do
+    info "[Attempt $attempts/$max_attempts] Waiting for the first worker node bootstrapper CSR to appear"
+    set +e
+    results=$(exec_oc_postinstall get csr 2>&1 |
+      grep -v "No resources found" |
+      grep -E "node-bootstrapper.*Pending" |
+      cut -f1 -d ' ')
+    num_results=$(grep -Evc '^$' <<< "$results")
+    set -e
+    if test "$num_results" -gt 0
+    then
+      touch "$done_file"
+      return 0
+    fi
+    attempts=$((attempts+1))
+    sleep 1
+  done
+  return 1
+}
+
 wait_for_and_register_worker_node_csrs() {
   _get_csrs() {
     local query state
@@ -431,6 +505,8 @@ wait_for_and_register_worker_node_csrs() {
         exec_oc_postinstall adm certificate approve "$csr"
       done
   }
+  test -f "$(_get_file_from_openshift_install_dir '.csrs_accepted')" && return 0
+
   local attempts max_attempts successes successes_required
   successes_required=10
   max_attempts=180
@@ -438,7 +514,11 @@ wait_for_and_register_worker_node_csrs() {
   successes=0
   while test "$attempts" -lt "$max_attempts"
   do
-    test "$successes" == "$successes_required" && return 0
+    if test "$successes" == "$successes_required"
+    then
+      touch "$(_get_file_from_openshift_install_dir '.csrs_accepted')"
+      return 0
+    fi
 
     approved_bootstrapper_csrs=$(_get_csrs 'node-bootstrapper' 'Approved')
     approved_serving_csrs=$(_get_csrs 'kubelet-serving' 'Approved')
@@ -517,7 +597,29 @@ delete_bootstrap_machine() {
     "Install complete; deleting bootstrap machine..."
 }
 
-export $(log_into_aws) || exit 1
+wait_for_ingress_load_balancer_to_be_created() {
+  local attempts max_attempts router_elb_hosted_zone_id
+  attempts=0
+  max_attempts=180
+  while test "$attempts"  -lt "$max_attempts"
+  do
+    info "[Attempt $attempts/$max_attempts] Waiting for ingress ELB to be created"
+    router_elb_fqdn=$(_cluster_router_fqdn)
+    if test -z "$router_elb_fqdn"
+    then
+      attempts=$((attempts+1))
+      sleep 1
+      continue
+    fi
+    router_elb_hosted_zone_id=$(_exec_aws elb describe-load-balancers |
+      jq -r '.LoadBalancerDescriptions[] | select(.DNSName == "'"$router_elb_fqdn"'").CanonicalHostedZoneNameID')
+    test -n "$router_elb_hosted_zone_id" && return 0
+    attempts=$((attempts+1))
+    sleep 1
+  done
+  return 1
+}
+
 create_ssh_key
 load_keys_into_ssh_agent
 upload_key_into_ec2
@@ -536,8 +638,10 @@ create_bootstrap_machine
 create_control_plane_machines
 create_worker_machines
 wait_for_bootstrap_complete
+wait_for_first_worker_csr
 wait_for_and_register_worker_node_csrs
 wait_for_workers_to_become_ready
-wait_for_install_to_complete
+wait_for_ingress_load_balancer_to_be_created
 create_ingress_dns_records
+wait_for_install_to_complete
 delete_bootstrap_machine

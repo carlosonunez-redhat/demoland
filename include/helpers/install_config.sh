@@ -34,7 +34,10 @@ render_and_save_install_config() {
   yaml=$(fail_if_nil \
     "$(render_yaml_template install-config "$@")" \
     "Couldn't generate AWS install config.") || return 1
-  echo "$yaml" > "$(_config_file_in_data_dir)"
+  echo "$yaml" > "$(_config_file_in_data_dir)" || return 1
+  test -f "$(_get_file_from_openshift_install_dir 'created_on')" && return 0
+
+  date +%s > "$(_get_file_from_openshift_install_dir 'created_on')"
 }
 
 get_data_from_ignition_file() {
@@ -52,4 +55,16 @@ get_data_from_ignition_file() {
     return 1
   fi
   jq -r "$2" "$ign_file"
+}
+
+install_config_data_stale() {
+  local twelve_hours_in_sec now install_config_creation_time delta secs_until_stale
+  test -f "$(_get_file_from_openshift_install_dir 'created_on')" || return 1
+  twelve_hours_in_sec=43200
+  now=$(date +%s)
+  install_config_creation_time=$(cat "$(_get_file_from_openshift_install_dir 'created_on')")
+  delta=$((now-install_config_creation_time))
+  secs_until_stale=$((twelve_hours_in_sec-delta))
+  info "[openshift-install] $((secs_until_stale/60)) minutes until install-config metadata stale"
+  test "$delta" -ge "$twelve_hours_in_sec"
 }
