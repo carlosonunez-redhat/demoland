@@ -184,6 +184,7 @@ create_security_group_rules() {
 }
 
 create_bootstrap_machine() {
+  { control_plane_nodes_exist && worker_nodes_exist; } && return 0
   set -e
   sg_id=$(fail_if_nil "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId')" \
     "Master security group ID not found")
