@@ -125,6 +125,40 @@ environments:
                     quantity_per_zone: 1
                     instance_type: m5.xlarge
                     spot: false
+    ocp-sno:
+        alias_of: ocp
+        deploy:
+            node_config:
+                bootstrap:
+                    ignition_file_s3_key: bootstrap.ign
+                    instance_type: c8i.2xlarge
+                    spot: false
+                    quantity_per_zone: 1
+                control_plane:
+                    quantity_per_zone: 1
+                    instance_type: m8i.4xlarge
+                    spot: false
+                workers:
+                    quantity_per_zone: 0
+                    instance_type: c8i.2xlarge
+                    spot: false
+    ocp-sno-virt:
+        alias_of: ocp
+        deploy:
+            node_config:
+                bootstrap:
+                    ignition_file_s3_key: bootstrap.ign
+                    instance_type: c8i.2xlarge
+                    spot: false
+                    quantity_per_zone: 1
+                control_plane:
+                    quantity_per_zone: 1
+                    instance_type: c5n.metal
+                    spot: false
+                workers:
+                    quantity_per_zone: 0
+                    instance_type: c8i.2xlarge
+                    spot: false
     ocp:
         version: 20250827
         components:
@@ -134,6 +168,23 @@ environments:
             environment_vars: []
             cluster_config:
                 openshift_version: 4.20.14
+                cluster_auth:
+                    google_oauth:
+                        - role: admin
+                          details:
+                            domain: redhat.com
+                            # encrypted
+                            clientID: ENC[AES256_GCM,data:dhjd7vRHLmA0gp/8zUfz51/X5qgK2RVjbtHc62FpCLY+X2I7U7aTzSWN4Z0HzAkZ9MnmbO4fwq5YTLo+ktCZJE14y5UMCtbp,iv:wDuz9bF+pDkFl+4hp/o+TBSuwUn+UKbhu9eQJd4wigg=,tag:VGiq/v6JAqzXbYkzZC9bVg==,type:str]
+                            # encrypted
+                            clientSecret: ENC[AES256_GCM,data:LkUMtd4vY8DBDPsquRHxoybhgKirQ0300qvXiW3D6KuC244=,iv:tDrB7sjsRUHAbsjvD98QdjXuuWSehicTIsq70iIQ6sQ=,tag:ORxlKUiNmYrf3XcF7D4JOQ==,type:str]
+                            emails:
+                                - cnunez@redhat.com
+                    basic:
+                        - role: admin
+                          details:
+                            name: admin
+                            # encrypted
+                            password: ENC[AES256_GCM,data:spJO7LZWuKiUKg==,iv:NdIIm6L/n047z6wtpEtL6YkhulyaS+enMTnkxxuVGNg=,tag:3NmVhZScRCyYezj9cjbmqQ==,type:str]
             cloud_config:
                 aws:
                     networking:
@@ -173,8 +224,8 @@ environments:
                     # encrypted
                     data: ENC[AES256_GCM,data:U2eobbE6upIEWrxHBbiL1zSEMdXQBDwRWpiZyGog9UJMPT/JwpXKdy5pD0wR2O3Gg/QVR2lJH4pZGJum/Xeuccm6/rFfxLP913xX76Ps+W6AP10YowpbOAjcX/bubm+FA5WZnIs0CFr8LUSzmKzrKxv1ITL5vxECbXOseszrMvBnDUoduAj5b8X31/FmPzPJQ1hBIQm66Ko9qB5yY09MpxeWmWOB4ZjR6n2tbsRve886UEq922SdhaldEozb2zq+OC4U1eKBOc4Rq0JoWCam2NnM/Y8vCrgOd9wo5taB+RAR4v+0WqRZlZtFoRxv8L2BAZkuZ3mObqbb5PcH/a/w5HzJ/V82mm5UN3Ie6rBLR1W2SsdWh4ZHE2qhYMpgU/XreRTGwG+/b3hU/z2ik7wgVo7MIXTvDpGqN8tf70IzmMXX2EpHWQMAO4Re+UB8b7GP7xFREbCjC7hnFQoel3AJNUPVdFFsGFdgDHyRa09BamVfnlhWtVfChrY2xl1X5NroZZT7Qn9uOvw6gj7mJhrmbq0JfCaetecTwqY=,iv:/j7qGCxTK0lBUSONjta9cn2A3X4idjk3zamBgFkFLbc=,tag:IR2K25bjQdDe7+KU/OyyCg==,type:str]
 sops:
-    lastmodified: "2026-04-18T18:10:15Z"
-    mac: ENC[AES256_GCM,data:bjpgXms/o6HvQq7TdxuG6uSxfcfdFuLyU8CSEY0iP38HMiOM/84r+NbcWZhcfiPRI/8QwBYx+1pexKsMclJ8+aIA/N45MmmDBadZpB8rFh9wSdkXanKD+rGkHJ4Q2ZD3t6Bf0IHyQxKuShS5pGjkcB7KsgLQMNCwQE1H7lDszNE=,iv:PSlACZNncgY53lbAh+m3mrj5mAYZS23Z7lHYAUGybK4=,tag:tr1czzSdoRGBeq422rrWSQ==,type:str]
+    lastmodified: "2026-04-19T23:40:38Z"
+    mac: ENC[AES256_GCM,data:qgG8UofN2EvMmaHvc5AtaSG4zHo3VP7up9ReqYLrAiB1pBPKU3V+2Pjj9bu2cqx/jDfaz1kosdpLFqsGZL0UJ6J4VeJXcNfVgO2aDpYVFqrboVd/afXokY0ybbNorwH7L2r/HH65rLZpmhLb1fCIOumS7Ya9o16Y2CfYAGwk+5s=,iv:3unwCFkWWiYHfOkFn+4sK4eFJhIrL7Zz99s3vQTZwyQ=,tag:FnQ5EF6R9Uj6Ia7nGxtpxQ==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
