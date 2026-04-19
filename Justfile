@@ -52,6 +52,8 @@ postinstall environment: (_run_stage_with_dependencies environment "_postinstall
 _run_stage_with_dependencies environment +stages:\
     (_generate_toplevel_environment_info environment)
   set +u; \
+  env_info_vol="$(just _container_environment_info_vol '{{ environment }}')"; \
+  export ENV_INFO_VOL="$env_info_vol"; \
   envs="{{ environment }}"; \
   test -z "$SKIP_DEPENDENCIES" && envs="$(just _get_dependent_environments {{ environment }});{{ environment }}"; \
   set -eu; \
@@ -85,16 +87,16 @@ _precheck environment:
     'true' \
     'Environment {{ environment }} does not have preflight checks; skipping.';
 
-_provision environment: (_ensure_toplevel_environment_info_available)
+_provision environment: (_ensure_toplevel_environment_info_available environment)
   just _execute_containerized '{{ environment }}' 'provision.sh';
 
-_expose environment: (_ensure_toplevel_environment_info_available)
+_expose environment: (_ensure_toplevel_environment_info_available environment)
   just _execute_containerized '{{ environment }}' \
     'expose.sh' \
     'true' \
     'Environment {{ environment }} does not have anything to expose; skipping.';
 
-_postinstall environment: (_ensure_toplevel_environment_info_available) \
+_postinstall environment: (_ensure_toplevel_environment_info_available environment) \
   (_ensure_toplevel_environment_has_kubeconfig environment) \
   (_ensure_container_postinstall_volume_exists environment) \
   (_ensure_openshift_client_image environment ) \
@@ -229,6 +231,20 @@ _container_postinstall_vol environment:
   env=$(just _resolved_environment_name '{{ environment }}'); \
   echo "{{ container_postinstall_vol }}-$env"
 
+_container_environment_info_vol environment:
+  set +u; \
+  if test -n "$ENV_INFO_VOL"; \
+  then \
+    echo "$ENV_INFO_VOL"; \
+    exit 0; \
+  fi; \
+  set -u; \
+  env=$(just _resolved_environment_name '{{ environment }}' | \
+        base64 -w 0 | \
+        tr -d '=' | \
+        head -c 8); \
+  echo "{{ container_environment_info_vol }}-$env"
+
 _container_vol_shared:
   echo "{{ container_vol }}-shared"
 
@@ -259,7 +275,7 @@ _execute_containerized environment file ignore_not_found='false' custom_message=
   fi; \
   command=({{ container_bin }} run --rm -it \
     -v "$(just _container_vol {{ environment }}):/data" \
-    -v "{{ container_environment_info_vol }}:/environment_info" \
+    -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
     -v "$(just _container_secrets_vol {{ environment }}):/secrets" \
     -v "$(just _container_vol_shared):/shared/data" \
     -v "$(just _container_secrets_vol_shared):/shared/secrets" \
@@ -316,29 +332,31 @@ _merge_cloud_creds environment:
 # the environment info volume stores information about the environment that executed
 # a deploy/destroy run that can be consumed by dependencies of an environment (kind of like
 # the Downward API in Kubernetes).
-_toplevel_environment:
+_toplevel_environment environment:
     {{ container_bin }} run --rm \
-      -v "{{ container_environment_info_vol }}:/info" \
+      -v "$(just _container_environment_info_vol {{ environment }}):/info" \
       bash:5 -c "test -f /info/root_environment_name && cat /info/root_environment_name"; \
 
 _generate_toplevel_environment_info environment:
   set +u; \
-  {{ container_bin }} volume ls | grep -q "{{ container_environment_info_vol }}" || \
-    {{ container_bin }} volume create "{{ container_environment_info_vol }}"; \
+  vol=$(just _container_environment_info_vol {{ environment }}); \
+  {{ container_bin }} volume ls | grep -q "$vol" || \
+    {{ container_bin }} volume create "$vol" >/dev/null; \
   for kvp in "root_environment_name:{{ environment }}" \
       "root_environment_id:$(base64 -w 0 <<< '{{ environment }}' | tr -d '=')"; \
   do \
     k=$(cut -f1 -d ':' <<< "$kvp"); \
     v=$(sed -E "s/^${k}://" <<< "$kvp"); \
     {{ container_bin }} run --rm \
-      -v "{{ container_environment_info_vol }}:/info" \
+      -v "${vol}:/info" \
       bash:5 -c "echo '$v' > /info/$k"; \
   done
 
-_ensure_toplevel_environment_info_available:
-  {{ container_bin }} volume ls | grep -q "{{ container_environment_info_vol }}" && \
+_ensure_toplevel_environment_info_available environment:
+  vol=$(just _container_environment_info_vol {{ environment }}); \
+  {{ container_bin }} volume ls | grep -q "$vol" && \
     {{ container_bin }} run --rm \
-      -v "{{ container_environment_info_vol }}:/info" \
+      -v "${vol}:/info" \
       bash:5 -c 'test -n "$(cat /info/root_environment_name)"' && \
       exit 0; \
   just _log error "Toplevel environment info hasn't been created yet"; \
@@ -346,7 +364,7 @@ _ensure_toplevel_environment_info_available:
 
 _ensure_toplevel_environment_has_kubeconfig environment:
   test -n "$(just _toplevel_environment_kubeconfig '{{ environment }}')" && exit 0; \
-  just _log error "A kubeconfig isn't available yet for environment '$(just _toplevel_environment)'"; \
+  just _log error "A kubeconfig isn't available yet for environment '$(just _toplevel_environment '{{ environment }}')'"; \
   exit 1
 
 _ensure_container_secrets_vol_populated environment:
@@ -471,7 +489,7 @@ _get_environment_directory_file environment fp:
 _toplevel_environment_kubeconfig environment:
   {{ container_bin }} run --rm \
       -v "$(just _container_secrets_vol_shared):/shared/secrets" \
-      -v "{{ container_environment_info_vol }}:/environment_info" \
+      -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
       bash:5 -c 'test -f /environment_info/kubeconfig_path && cat /environment_info/kubeconfig_path'
 
 _run_yq input query:
