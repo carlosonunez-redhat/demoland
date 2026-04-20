@@ -127,12 +127,51 @@ Metadata:
         default: "Master Security Group ID"
       AutoRegisterELB:
         default: "Use Provided ELB Automation"
+    NumNodes:
+      Description: "The number of control plane nodes to provision during install (default: 0, max: 3)."
+      Default: 0
+      Type: String
 
 Conditions:
-  DoRegistration: !Equals ["yes", !Ref AutoRegisterELB]
+  CreateOneNode: !Not
+    - !Equals
+      - !Ref NumNodes
+      - "0"
+  CreateTwoNodes: !Or
+    - !Equals
+      - !Ref NumNodes
+      - "2"
+    - !Equals
+      - !Ref NumNodes
+      - "3"
+  CreateThreeNodes: !Equals
+    - !Ref NumNodes
+    - "3"
+  DoRegistrationOneNode: !And
+    - !Or
+      - !Condition CreateOneNode
+      - !Condition CreateTwoNodes
+      - !Condition CreateThreeNodes
+    - !Equals
+      - "yes"
+      - !Ref AutoRegisterELB
+  DoRegistrationTwoNodes: !And
+    - !Or
+      - !Condition CreateTwoNodes
+      - !Condition CreateThreeNodes
+    - !Equals
+      - "yes"
+      - !Ref AutoRegisterELB
+  DoRegistrationThreeNodes: !And
+    - !Or
+      - !Condition CreateThreeNodes
+    - !Equals
+      - "yes"
+      - !Ref AutoRegisterELB
 
 Resources:
   Master0:
+    Condition: CreateOneNode
     Type: AWS::EC2::Instance
     Properties:
       ImageId: !Ref RhcosAmi
@@ -163,7 +202,7 @@ Resources:
         Value: !Join ["-", [!Ref InfrastructureName, "cp0"] ]
 
   RegisterMaster0:
-    Condition: DoRegistration
+    Condition: DoRegistrationOneNode
     Type: Custom::NLBRegister
     Properties:
       ServiceToken: !Ref RegisterNlbIpTargetsLambdaArn
@@ -171,7 +210,7 @@ Resources:
       TargetIp: !GetAtt Master0.PrivateIp
 
   RegisterMaster0InternalApiTarget:
-    Condition: DoRegistration
+    Condition: DoRegistrationOneNode
     Type: Custom::NLBRegister
     Properties:
       ServiceToken: !Ref RegisterNlbIpTargetsLambdaArn
@@ -179,7 +218,7 @@ Resources:
       TargetIp: !GetAtt Master0.PrivateIp
 
   RegisterMaster0InternalServiceTarget:
-    Condition: DoRegistration
+    Condition: DoRegistrationOneNode
     Type: Custom::NLBRegister
     Properties:
       ServiceToken: !Ref RegisterNlbIpTargetsLambdaArn
@@ -187,6 +226,7 @@ Resources:
       TargetIp: !GetAtt Master0.PrivateIp
 
   Master1:
+    Condition: CreateTwoNodes
     Type: AWS::EC2::Instance
     Properties:
       ImageId: !Ref RhcosAmi
@@ -217,7 +257,7 @@ Resources:
         Value: !Join ["-", [!Ref InfrastructureName, "cp1"] ]
 
   RegisterMaster1:
-    Condition: DoRegistration
+    Condition: DoRegistrationTwoNodes
     Type: Custom::NLBRegister
     Properties:
       ServiceToken: !Ref RegisterNlbIpTargetsLambdaArn
@@ -225,7 +265,7 @@ Resources:
       TargetIp: !GetAtt Master1.PrivateIp
 
   RegisterMaster1InternalApiTarget:
-    Condition: DoRegistration
+    Condition: DoRegistrationTwoNodes
     Type: Custom::NLBRegister
     Properties:
       ServiceToken: !Ref RegisterNlbIpTargetsLambdaArn
@@ -233,7 +273,7 @@ Resources:
       TargetIp: !GetAtt Master1.PrivateIp
 
   RegisterMaster1InternalServiceTarget:
-    Condition: DoRegistration
+    Condition: DoRegistrationTwoNodes
     Type: Custom::NLBRegister
     Properties:
       ServiceToken: !Ref RegisterNlbIpTargetsLambdaArn
@@ -241,6 +281,7 @@ Resources:
       TargetIp: !GetAtt Master1.PrivateIp
 
   Master2:
+    Condition: CreateThreeNodes
     Type: AWS::EC2::Instance
     Properties:
       ImageId: !Ref RhcosAmi
@@ -271,7 +312,7 @@ Resources:
         Value: !Join ["-", [!Ref InfrastructureName, "cp2"] ]
 
   RegisterMaster2:
-    Condition: DoRegistration
+    Condition: DoRegistrationThreeNodes
     Type: Custom::NLBRegister
     Properties:
       ServiceToken: !Ref RegisterNlbIpTargetsLambdaArn
@@ -279,7 +320,7 @@ Resources:
       TargetIp: !GetAtt Master2.PrivateIp
 
   RegisterMaster2InternalApiTarget:
-    Condition: DoRegistration
+    Condition: DoRegistrationThreeNodes
     Type: Custom::NLBRegister
     Properties:
       ServiceToken: !Ref RegisterNlbIpTargetsLambdaArn
@@ -287,7 +328,7 @@ Resources:
       TargetIp: !GetAtt Master2.PrivateIp
 
   RegisterMaster2InternalServiceTarget:
-    Condition: DoRegistration
+    Condition: DoRegistrationThreeNodes
     Type: Custom::NLBRegister
     Properties:
       ServiceToken: !Ref RegisterNlbIpTargetsLambdaArn
@@ -295,7 +336,24 @@ Resources:
       TargetIp: !GetAtt Master2.PrivateIp
 
 Outputs:
-  PrivateIPs:
+  PrivateIPsOneNode:
+    Condition: CreateOneNode
+    Description: The control-plane node private IP addresses.
+    Value:
+      !Join [
+        ",",
+        [!GetAtt Master0.PrivateIp]
+      ]
+  PrivateIPsTwoNodes:
+    Condition: CreateTwoNodes
+    Description: The control-plane node private IP addresses.
+    Value:
+      !Join [
+        ",",
+        [!GetAtt Master0.PrivateIp, !GetAtt Master1.PrivateIp]
+      ]
+  PrivateIPsThreeNodes:
+    Condition: CreateThreeNodes
     Description: The control-plane node private IP addresses.
     Value:
       !Join [

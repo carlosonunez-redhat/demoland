@@ -251,6 +251,13 @@ create_openshift_install_config_file() {
     grep -q 'Public' <<< "$1" && ids=$(grep -v "$(_bootstrap_subnet)" <<< "$ids")
     echo "$ids" | as_yaml_list
   }
+  enable_sno=false
+  num_cp_nodes="$(_get_from_config '.deploy.node_config.control_plane.quantity_per_zone')"
+  if test "$num_cp_nodes" -eq 1
+  then
+    info "Enabling single-node OpenShift"
+    enable_sno=true
+  fi
   local values file external_subnet_ids internal_subnet_ids
   external_subnet_ids=$(_subnet_ids_as_yaml_list "$(_get_param_from_aws_cfn_stack vpc 'PublicSubnetIds')")
   internal_subnet_ids=$(_subnet_ids_as_yaml_list "$(_get_param_from_aws_cfn_stack vpc 'PrivateSubnetIds')")
@@ -271,9 +278,14 @@ create_openshift_install_config_file() {
       control_plane_security_groups "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId' | as_yaml_list)"
       bootstrap_node_subnet_id "$(_bootstrap_subnet)"
       control_plane_instance_profile "$(_get_param_from_aws_cfn_stack security 'MasterInstanceProfile')"
+      worker_security_groups "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId' | as_yaml_list)"
+      worker_instance_profile "$(_get_param_from_aws_cfn_stack security 'WorkerInstanceProfile')"
       external_subnet_ids "$external_subnet_ids"
       internal_subnet_ids "$internal_subnet_ids"
       disable_workers "true"
+      worker_node_azs '[]'
+      worker_node_instance_type 'not-used'
+      enable_sno "$enable_sno"
     )
   else
     values=(
@@ -400,6 +412,7 @@ create_control_plane_machines() {
     'IgnitionLocation' "https://${api_server_fqdn}:22623/config/master"
     'CertificateAuthorities' "$cert_authority"
     'MasterInstanceProfileName' "$instance_profile_name"
+    'NumNodes' "$(_get_from_config '.deploy.node_config.control_plane.quantity_per_zone')"
   )
   params_json=$(_create_aws_cf_params_json "${params[@]}")
   _create_aws_resources_from_cfn_stack_with_caps control_plane_machines "$params_json" \
