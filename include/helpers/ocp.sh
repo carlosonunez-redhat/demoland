@@ -34,7 +34,7 @@ exec_oc() {
 
 exec_oc_postinstall() {
   config=$(_get_file_from_openshift_install_dir 'auth/kubeconfig')
-  ctx=$(_exec_oc "$config" config get-contexts -o name | grep 'kube:admin')
+  ctx=$(_exec_oc "$config" config get-contexts -o name | grep -E '(^admin$|kube:admin)')
   if test -z "$ctx"
   then
     error "Couldn't find 'kube:admin' context from openshift-install generated Kubeconfig"
