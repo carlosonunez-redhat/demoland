@@ -15,8 +15,8 @@ control_plane_nodes_exist() {
   num_worker_nodes_want="$(_get_from_config '.deploy.node_config.control_plane.quantity_per_zone')"
   num_worker_nodes_got=$(_exec_aws ec2 describe-instances \
     --query 'Reservations[].Instances[?(State.Name == `running`) &&
-(@.Tags[?Key==`aws:cloudformation:logical-id` &&
-contains(Value, `Master`)])].InstanceId' --output text | wc -l)
+(@.Tags[?Key==`aws:cloudformation:logical-id` && contains(Value, `Master`)]) &&
+(@.Tags[?Key==`Name` && contains(Value, `'"$(_cluster_infra_name)"'`)])].InstanceId' --output text | wc -l)
   test "$num_worker_nodes_got" == "$num_worker_nodes_want"
 }
 
@@ -26,8 +26,8 @@ worker_nodes_exist() {
 
   num_worker_nodes_got=$(_exec_aws ec2 describe-instances \
     --query 'Reservations[].Instances[?(State.Name == `running`) &&
-(@.Tags[?Key==`aws:cloudformation:logical-id` &&
-contains(Value, `Worker`)])].InstanceId' --output text | wc -l)
+(@.Tags[?Key==`aws:cloudformation:logical-id` && contains(Value, `Master`)]) &&
+(@.Tags[?Key==`Name` && contains(Value, `'"$(_cluster_infra_name)"'`)])].InstanceId' --output text | wc -l)
   test "$num_worker_nodes_got" == "$num_worker_nodes_want"
 }
 
@@ -94,6 +94,18 @@ remove_default_machinesets_from_installation_manifests() {
     find "$(_openshift_install_dir)/openshift" -type f -name "*$f*" \
       -exec rm -rf {} \;
   done
+}
+
+configure_control_plane_scheduling() {
+  test -d "$(_get_file_from_openshift_install_dir 'manifests')" || return 0
+
+  num_cp_nodes="$(_get_from_config '.deploy.node_config.control_plane.quantity_per_zone')"
+  cp_schedulable="$(_get_from_config '.deploy.node_config.control_plane.schedulable')"
+  test -z "$cp_schedulable" &&
+    test "$num_cp_nodes" -ne 1 &&
+    return 0
+  info "Making control plane schedulable"
+  yq -ir '.spec.mastersSchedulable = true' "$(_get_file_from_openshift_install_dir 'manifests/cluster-scheduler-02-config.yml')"
 }
 
 create_ignition_files() {
@@ -253,11 +265,7 @@ create_openshift_install_config_file() {
   }
   enable_sno=false
   num_cp_nodes="$(_get_from_config '.deploy.node_config.control_plane.quantity_per_zone')"
-  if test "$num_cp_nodes" -eq 1
-  then
-    info "Enabling single-node OpenShift"
-    enable_sno=true
-  fi
+  test "$num_cp_nodes" -eq 1 && enable_sno=true
   local values file external_subnet_ids internal_subnet_ids
   external_subnet_ids=$(_subnet_ids_as_yaml_list "$(_get_param_from_aws_cfn_stack vpc 'PublicSubnetIds')")
   internal_subnet_ids=$(_subnet_ids_as_yaml_list "$(_get_param_from_aws_cfn_stack vpc 'PrivateSubnetIds')")
@@ -477,6 +485,9 @@ wait_for_first_worker_csr() {
   done_file="$(_get_file_from_openshift_install_dir '.first_worker_joined')"
   test -f "$done_file" && return 0
 
+  num_workers="$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"
+  test "$num_workers" -eq 0 && return 0
+
   attempts=0
   max_attempts=180
   while test "$attempts" -lt "$max_attempts"
@@ -522,6 +533,8 @@ wait_for_and_register_worker_node_csrs() {
       done
   }
   test -f "$(_get_file_from_openshift_install_dir '.csrs_accepted')" && return 0
+  num_workers="$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"
+  test "$num_workers" -eq 0 && return 0
 
   local attempts max_attempts successes successes_required
   successes_required=10
@@ -562,11 +575,13 @@ wait_for_and_register_worker_node_csrs() {
 }
 
 wait_for_workers_to_become_ready() {
+  num_workers="$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"
+  test "$num_workers" -eq 0 && return 0
   local num_worker_nodes max_attempts
   num_worker_nodes=$(_exec_aws ec2 describe-instances \
     --query 'Reservations[].Instances[?(State.Name == `running`) && 
-(@.Tags[?Key==`aws:cloudformation:logical-id` &&
-contains(Value, `Worker`)])].InstanceId' --output text | wc -l)
+(@.Tags[?Key==`aws:cloudformation:logical-id` && contains(Value, `Worker`)]) &&
+(@.Tags[?Key==`Name` && contains(Value, `'"$(_cluster_infra_name)"'`)])].InstanceId' --output text | wc -l)
   max_attempts=100
   while test "$max_attempts" -gt 0
   do
@@ -735,9 +750,11 @@ EOF
       test -n "$existing_idp" && return 0
       info "Updating cluster identity provider details"
       idp=$(yq -o=j -I=0 '.spec.identityProviders[0]' /tmp/idp_info)
+      idx=0
+      test "$num_existing_idps" -ge 1 && idx="$num_existing_idps"
       exec_oc_postinstall patch oauth cluster \
         --type=json \
-        -p '[{"op":"add","path":"/spec/identityProviders/'"$((num_existing_idps-1))"'","value":'"$idp"'}]'
+        -p '[{"op":"add","path":"/spec/identityProviders/'"$idx"'","value":'"$idp"'}]'
     fi
     if test "${restart_auth,,}" == true
     then
@@ -828,9 +845,11 @@ EOF
       test -n "$existing_idp" && op=replace
       info "Updating cluster identity provider details"
       idp=$(yq -o=j -I=0 '.spec.identityProviders[0]' /tmp/idp_info)
+      idx=0
+      test "$num_existing_idps" -ge 1 && idx="$num_existing_idps"
       exec_oc_postinstall patch oauth cluster \
         --type=json \
-        -p '[{"op":"'"$op"'","path":"/spec/identityProviders/'"$((num_existing_idps-1))"'","value":'"$idp"'}]'
+        -p '[{"op":"'"$op"'","path":"/spec/identityProviders/'"$idx"'","value":'"$idp"'}]'
       restart_auth=true
     fi
     while read -r email
@@ -860,6 +879,7 @@ create_security_group_rules
 create_openshift_install_config_file
 create_installation_manifests
 remove_default_machinesets_from_installation_manifests
+configure_control_plane_scheduling
 create_ignition_files
 sync_bootstrap_ignition_files_with_s3_bucket
 create_bootstrap_machine
