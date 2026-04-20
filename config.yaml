@@ -136,7 +136,7 @@ environments:
                     quantity_per_zone: 1
                 control_plane:
                     quantity_per_zone: 1
-                    instance_type: m8i.4xlarge
+                    instance_type: c8i.8xlarge
                     spot: false
                 workers:
                     quantity_per_zone: 0
@@ -224,8 +224,8 @@ environments:
                     # encrypted
                     data: ENC[AES256_GCM,data:U2eobbE6upIEWrxHBbiL1zSEMdXQBDwRWpiZyGog9UJMPT/JwpXKdy5pD0wR2O3Gg/QVR2lJH4pZGJum/Xeuccm6/rFfxLP913xX76Ps+W6AP10YowpbOAjcX/bubm+FA5WZnIs0CFr8LUSzmKzrKxv1ITL5vxECbXOseszrMvBnDUoduAj5b8X31/FmPzPJQ1hBIQm66Ko9qB5yY09MpxeWmWOB4ZjR6n2tbsRve886UEq922SdhaldEozb2zq+OC4U1eKBOc4Rq0JoWCam2NnM/Y8vCrgOd9wo5taB+RAR4v+0WqRZlZtFoRxv8L2BAZkuZ3mObqbb5PcH/a/w5HzJ/V82mm5UN3Ie6rBLR1W2SsdWh4ZHE2qhYMpgU/XreRTGwG+/b3hU/z2ik7wgVo7MIXTvDpGqN8tf70IzmMXX2EpHWQMAO4Re+UB8b7GP7xFREbCjC7hnFQoel3AJNUPVdFFsGFdgDHyRa09BamVfnlhWtVfChrY2xl1X5NroZZT7Qn9uOvw6gj7mJhrmbq0JfCaetecTwqY=,iv:/j7qGCxTK0lBUSONjta9cn2A3X4idjk3zamBgFkFLbc=,tag:IR2K25bjQdDe7+KU/OyyCg==,type:str]
 sops:
-    lastmodified: "2026-04-19T23:40:38Z"
-    mac: ENC[AES256_GCM,data:qgG8UofN2EvMmaHvc5AtaSG4zHo3VP7up9ReqYLrAiB1pBPKU3V+2Pjj9bu2cqx/jDfaz1kosdpLFqsGZL0UJ6J4VeJXcNfVgO2aDpYVFqrboVd/afXokY0ybbNorwH7L2r/HH65rLZpmhLb1fCIOumS7Ya9o16Y2CfYAGwk+5s=,iv:3unwCFkWWiYHfOkFn+4sK4eFJhIrL7Zz99s3vQTZwyQ=,tag:FnQ5EF6R9Uj6Ia7nGxtpxQ==,type:str]
+    lastmodified: "2026-04-20T03:55:08Z"
+    mac: ENC[AES256_GCM,data:Z3xIzAk10EtmBKP43aGYwIvPaWDnaVccJYtnOIFqJXKnDHvexTjSjlIx5o632jLLXzYtG45d9HPfkTL7o/yOuyRMSsZAl/VYvIIONYDmK4yLIOqUa1dxwRYBWXqV1LgcIVmxYVrIoIKNZEJc+UcNMZ4FPZW79cYOOjTZaY0Mp10=,iv:iyhXEr6Z1R9MoDK/kJprCbDcQvTIeJBqdUQu4ba1KS4=,tag:YWfXv1VeY9GFE0WCl/S3dQ==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
