@@ -11,6 +11,61 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/aws.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/ocp.sh"
 
+_update_cluster_identity_providers() {
+  local idp
+  idp="$1"
+  echo "$idp" > /tmp/idp_info
+  existing_oauth=$(exec_oc_postinstall get oauth cluster -o yaml 2>/dev/null)
+  if test -z "$existing_oauth"
+  then
+    info "Configuring identity provider for cluster with details: $(yq -o=j -I=0 . <<< "$idp")"
+    exec_oc_postinstall apply -f /tmp/idp_info
+    restart_auth=true
+  else
+    num_existing_idps=$(exec_oc_postinstall get oauth cluster -o yaml | yq -r '.spec.identityProviders | length')
+    info "Updating cluster identity provider with details: $(yq -o=j -I=0 . <<< "$idp")"
+    idp=$(yq -o=j -I=0 '.spec.identityProviders[0]' /tmp/idp_info)
+    idx=0
+    path="/spec"
+    value=$(printf '{"identityProviders":[%s]}' "$idp")
+    if test "$num_existing_idps" -ge 1
+    then
+      idx="$((num_existing_idps-1))"
+      path="/spec/identityProviders/$idx"
+      value="$idp"
+    fi
+    exec_oc_postinstall patch oauth cluster \
+      --type=json \
+      -p '[{"op":"add","path":"'"$path"'","value":'"$value"'}]'
+    info "Restarting OpenShift Authentication..."
+    exec_oc_postinstall rollout restart -n openshift-authentication deployment/oauth-openshift
+  fi
+  rm /tmp/idp_info
+}
+
+_get_auth_secret_name() {
+  local type role query
+  type="$1"
+  role="$2"
+  echo "authinfo-${type,,}-$(tr -dc '[:alnum:]' <<< "${role,,}")"
+}
+
+_get_auth_secret() {
+  local type role query
+  type="$1"
+  role="$2"
+  f="/tmp/auth_file_$(echo "${type}-${role}" |base64 -w 0 | tr -d '=')"
+  test -f "$f" || 2>/dev/null exec_oc_postinstall get secret -n openshift-config \
+    "$(_get_auth_secret_name "$type" "$role")" \
+    -o yaml > "$f"
+  test -s "$f" || return 0
+  yq -r "$3" "$f"
+}
+
+_ensure_valid_cluster_role() {
+  exec_oc_postinstall get clusterrole -o name | sed -E 's;clusterrole.rbac.authorization.k8s.io/;;' | grep -q "$1"
+}
+
 control_plane_nodes_exist() {
   num_worker_nodes_want="$(_get_from_config '.deploy.node_config.control_plane.quantity_per_zone')"
   num_worker_nodes_got=$(_exec_aws ec2 describe-instances \
@@ -634,7 +689,6 @@ wait_for_ingress_load_balancer_to_be_created() {
   max_attempts=180
   while test "$attempts"  -lt "$max_attempts"
   do
-    info "[Attempt $attempts/$max_attempts] Waiting for ingress ELB to be created"
     router_elb_fqdn=$(_cluster_router_fqdn)
     if test -z "$router_elb_fqdn"
     then
@@ -645,29 +699,11 @@ wait_for_ingress_load_balancer_to_be_created() {
     router_elb_hosted_zone_id=$(_exec_aws elb describe-load-balancers |
       jq -r '.LoadBalancerDescriptions[] | select(.DNSName == "'"$router_elb_fqdn"'").CanonicalHostedZoneNameID')
     test -n "$router_elb_hosted_zone_id" && return 0
+    info "[Attempt $attempts/$max_attempts] Waiting for ingress ELB to be created"
     attempts=$((attempts+1))
     sleep 1
   done
   return 1
-}
-
-_get_auth_secret_name() {
-  local type role query
-  type="$1"
-  role="$2"
-  echo "authinfo-${type,,}-${role,,}"
-}
-
-_get_auth_secret() {
-  local type role query
-  type="$1"
-  role="$2"
-  f="/tmp/auth_file_$(echo "${type}-${role}" |base64 -w 0 | tr -d '=')"
-  test -f "$f" || 2>/dev/null exec_oc_postinstall get secret -n openshift-config \
-    "$(_get_auth_secret_name "$type" "$role")" \
-    -o yaml > "$f"
-  test -s "$f" || return 0
-  yq -r "$3" "$f"
 }
 
 create_cluster_users_htpasswd() {
@@ -680,18 +716,30 @@ create_cluster_users_htpasswd() {
     echo "$data" | base64 -d | grep -Eq "^${user}:"
   }
 
-  auths=$(_get_from_config '.deploy.cluster_config.cluster_auth.basic')
+  auths=$(_get_from_config '.deploy.cluster_config.cluster_auth.basic.auths')
   { test -z "$auths" || test "$auths" == '[]'; } && return 0
 
   restart_auth=false
   for role in $(yq -r '.[].role' <<< "$auths" | sort -u)
   do
     { test -z "$role" || test "${role,,}" == null ; } && continue
+    if ! _ensure_valid_cluster_role "$role"
+    then
+      error "Not a valid cluster role: $role"
+      return 1
+    fi
+    auth_infos=$(yq -o=j -I=0 -r '[.[] | select(.role == "'"$role"'")] | flatten' <<< "$auths")
+    num_auth_infos=$(jq -r 'length' <<< "$auth_infos")
+    if test "$num_auth_infos" -gt 1
+    then
+      error "Basic auth has $num_auth_infos sections that configure the '$role' role, but only one can exist"
+      return 1
+    fi
     changes_made=false
     htpasswd_file="$(mktemp /tmp/htpasswd.XXXXXXXX)"
-    while read -r auth_info
+    while read -r userdata
     do
-      username=$(jq -r '.name' <<< "$auth_info" | grep -iv null | cat)
+      username=$(jq -r '.name' <<< "$userdata" | grep -iv null | cat)
       if test -z "$username"
       then
         error "One of the users in the '$role' section has a blank username."
@@ -700,7 +748,7 @@ create_cluster_users_htpasswd() {
       test "${username,,}" == null && continue
       _user_exists_in_htpasswd_secret "$username" "$role" && continue
 
-      password=$(jq -r '.password' <<< "$auth_info" | grep -iv null | cat)
+      password=$(jq -r '.password' <<< "$userdata" | grep -iv null | cat)
       if test -z "$password"
       then
         error "One of the users in the '$role' section has a blank password."
@@ -709,11 +757,9 @@ create_cluster_users_htpasswd() {
       info "Creating basic auth user '$username' (role: $role)"
       htpasswd -c -B -b "$htpasswd_file" "$username" "$password" || return 1
       info "Granting '$username' $role access"
-      adm_role=role
-      test "${role,,}" == admin && adm_role='cluster-admin'
-      exec_oc_postinstall adm policy add-cluster-role-to-user "$adm_role" "$username"
+      exec_oc_postinstall adm policy add-cluster-role-to-user "$role" "$username"
       changes_made=true
-    done < <(yq -o=j -I=0 -r '.[] | select(.role == "'"$role"'") | .details' <<< "$auths")
+    done < <(jq -cr '.[0].users[]' <<< "$auth_infos")
     if test "$changes_made" == true
     then
       info "Saving login details to cluster"
@@ -721,92 +767,59 @@ create_cluster_users_htpasswd() {
       exec_oc_postinstall create secret generic -n openshift-config \
         --from-file=htpasswd="$htpasswd_file" \
         "$(_get_auth_secret_name basic "$role")"
-      restart_auth=true
-    fi
-    cat >/tmp/idp_info <<-EOF
-apiVersion: config.openshift.io/v1
-kind: OAuth
-metadata:
-  name: cluster
-spec:
-  identityProviders:
-  - name: basic-$role
-    mappingMethod: claim 
-    type: HTPasswd
-    htpasswd:
-      fileData:
-        name: $(_get_auth_secret_name basic "$role")
+      _update_cluster_identity_providers "$(cat <<-EOF
+  apiVersion: config.openshift.io/v1
+  kind: OAuth
+  metadata:
+    name: cluster
+  spec:
+    identityProviders:
+    - name: basic-$role
+      mappingMethod: claim 
+      type: HTPasswd
+      htpasswd:
+        fileData:
+          name: $(_get_auth_secret_name basic "$role")
 EOF
-    existing_oauth=$(exec_oc_postinstall get oauth cluster -o yaml 2>/dev/null)
-    if test -z "$existing_oauth"
-    then
-      info "Configuring identity provider for cluster"
-      exec_oc_postinstall apply -f /tmp/idp_info
-    else
-      num_existing_idps=$(exec_oc_postinstall get oauth cluster -o yaml | yq -r '.spec.identityProviders | length')
-      existing_idp=$(exec_oc_postinstall get oauth cluster -o yaml |
-        yq -r '.spec.identityProviders[] | select(.name == "'"basic-$role"'") | .name' |
-        grep -iv null | cat)
-      test -n "$existing_idp" && return 0
-      info "Updating cluster identity provider details"
-      idp=$(yq -o=j -I=0 '.spec.identityProviders[0]' /tmp/idp_info)
-      idx=0
-      test "$num_existing_idps" -ge 1 && idx="$num_existing_idps"
-      exec_oc_postinstall patch oauth cluster \
-        --type=json \
-        -p '[{"op":"add","path":"/spec/identityProviders/'"$idx"'","value":'"$idp"'}]'
-    fi
-    if test "${restart_auth,,}" == true
-    then
-      info "Restarting OpenShift Authentication..."
+)"
       exec_oc_postinstall rollout restart -n openshift-authentication deployment/oauth-openshift
     fi
   done
 }
 
-# TODO: single entry point for these functions. 
 create_cluster_users_google_auth() {
-  _user_exists_in_google_secret() {
-    local user role data
-    user="$1"
-    role="$2"
-    data=$(_get_auth_secret google "$role" '.data.clientSecret')
-    test -z "$data" && return 1
-    echo "$data" | base64 -d | grep -E "^${user}:"
-  }
-
-  auths=$(_get_from_config '.deploy.cluster_config.cluster_auth.google_oauth')
+  auths=$(_get_from_config '.deploy.cluster_config.cluster_auth.google_oauth.auths')
   { test -z "$auths" || test "$auths" == '[]'; } && return 0
 
+  details=$(_get_from_config '.deploy.cluster_config.cluster_auth.google_oauth.additional_details')
   restart_auth=false
   for role in $(yq -r '.[].role' <<< "$auths" | sort -u)
   do
     { test -z "$role" || test "${role,,}" == null ; } && continue
-    changes_made=false
-    auth_info=$(yq -o=j -I=0 -r '.[] | select(.role == "'"$role"'") | .details' <<< "$auths")
-    num_auth_infos=$(wc -l <<< "$auth_info")
+    if ! _ensure_valid_cluster_role "$role"
+    then
+      error "Not a valid cluster role: $role"
+      return 1
+    fi
+    auth_infos=$(yq -o=j -I=0 -r '[.[] | select(.role == "'"$role"'")] | flatten' <<< "$auths")
+    num_auth_infos=$(jq -r 'length' <<< "$auth_infos")
     if test "$num_auth_infos" -gt 1
     then
-      error "You can't have more than one Google client ID per role; '$role' role has $num_auth_infos."
+      error "Google auth has $num_auth_infos sections that configure the '$role' role, but only one can exist"
       return 1
     fi
-    client_id=$(jq -r '.clientID' <<< "$auth_info" | grep -iv null | cat)
-    if test -z "$client_id"
+    changes_made=false
+    client_id=$(yq -r '.client_id' <<< "$details")
+    client_secret=$(yq -r '.client_secret' <<< "$details")
+    if test -z "$client_id" || test -z "$client_secret"
     then
-      error "One of the users in the '$role' section has a blank client_id."
+      error "client_id and client_secret must be defined"
       return 1
     fi
-    _user_exists_in_google_secret "$client_id" "$role" && continue
-    client_secret=$(jq -r '.clientSecret' <<< "$auth_info" | grep -iv null | cat)
-    if test -z "$client_secret"
-    then
-      error "One of the users in the '$role' section has a blank client_secret."
-      return 1
-    fi
-    hosted_domain=$(jq -r '.domain' <<< "$auth_info" | grep -iv null | cat)
+    hosted_domain=$(yq -r '.approved_domain' <<< "$details" | grep -iv null | cat)
     if test -z "$hosted_domain"
     then
-      error "One of the users in the '$role' section doesn't have a domain associated with it."
+      error "approved_domain must be defined."
       return 1
     fi
     info "Mapping Google OAuth app '$client_id' to role '$role'"
@@ -814,7 +827,7 @@ create_cluster_users_google_auth() {
     exec_oc_postinstall create secret generic -n openshift-config \
       --from-literal=clientSecret="$client_secret" \
       "$(_get_auth_secret_name google "$role")"
-    cat >/tmp/idp_info <<-EOF
+    _update_cluster_identity_providers "$(cat <<-EOF
 apiVersion: config.openshift.io/v1
 kind: OAuth
 metadata:
@@ -830,40 +843,12 @@ spec:
       clientSecret:
         name: $(_get_auth_secret_name google "$role")
 EOF
-    existing_oauth=$(exec_oc_postinstall get oauth cluster -o yaml 2>/dev/null)
-    if test -z "$existing_oauth"
-    then
-      info "Configuring identity provider for cluster"
-      exec_oc_postinstall apply -f /tmp/idp_info
-      restart_auth=true
-    else
-      num_existing_idps=$(exec_oc_postinstall get oauth cluster -o yaml | yq -r '.spec.identityProviders | length')
-      existing_idp=$(exec_oc_postinstall get oauth cluster -o yaml |
-        yq -r '.spec.identityProviders[] | select(.name == "'"google-$role"'") | .name' |
-        grep -iv null | cat)
-      op=add
-      test -n "$existing_idp" && op=replace
-      info "Updating cluster identity provider details"
-      idp=$(yq -o=j -I=0 '.spec.identityProviders[0]' /tmp/idp_info)
-      idx=0
-      test "$num_existing_idps" -ge 1 && idx="$num_existing_idps"
-      exec_oc_postinstall patch oauth cluster \
-        --type=json \
-        -p '[{"op":"'"$op"'","path":"/spec/identityProviders/'"$idx"'","value":'"$idp"'}]'
-      restart_auth=true
-    fi
+)"
     while read -r email
     do
-      adm_role="$role"
-      test "${role,,}" == admin && adm_role='cluster-admin'
-      info "Granting '$email' '$adm_role' access"
-      exec_oc_postinstall adm policy add-cluster-role-to-user "$adm_role" "$email"
-    done < <(jq -r '.emails[]' <<< "$auth_info" | grep -iv null | cat)
-    if test "${restart_auth,,}" == true
-    then
-      info "Restarting OpenShift Authentication..."
-      exec_oc_postinstall rollout restart -n openshift-authentication deployment/oauth-openshift
-    fi
+      info "Granting '$email' '$role' access"
+      exec_oc_postinstall adm policy add-cluster-role-to-user "$role" "$email"
+    done < <(jq -r '.users[]' <<< "$auth_infos" | grep -iv null | cat)
   done
 }
 

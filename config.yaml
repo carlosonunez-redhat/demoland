@@ -9,6 +9,12 @@ common:
                 aws_default_region: ENC[AES256_GCM,data:yhbppXp4Emsv,iv:PoWpnhgYk18InCtqBcLK5yrI8vrHqTX9BDR2kQ0Kya0=,tag:7Jooayomp5o2DNnbqlvfFg==,type:str]
                 aws_role_arn: ENC[AES256_GCM,data:yA+WDikbuiX3IyphIDT2++hXaXx5WGHgx3a1OonJM40yVkRJqVWsBCTyue3RhbYO,iv:KrwbybYkkIVgaNb4QCerejvGMbYb2JbUupaFLOs83RU=,tag:qePeUIvZeelVzep8FrCpfQ==,type:str]
                 aws_role_external_id: ENC[AES256_GCM,data:ZtjjLB7VfRetsFKhCTbgU1F886U=,iv:H/73XQG/VEQV8JYQ8QiRYbU+2k13w2s+tLwJ8v5kw8Q=,tag:gcXR3Fc+PSwR6lw3lvvyUg==,type:str]
+        gcp:
+            # gcp.project_id: The GCP project to scope resources into.
+            # encrypted
+            project_id: ENC[AES256_GCM,data:oRgMnbl4yDcCKtFPo/2RvW/gMWne,iv:2f6IQZC+ZBNdDbjTM6SEbi6tHjrtMp03ojDyeSjlgzc=,tag:+SSiF0dYUT9MXUbmVF5pDA==,type:str]
+            # gcp.service_account: The service account to use
+            service_account: {}
 environments:
     example:
         version: 20260402
@@ -164,27 +170,49 @@ environments:
         components:
             - openshift-gitops
             - web-terminal
+        cloud_credentials: null
         deploy:
             environment_vars: []
             cluster_config:
                 openshift_version: 4.20.14
                 cluster_auth:
-                    google_oauth:
-                        - role: admin
-                          details:
-                            domain: redhat.com
-                            # encrypted
-                            clientID: ENC[AES256_GCM,data:dhjd7vRHLmA0gp/8zUfz51/X5qgK2RVjbtHc62FpCLY+X2I7U7aTzSWN4Z0HzAkZ9MnmbO4fwq5YTLo+ktCZJE14y5UMCtbp,iv:wDuz9bF+pDkFl+4hp/o+TBSuwUn+UKbhu9eQJd4wigg=,tag:VGiq/v6JAqzXbYkzZC9bVg==,type:str]
-                            # encrypted
-                            clientSecret: ENC[AES256_GCM,data:LkUMtd4vY8DBDPsquRHxoybhgKirQ0300qvXiW3D6KuC244=,iv:tDrB7sjsRUHAbsjvD98QdjXuuWSehicTIsq70iIQ6sQ=,tag:ORxlKUiNmYrf3XcF7D4JOQ==,type:str]
-                            emails:
-                                - cnunez@redhat.com
                     basic:
-                        - role: admin
-                          details:
-                            name: admin
+                        auths:
+                            - role: cluster-admin
+                              users:
+                                - name: admin
+                                  # encrypted
+                                  password: ENC[AES256_GCM,data:Hy8DasfyHtrzBQ==,iv:SIv8CTwazLNaJVFVGkDfbRxZvDUCTBTBM0Vb8GFsfKg=,tag:Rmy0WO34gXpImhu6cFzn8Q==,type:str]
+                    google_oauth:
+                        additional_details:
+                            approved_domain: redhat.com
+                            # Unfortunately, Google Cloud does not expose an API for automating
+                            # the creation of OAuth clients. They USED to through the IAP
+                            # service, but they deprecated this service without a replacement.
+                            # This means you'll need to do the below by hand.
+                            #
+                            # To create the OAuth client:
+                            #
+                            # - Visit https://console.cloud.google.com/auth/clients, then click on
+                            #   "Create Client" and create a "Web Application"-type client.
+                            #   Afterwards, scroll down to the "Allowed redirect URIs" section and
+                            #   add the following:
+                            #
+                            #   https://oauth-openshift.apps.CLUSTER_NAME.DOMAIN_NAME/oauth2callback/google-admin
+                            #
+                            #   Click "Save" once done.
+                            #
+                            # - Click "Create Secret" on the bottom right-hand side of the screen.
+                            #   Use the "Client ID" and "Client Secret" that are generated to fill
+                            #   in the properties below.
                             # encrypted
-                            password: ENC[AES256_GCM,data:spJO7LZWuKiUKg==,iv:NdIIm6L/n047z6wtpEtL6YkhulyaS+enMTnkxxuVGNg=,tag:3NmVhZScRCyYezj9cjbmqQ==,type:str]
+                            client_id: ENC[AES256_GCM,data:mnQpLIRNL79i5eMMYfn2jJ5FPLAY4A9NG/mJTZIgme5/9yNXYo7ZoCW0ASAIp+HRNVZLLpygOd7HIQ9Q+0f3cdB7YGv+mkB2,iv:CAcc/DOlkdMRUgq9hu7IMMjCbpLqS9+QvFWpivW3PZk=,tag:5oE5VkxuJjDuFrw8FNmYvA==,type:str]
+                            # encrypted
+                            client_secret: ENC[AES256_GCM,data:NeelIRP87bfvWMmyEjrGLZUJKgsUBHxZ5VqnoS1IVVhyh1I=,iv:hsagJ4cQvwfVE8n8Tar3cdU77FsaKC8ZhLIrI3epERc=,tag:ZY/3Iqd5DXllNL/H6TGjng==,type:str]
+                        auths:
+                            - role: cluster-admin
+                              users:
+                                - cnunez@redhat.com
             cloud_config:
                 aws:
                     networking:
@@ -224,8 +252,8 @@ environments:
                     # encrypted
                     data: ENC[AES256_GCM,data:U2eobbE6upIEWrxHBbiL1zSEMdXQBDwRWpiZyGog9UJMPT/JwpXKdy5pD0wR2O3Gg/QVR2lJH4pZGJum/Xeuccm6/rFfxLP913xX76Ps+W6AP10YowpbOAjcX/bubm+FA5WZnIs0CFr8LUSzmKzrKxv1ITL5vxECbXOseszrMvBnDUoduAj5b8X31/FmPzPJQ1hBIQm66Ko9qB5yY09MpxeWmWOB4ZjR6n2tbsRve886UEq922SdhaldEozb2zq+OC4U1eKBOc4Rq0JoWCam2NnM/Y8vCrgOd9wo5taB+RAR4v+0WqRZlZtFoRxv8L2BAZkuZ3mObqbb5PcH/a/w5HzJ/V82mm5UN3Ie6rBLR1W2SsdWh4ZHE2qhYMpgU/XreRTGwG+/b3hU/z2ik7wgVo7MIXTvDpGqN8tf70IzmMXX2EpHWQMAO4Re+UB8b7GP7xFREbCjC7hnFQoel3AJNUPVdFFsGFdgDHyRa09BamVfnlhWtVfChrY2xl1X5NroZZT7Qn9uOvw6gj7mJhrmbq0JfCaetecTwqY=,iv:/j7qGCxTK0lBUSONjta9cn2A3X4idjk3zamBgFkFLbc=,tag:IR2K25bjQdDe7+KU/OyyCg==,type:str]
 sops:
-    lastmodified: "2026-04-20T03:55:08Z"
-    mac: ENC[AES256_GCM,data:Z3xIzAk10EtmBKP43aGYwIvPaWDnaVccJYtnOIFqJXKnDHvexTjSjlIx5o632jLLXzYtG45d9HPfkTL7o/yOuyRMSsZAl/VYvIIONYDmK4yLIOqUa1dxwRYBWXqV1LgcIVmxYVrIoIKNZEJc+UcNMZ4FPZW79cYOOjTZaY0Mp10=,iv:iyhXEr6Z1R9MoDK/kJprCbDcQvTIeJBqdUQu4ba1KS4=,tag:YWfXv1VeY9GFE0WCl/S3dQ==,type:str]
+    lastmodified: "2026-04-21T02:38:22Z"
+    mac: ENC[AES256_GCM,data:5p0GjX6M+2Cbd0FI7gMd3cHl7fTJypQiQhySr+JiYdXjb0F5CdaRcoRk2QHFUblJfxvV6f0msmf7chHV1b+LBh6CglT2uF+DKVqmTDXjnPJvkgl3yXzJaiPISBtOS3SFhyuHWU5XvN6a6aEgBPraz+0hCm7ApL+m+66M60l2/Wo=,iv:C4jsGorYcQ4hrk3j9AjtpOc/jnsYGF4JELYW9qC7oSc=,tag:pGLX/NV1xoB9BLq3EB03Tw==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
