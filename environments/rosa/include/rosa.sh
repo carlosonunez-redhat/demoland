@@ -1,6 +1,7 @@
 export OCM_CONFIG="$(_get_file_from_secrets_dir 'ocm/ocm.json')"
 
 _exec_rosa() {
+  export $(log_into_aws)
   if test -n "$ROSA_CLIENT_ID" && test -n "$ROSA_CLIENT_SECRET"
   then rosa login --client-id="$ROSA_CLIENT_ID" --client-secret="$ROSA_CLIENT_SECRET" || return 1
   else rosa login --token="$(_get_from_config '.deploy.rosa_config.auth.token')" || return 1

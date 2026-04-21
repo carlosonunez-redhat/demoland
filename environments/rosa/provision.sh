@@ -25,7 +25,7 @@ deploy_network_hcp() {
 }
 
 create_account_roles() {
-  roles=$(aws iam list-roles | grep "$(_rosa_cluster_name)" | cat)
+  roles=$(_exec_aws iam list-roles | grep "$(_rosa_cluster_name)" | cat)
   test "$(wc -l <<< "$roles")" -gt 1 && return 0
   info "Creating AWS account roles for ROSA"
   _exec_rosa create account-roles \
@@ -93,7 +93,7 @@ create_cluster_hcp() {
   if ! _cluster_pending hcp
   then
     info "Creating HCP ROSA cluster"
-    subnets=$(aws ec2 describe-subnets --filters "Name=tag:Name,Values=$(_rosa_network_stack hcp)*" \
+    subnets=$(_exec_aws ec2 describe-subnets --filters "Name=tag:Name,Values=$(_rosa_network_stack hcp)*" \
       --query 'Subnets[].SubnetId' \
       --output text | tr '\t' ',')
     if test -z "$subnets"
