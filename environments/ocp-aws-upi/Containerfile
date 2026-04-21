@@ -23,8 +23,19 @@ FROM fedora:41 AS final
 COPY --from=ocp_installer /tmp/openshift-install /usr/bin/openshift-install
 COPY --from=oc_client /tmp/oc /usr/bin/oc
 RUN dnf -y update
-RUN dnf -y install yq jq awscli openssh ssh-agent
+RUN dnf -y install yq jq awscli openssh ssh-agent htpasswd
 RUN arch=amd64; uname -m | grep -Eiq 'arm|aarch' && arch=arm64; \
     curl -Lo /usr/bin/ytt "https://github.com/carvel-dev/ytt/releases/download/v0.52.0/ytt-linux-$arch"
 RUN chmod +x /usr/bin/ytt
 RUN ytt --version
+RUN arch=x86_64; uname -m | grep -Eiq 'arm|aarch' && arch=aarch64; \
+  cat >/etc/yum.repos.d/google-cloud-sdk.repo <<-EOF
+[google-cloud-cli]
+name=Google Cloud CLI
+baseurl=https://packages.cloud.google.com/yum/repos/cloud-sdk-el9-$arch
+enabled=1
+gpgcheck=1
+repo_gpgcheck=0
+gpgkey=https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+EOF
+RUN sudo dnf -y install libxcrypt-compat google-cloud-cli

@@ -1,0 +1,14 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: web-terminal
+  namespace: openshift-operators
+spec:
+  sourceNamespace: openshift-marketplace
+  source: redhat-operators
+  channel: fast
+  installPlanApproval: Automatic
+  # LOL the subscription HAS to be named 'web-terminal' in order for the icon to appear in the console.
+  # https://github.com/openshift/console/blob/main/pkg/terminal/operator.go#L31
+  name: web-terminal
+  startingCSV: web-terminal.v1.15.0

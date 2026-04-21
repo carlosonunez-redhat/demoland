@@ -11,13 +11,21 @@ controlPlane:
   amiID: #@ data.values.rhcos_ami_id
   additionalSecurityGroupIDs: #@ data.values.control_plane_security_groups
   iamProfile: #@ data.values.control_plane_instance_profile
+  #@ if data.values.enable_sno == True:
+  replicas: 1
+  #@ end
 compute:
+  #@ if data.values.disable_workers == True:
+  - name: worker
+    replicas: 0
+  #@ else:
   - zones: #@ data.values.worker_node_azs
     instanceType: #@ data.values.worker_node_instance_type
     amiID: #@ data.values.rhcos_ami_id
     additionalSecurityGroupIDs: #@ data.values.worker_security_groups
     iamProfile: #@ data.values.worker_instance_profile
     name: worker
+  #@ end
 platform:
   aws:
     region: #@ data.values.aws_region
@@ -40,8 +48,13 @@ platform:
         #@ end
     hostedZone: #@ data.values.aws_hosted_zone_id
     defaultMachinePlatform:
-      zones: #@ data.values.worker_node_azs
-      instanceType: #@ data.values.worker_node_instance_type
       amiID: #@ data.values.rhcos_ami_id
       additionalSecurityGroupIDs: #@ data.values.worker_security_groups
       iamProfile: #@ data.values.worker_instance_profile
+      #@ if data.values.disable_workers == True:
+      zones: #@ data.values.control_plane_node_azs
+      instanceType: #@ data.values.control_plane_node_instance_type
+      #@ else:
+      zones: #@ data.values.worker_node_azs
+      instanceType: #@ data.values.worker_node_instance_type
+      #@ end

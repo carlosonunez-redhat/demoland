@@ -7,13 +7,13 @@ _bootstrap_subnet() {
   bootstrap_az=$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones.bootstrap[0]')
   public_subnets=$(fail_if_nil "$(_get_param_from_aws_cfn_stack vpc 'PublicSubnetIds')" \
     "Public subnets not found" | tr ',' ' ')
-  aws ec2 describe-subnets --subnet-ids $public_subnets |
+  _exec_aws ec2 describe-subnets --subnet-ids $public_subnets |
     jq -r --arg az "$bootstrap_az" '.Subnets[] | select(.AvailabilityZone == $az) | .SubnetId'
 }
 
 _hosted_zone_id() {
   domain_name=$(_get_from_config '.deploy.cloud_config.aws.networking.dns.domain_name')
-  aws route53 list-hosted-zones |
+  _exec_aws route53 list-hosted-zones |
     jq --arg name "$domain_name" -r '.HostedZones[] | select(.Name == $name + ".") | .Id' |
     grep -v null |
     cat
@@ -21,7 +21,7 @@ _hosted_zone_id() {
 
 _hosted_zone_name() {
   domain_name=$(_get_from_config '.deploy.cloud_config.aws.networking.dns.domain_name')
-  aws route53 list-hosted-zones |
+  _exec_aws route53 list-hosted-zones |
     jq --arg name "$domain_name" -r '.HostedZones[] | select(.Name == $name + ".") | .Name' |
     grep -v null |
     sed -E 's/\.$//' | cat
@@ -41,7 +41,7 @@ _get_param_from_aws_cfn_stack() {
   stack_name="$1"
   param="$2"
   resolved_stack_name="$(_aws_cf_stack_name "$1")"
-  results=$(aws cloudformation describe-stacks --stack-name "$resolved_stack_name" |
+  results=$(_exec_aws cloudformation describe-stacks --stack-name "$resolved_stack_name" |
     jq -r '.Stacks[0]' |
     grep -v null |
     cat)
@@ -95,7 +95,7 @@ _wait_for_cf_stack_until_state() {
     return 0
   }
   _aws_cfn_failure_reasons() {
-    aws cloudformation describe-stack-events --stack-name "$1" |
+    _exec_aws cloudformation describe-stack-events --stack-name "$1" |
       jq -r '.StackEvents[] |
         select(
           .ResourceStatus == "CREATE_FAILED" and
@@ -111,11 +111,11 @@ _wait_for_cf_stack_until_state() {
   failed_state="${4,,}"
   while true
   do
-    result=$(aws cloudformation describe-stacks --stack-name "$stack_name" |
+    result=$(_exec_aws cloudformation describe-stacks --stack-name "$stack_name" |
         jq -r '.Stacks[0]')
     if test -z "$result"
     then
-      if test -z "$(aws sts get-caller-identity)"
+      if test -z "$(_exec_aws sts get-caller-identity)"
       then
         info "[iteration #${iterations}] '$stack_name': credentials expired while waiting. refreshing"
         eval $(log_into_aws) || return 1
@@ -150,7 +150,7 @@ _wait_for_cf_stack_until_state() {
           info "[iteration #${iterations}] '$stack_name': Failed; rolling back..."
         ;;
       rollback_complete)
-        manual_delete_command=(aws cloudformation delete-stack
+        manual_delete_command=(_exec_aws cloudformation delete-stack
           --stack-name "$stack_name")
         error "'$stack_name' CloudFormation stack rolled back; destroy the stack and re-deploy \
 or run this manually: ${manual_delete_command[*]}. Reasons why this failed:"
@@ -171,7 +171,7 @@ or run this manually: ${manual_delete_command[*]}. Reasons why this failed:"
 
 _delete_aws_resources_from_cfn_stack() {
   _not_exists() {
-    test -z "$(2>/dev/null aws cloudformation describe-stacks \
+    test -z "$(2>/dev/null _exec_aws cloudformation describe-stacks \
       --stack-name "$(_aws_cf_stack_name "$1")")"
   }
   _run() {
@@ -182,7 +182,7 @@ _delete_aws_resources_from_cfn_stack() {
       error "Stack file not found: $stack_file"
       return 1
     fi
-    aws cloudformation delete-stack --stack-name "$(_aws_cf_stack_name "$1")" >/dev/null
+    _exec_aws cloudformation delete-stack --stack-name "$(_aws_cf_stack_name "$1")" >/dev/null
   }
   _wait() {
     _wait_for_cf_stack_until_state "$1" \
@@ -198,7 +198,7 @@ _delete_aws_resources_from_cfn_stack() {
 
 _create_cfn_stack() {
   _not_exists() {
-    test -z "$(2>/dev/null aws cloudformation describe-stacks \
+    test -z "$(2>/dev/null _exec_aws cloudformation describe-stacks \
       --stack-name "$(_aws_cf_stack_name "$1")")"
   }
   _run() {
@@ -209,7 +209,7 @@ _create_cfn_stack() {
       error "Stack file not found: $stack_file"
       return 1
     fi
-    cmd=(aws cloudformation create-stack
+    cmd=(_exec_aws cloudformation create-stack
       --stack-name "$(_aws_cf_stack_name "$1")"
       --template-body "file://$stack_file")
     test -n "$2" && cmd+=(--parameters "$2")

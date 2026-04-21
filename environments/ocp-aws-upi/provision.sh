@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -e
 source "$INCLUDE_DIR/helpers/aws.sh"
+source "$INCLUDE_DIR/helpers/gcp.sh"
 source "$INCLUDE_DIR/helpers/config.sh"
 source "$INCLUDE_DIR/helpers/data.sh"
 source "$INCLUDE_DIR/helpers/errors.sh"
@@ -10,6 +11,96 @@ source "$INCLUDE_DIR/helpers/ocp.sh"
 source "$INCLUDE_DIR/helpers/yaml.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/aws.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/ocp.sh"
+
+_update_cluster_identity_providers() {
+  local idp
+  idp="$1"
+  echo "$idp" > /tmp/idp_info
+  existing_oauth=$(exec_oc_postinstall get oauth cluster -o yaml 2>/dev/null)
+  if test -z "$existing_oauth"
+  then
+    info "Configuring identity provider for cluster with details: $(yq -o=j -I=0 . <<< "$idp")"
+    exec_oc_postinstall apply -f /tmp/idp_info
+    restart_auth=true
+  else
+    num_existing_idps=$(exec_oc_postinstall get oauth cluster -o yaml | yq -r '.spec.identityProviders | length')
+    info "Updating cluster identity provider with details: $(yq -o=j -I=0 . <<< "$idp")"
+    idp=$(yq -o=j -I=0 '.spec.identityProviders[0]' /tmp/idp_info)
+    idx=0
+    path="/spec"
+    value=$(printf '{"identityProviders":[%s]}' "$idp")
+    if test "$num_existing_idps" -ge 1
+    then
+      idx="$((num_existing_idps-1))"
+      path="/spec/identityProviders/$idx"
+      value="$idp"
+    fi
+    exec_oc_postinstall patch oauth cluster \
+      --type=json \
+      -p '[{"op":"add","path":"'"$path"'","value":'"$value"'}]'
+    info "Restarting OpenShift Authentication..."
+    exec_oc_postinstall rollout restart -n openshift-authentication deployment/oauth-openshift
+  fi
+  rm /tmp/idp_info
+}
+
+_get_auth_secret_name() {
+  local type role query
+  type="$1"
+  role="$2"
+  echo "authinfo-${type,,}-$(tr -dc '[:alnum:]' <<< "${role,,}")"
+}
+
+_get_auth_secret() {
+  local type role query
+  type="$1"
+  role="$2"
+  query="$3"
+  f="/tmp/auth_file_$(echo "${type}-${role}" |base64 -w 0 | tr -d '=')"
+  test -f "$f" || 2>/dev/null exec_oc_postinstall get secret -n openshift-config \
+    "$(_get_auth_secret_name "$type" "$role")" \
+    -o yaml > "$f"
+  test -s "$f" || return 0
+  yq -r "$query" "$f"
+}
+
+_ensure_valid_cluster_role() {
+  exec_oc_postinstall get clusterrole -o name | sed -E 's;clusterrole.rbac.authorization.k8s.io/;;' | grep -q "$1"
+}
+
+control_plane_nodes_exist() {
+  num_worker_nodes_want="$(_get_from_config '.deploy.node_config.control_plane.quantity_per_zone')"
+  num_worker_nodes_got=$(_exec_aws ec2 describe-instances \
+    --query 'Reservations[].Instances[?(State.Name == `running`) &&
+(@.Tags[?Key==`aws:cloudformation:logical-id` && contains(Value, `Master`)]) &&
+(@.Tags[?Key==`Name` && contains(Value, `'"$(_cluster_infra_name)"'`)])].InstanceId' --output text | wc -l)
+  test "$num_worker_nodes_got" == "$num_worker_nodes_want"
+}
+
+worker_nodes_exist() {
+  num_worker_nodes_want="$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"
+  { test -z "$num_worker_nodes_want" || test "$num_worker_nodes_want" -eq 0; } && return 0
+
+  num_worker_nodes_got=$(_exec_aws ec2 describe-instances \
+    --query 'Reservations[].Instances[?(State.Name == `running`) &&
+(@.Tags[?Key==`aws:cloudformation:logical-id` && contains(Value, `Master`)]) &&
+(@.Tags[?Key==`Name` && contains(Value, `'"$(_cluster_infra_name)"'`)])].InstanceId' --output text | wc -l)
+  test "$num_worker_nodes_got" == "$num_worker_nodes_want"
+}
+
+create_installconfig_data() {
+  _ignition_files_present() {
+    for t in master worker bootstrap
+    do
+      test -f "$(_get_file_from_openshift_install_dir "$t.ign")" || return 1
+    done
+  }
+  { control_plane_nodes_exist && worker_nodes_exist; } && return 1
+  _ignition_files_present || return 0
+  { install_config_data_stale && { ! control_plane_nodes_exist && ! worker_nodes_exist ; } ; } && return 0
+  warning "Install config data is stale but cluster is in an inconsistent state; keeping current data for safety"
+  return 1
+}
 
 create_ssh_key() {
   f="$(_get_file_from_data_dir 'id_rsa')"
@@ -37,11 +128,21 @@ upload_key_into_ec2() {
 }
 
 create_installation_manifests() {
+  if ! create_installconfig_data
+  then
+    info "Skipping creating installation manifests"
+    return 0
+  fi
   info "Creating installation manifests"
   _exec_openshift_install_aws create manifests
 }
 
 remove_default_machinesets_from_installation_manifests() {
+  if ! create_installconfig_data
+  then
+    info "Skipping openshift install manifest modification"
+    return 0
+  fi
   for f in '99_openshift-cluster-api_master-machines' \
     '99_openshift-machine-api_master-control-plane-machine-set' \
     '99_openshift-cluster-api_worker-machineset'
@@ -52,7 +153,24 @@ remove_default_machinesets_from_installation_manifests() {
   done
 }
 
+configure_control_plane_scheduling() {
+  test -d "$(_get_file_from_openshift_install_dir 'manifests')" || return 0
+
+  num_cp_nodes="$(_get_from_config '.deploy.node_config.control_plane.quantity_per_zone')"
+  cp_schedulable="$(_get_from_config '.deploy.node_config.control_plane.schedulable')"
+  test -z "$cp_schedulable" &&
+    test "$num_cp_nodes" -ne 1 &&
+    return 0
+  info "Making control plane schedulable"
+  yq -ir '.spec.mastersSchedulable = true' "$(_get_file_from_openshift_install_dir 'manifests/cluster-scheduler-02-config.yml')"
+}
+
 create_ignition_files() {
+  if ! create_installconfig_data
+  then
+    info "Skipping creating Red Hat CoreOS ignition files"
+    return 0
+  fi
   info "Creating Red Hat CoreOS Ignition files"
   _exec_openshift_install_aws create ignition-configs || return 1
   for file in bootstrap master worker
@@ -137,6 +255,7 @@ create_security_group_rules() {
 }
 
 create_bootstrap_machine() {
+  { control_plane_nodes_exist && worker_nodes_exist; } && return 0
   set -e
   sg_id=$(fail_if_nil "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId')" \
     "Master security group ID not found")
@@ -201,31 +320,64 @@ create_openshift_install_config_file() {
     grep -q 'Public' <<< "$1" && ids=$(grep -v "$(_bootstrap_subnet)" <<< "$ids")
     echo "$ids" | as_yaml_list
   }
+  enable_sno=false
+  num_cp_nodes="$(_get_from_config '.deploy.node_config.control_plane.quantity_per_zone')"
+  test "$num_cp_nodes" -eq 1 && enable_sno=true
   local values file external_subnet_ids internal_subnet_ids
   external_subnet_ids=$(_subnet_ids_as_yaml_list "$(_get_param_from_aws_cfn_stack vpc 'PublicSubnetIds')")
   internal_subnet_ids=$(_subnet_ids_as_yaml_list "$(_get_param_from_aws_cfn_stack vpc 'PrivateSubnetIds')")
-  values=(
-    ssh_key "$(fail_if_nil "$(ssh-keygen -yf "$(_get_file_from_data_dir 'id_rsa')")" \
-      "Couldn't obtain public key from SSH private key.")"
-    base_domain "$(_hosted_zone_name)"
-    aws_hosted_zone_id "$(_hosted_zone_id)"
-    rhcos_ami_id "$(_rhcos_ami_id)"
-    cluster_name "$(_cluster_name)"
-    aws_region "$(_get_from_config '.deploy.cloud_config.aws.networking.region')"
-    pull_secret "$(_get_from_config '.deploy.node_config.common.pull_secret' | as_json_string)"
-    control_plane_node_azs "$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones.control_plane[]' | as_yaml_list)"
-    control_plane_node_instance_type "$(_get_from_config '.deploy.node_config.control_plane.instance_type')"
-    control_plane_security_groups "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId' | as_yaml_list)"
-    worker_node_azs "$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones.workers[]'|
-      as_yaml_list)"
-    worker_node_instance_type "$(_get_from_config '.deploy.node_config.workers.instance_type')"
-    worker_security_groups "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId' | as_yaml_list)"
-    bootstrap_node_subnet_id "$(_bootstrap_subnet)"
-    control_plane_instance_profile "$(_get_param_from_aws_cfn_stack security 'MasterInstanceProfile')"
-    worker_instance_profile "$(_get_param_from_aws_cfn_stack security 'WorkerInstanceProfile')"
-    external_subnet_ids "$external_subnet_ids"
-    internal_subnet_ids "$internal_subnet_ids"
-  )
+  num_workers="$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"
+  if test "$num_workers" -eq 0
+  then
+    values=(
+      ssh_key "$(fail_if_nil "$(ssh-keygen -yf "$(_get_file_from_data_dir 'id_rsa')")" \
+        "Couldn't obtain public key from SSH private key.")"
+      base_domain "$(_hosted_zone_name)"
+      aws_hosted_zone_id "$(_hosted_zone_id)"
+      rhcos_ami_id "$(_rhcos_ami_id)"
+      cluster_name "$(_cluster_name)"
+      aws_region "$(_get_from_config '.deploy.cloud_config.aws.networking.region')"
+      pull_secret "$(_get_from_config '.deploy.node_config.common.pull_secret' | as_json_string)"
+      control_plane_node_azs "$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones.control_plane[]' | as_yaml_list)"
+      control_plane_node_instance_type "$(_get_from_config '.deploy.node_config.control_plane.instance_type')"
+      control_plane_security_groups "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId' | as_yaml_list)"
+      bootstrap_node_subnet_id "$(_bootstrap_subnet)"
+      control_plane_instance_profile "$(_get_param_from_aws_cfn_stack security 'MasterInstanceProfile')"
+      worker_security_groups "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId' | as_yaml_list)"
+      worker_instance_profile "$(_get_param_from_aws_cfn_stack security 'WorkerInstanceProfile')"
+      external_subnet_ids "$external_subnet_ids"
+      internal_subnet_ids "$internal_subnet_ids"
+      disable_workers "true"
+      worker_node_azs '[]'
+      worker_node_instance_type 'not-used'
+      enable_sno "$enable_sno"
+    )
+  else
+    values=(
+      ssh_key "$(fail_if_nil "$(ssh-keygen -yf "$(_get_file_from_data_dir 'id_rsa')")" \
+        "Couldn't obtain public key from SSH private key.")"
+      base_domain "$(_hosted_zone_name)"
+      aws_hosted_zone_id "$(_hosted_zone_id)"
+      rhcos_ami_id "$(_rhcos_ami_id)"
+      cluster_name "$(_cluster_name)"
+      aws_region "$(_get_from_config '.deploy.cloud_config.aws.networking.region')"
+      pull_secret "$(_get_from_config '.deploy.node_config.common.pull_secret' | as_json_string)"
+      control_plane_node_azs "$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones.control_plane[]' | as_yaml_list)"
+      control_plane_node_instance_type "$(_get_from_config '.deploy.node_config.control_plane.instance_type')"
+      control_plane_security_groups "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId' | as_yaml_list)"
+      worker_node_azs "$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones.workers[]'|
+        as_yaml_list)"
+      worker_node_instance_type "$(_get_from_config '.deploy.node_config.workers.instance_type')"
+      worker_security_groups "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId' | as_yaml_list)"
+      bootstrap_node_subnet_id "$(_bootstrap_subnet)"
+      control_plane_instance_profile "$(_get_param_from_aws_cfn_stack security 'MasterInstanceProfile')"
+      worker_instance_profile "$(_get_param_from_aws_cfn_stack security 'WorkerInstanceProfile')"
+      external_subnet_ids "$external_subnet_ids"
+      internal_subnet_ids "$internal_subnet_ids"
+      disable_workers "false"
+      enable_sno "$enable_sno"
+    )
+  fi
   render_and_save_install_config "${values[@]}"
 }
 
@@ -299,16 +451,6 @@ create_control_plane_machines() {
   int_svc_target_group_arn=$(fail_if_nil \
     "$(_get_param_from_aws_cfn_stack networking 'InternalServiceTargetGroupArn')" \
     'Internal service NLB target group ARN not found')
-  private_hosted_zone_id=$(fail_if_nil \
-    "$(_get_param_from_aws_cfn_stack networking 'PrivateHostedZoneId')" \
-    "Private hosted zone ID not found.")
-  private_hosted_zone_name=$(_exec_aws route53 get-hosted-zone --id "$private_hosted_zone_id" --query 'HostedZone.Name'\
-    --output text)
-  if test -z "$private_hosted_zone_name"
-  then
-    error "Hosted zone name not found from ID $private_hosted_zone_id"
-    return 1
-  fi
   cert_authority=$(get_data_from_ignition_file master '.ignition.security.tls.certificateAuthorities[0].source')
   if test -z "$cert_authority"
   then
@@ -330,14 +472,13 @@ create_control_plane_machines() {
     'ExternalApiTargetGroupArn' "$ext_api_target_group_arn"
     'InternalApiTargetGroupArn' "$int_api_target_group_arn"
     'InternalServiceTargetGroupArn' "$int_svc_target_group_arn"
-    'PrivateHostedZoneId' "$private_hosted_zone_id"
-    'PrivateHostedZoneName' "$private_hosted_zone_name"
     'Master0Subnet' "$(cut -f1 -d ',' <<< "$private_subnets")"
     'Master1Subnet' "$(cut -f2 -d ',' <<< "$private_subnets")"
     'Master2Subnet' "$(cut -f3 -d ',' <<< "$private_subnets")"
     'IgnitionLocation' "https://${api_server_fqdn}:22623/config/master"
     'CertificateAuthorities' "$cert_authority"
     'MasterInstanceProfileName' "$instance_profile_name"
+    'NumNodes' "$(_get_from_config '.deploy.node_config.control_plane.quantity_per_zone')"
   )
   params_json=$(_create_aws_cf_params_json "${params[@]}")
   _create_aws_resources_from_cfn_stack_with_caps control_plane_machines "$params_json" \
@@ -350,7 +491,7 @@ create_worker_machines() {
   num_workers="$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"
   if test -z "$num_workers" || test "$num_workers" -eq 0
   then
-    info "Config for this environment requested no workers; continuing."
+    info "No workers in this environment; control plane will be schedulable"
     return 0
   fi
 
@@ -398,6 +539,36 @@ wait_for_install_to_complete() {
   _exec_openshift_install_aws wait-for install-complete --log-level debug
 }
 
+wait_for_first_worker_csr() {
+  done_file="$(_get_file_from_openshift_install_dir '.first_worker_joined')"
+  test -f "$done_file" && return 0
+
+  num_workers="$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"
+  test "$num_workers" -eq 0 && return 0
+
+  attempts=0
+  max_attempts=180
+  while test "$attempts" -lt "$max_attempts"
+  do
+    info "[Attempt $attempts/$max_attempts] Waiting for the first worker node bootstrapper CSR to appear"
+    set +e
+    results=$(exec_oc_postinstall get csr 2>&1 |
+      grep -v "No resources found" |
+      grep -E "node-bootstrapper.*Pending" |
+      cut -f1 -d ' ')
+    num_results=$(grep -Evc '^$' <<< "$results")
+    set -e
+    if test "$num_results" -gt 0
+    then
+      touch "$done_file"
+      return 0
+    fi
+    attempts=$((attempts+1))
+    sleep 1
+  done
+  return 1
+}
+
 wait_for_and_register_worker_node_csrs() {
   _get_csrs() {
     local query state
@@ -409,16 +580,20 @@ wait_for_and_register_worker_node_csrs() {
       cut -f1 -d ' '
   }
   _num_csrs() {
-    echo -n "$1" | wc -l
+    grep -Evc '^$' <<< "$1"
   }
   _approve_csrs() {
-    echo -n "$1" |
+    grep -Ev '^$' <<< "$1" |
       while read -r csr
       do
         info "--> Approving pending '$2' CSR [$csr]"
         exec_oc_postinstall adm certificate approve "$csr"
       done
   }
+  test -f "$(_get_file_from_openshift_install_dir '.csrs_accepted')" && return 0
+  num_workers="$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"
+  test "$num_workers" -eq 0 && return 0
+
   local attempts max_attempts successes successes_required
   successes_required=10
   max_attempts=180
@@ -426,7 +601,11 @@ wait_for_and_register_worker_node_csrs() {
   successes=0
   while test "$attempts" -lt "$max_attempts"
   do
-    test "$successes" == "$successes_required" && return 0
+    if test "$successes" == "$successes_required"
+    then
+      touch "$(_get_file_from_openshift_install_dir '.csrs_accepted')"
+      return 0
+    fi
 
     approved_bootstrapper_csrs=$(_get_csrs 'node-bootstrapper' 'Approved')
     approved_serving_csrs=$(_get_csrs 'kubelet-serving' 'Approved')
@@ -438,8 +617,8 @@ wait_for_and_register_worker_node_csrs() {
       pending (bootstrapper): $(_num_csrs "$pending_bootstrapper_csrs")
       pending (kubelet serving): $(_num_csrs "$pending_serving_csrs")
       zero-CSR confirmations remaining: $((successes_required-successes))"
-    if test "$(_num_csrs pending_bootstrapper_csrs)" == 0 &&
-       test "$(_num_csrs pending_serving_csrs)" == 0
+    if test "$(_num_csrs "$pending_bootstrapper_csrs")" == 0 &&
+       test "$(_num_csrs "$pending_serving_csrs")" == 0
     then
       successes=$((successes+1))
       sleep 0.5
@@ -454,11 +633,13 @@ wait_for_and_register_worker_node_csrs() {
 }
 
 wait_for_workers_to_become_ready() {
+  num_workers="$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"
+  test "$num_workers" -eq 0 && return 0
   local num_worker_nodes max_attempts
   num_worker_nodes=$(_exec_aws ec2 describe-instances \
     --query 'Reservations[].Instances[?(State.Name == `running`) && 
-(@.Tags[?Key==`aws:cloudformation:logical-id` &&
-contains(Value, `Worker`)])].InstanceId' --output text | wc -l)
+(@.Tags[?Key==`aws:cloudformation:logical-id` && contains(Value, `Worker`)]) &&
+(@.Tags[?Key==`Name` && contains(Value, `'"$(_cluster_infra_name)"'`)])].InstanceId' --output text | wc -l)
   max_attempts=100
   while test "$max_attempts" -gt 0
   do
@@ -471,7 +652,17 @@ contains(Value, `Worker`)])].InstanceId' --output text | wc -l)
 }
 
 create_ingress_dns_records() {
-  local router_elb_hosted_zone_id
+  local router_elb_hosted_zone_id private_hosted_zone_id private_hosted_zone_name
+  private_hosted_zone_id=$(fail_if_nil \
+    "$(_get_param_from_aws_cfn_stack networking 'PrivateHostedZoneId')" \
+    "Private hosted zone ID not found.")
+  private_hosted_zone_name=$(_exec_aws route53 get-hosted-zone --id "$private_hosted_zone_id" --query 'HostedZone.Name'\
+    --output text | sed -E 's/\.$//')
+  if test -z "$private_hosted_zone_name"
+  then
+    error "Hosted zone name not found from ID $private_hosted_zone_id"
+    return 1
+  fi
   router_elb_fqdn=$(_cluster_router_fqdn) || return 1
   router_elb_hosted_zone_id=$(_exec_aws elb describe-load-balancers |
     jq -r '.LoadBalancerDescriptions[] | select(.DNSName == "'"$router_elb_fqdn"'").CanonicalHostedZoneNameID') || return 1
@@ -480,7 +671,9 @@ create_ingress_dns_records() {
     'HostedZoneId' "$(_hosted_zone_id)"
     'HostedZoneName' "$(_hosted_zone_name)"
     'RouterELBHostedZoneId' "$router_elb_hosted_zone_id"
-    'RouterELBFQDN' "$(_cluster_router_fqdn)"
+    'RouterELBFQDN' "$(_cluster_router_fqdn)."
+    'PrivateHostedZoneId' "$private_hosted_zone_id"
+    'PrivateHostedZoneName' "$private_hosted_zone_name"
   )
   params_json=$(_create_aws_cf_params_json "${params[@]}")
   _create_aws_resources_from_cfn_stack_with_caps ingress "$params_json" \
@@ -493,7 +686,196 @@ delete_bootstrap_machine() {
     "Install complete; deleting bootstrap machine..."
 }
 
-export $(log_into_aws) || exit 1
+wait_for_ingress_load_balancer_to_be_created() {
+  local attempts max_attempts router_elb_hosted_zone_id
+  attempts=0
+  max_attempts=180
+  while test "$attempts"  -lt "$max_attempts"
+  do
+    router_elb_fqdn=$(_cluster_router_fqdn)
+    if test -z "$router_elb_fqdn"
+    then
+      attempts=$((attempts+1))
+      sleep 1
+      continue
+    fi
+    router_elb_hosted_zone_id=$(_exec_aws elb describe-load-balancers |
+      jq -r '.LoadBalancerDescriptions[] | select(.DNSName == "'"$router_elb_fqdn"'").CanonicalHostedZoneNameID')
+    test -n "$router_elb_hosted_zone_id" && return 0
+    info "[Attempt $attempts/$max_attempts] Waiting for ingress ELB to be created"
+    attempts=$((attempts+1))
+    sleep 1
+  done
+  return 1
+}
+
+create_cluster_users_htpasswd() {
+  _user_exists_in_htpasswd_secret() {
+    local user role data
+    user="$1"
+    role="$2"
+    data=$(_get_auth_secret basic "$role" '.data.htpasswd')
+    test -z "$data" && return 1
+    echo "$data" | base64 -d | grep -Eq "^${user}:"
+  }
+
+  auths=$(_get_from_config '.deploy.cluster_config.cluster_auth.basic.auths')
+  { test -z "$auths" || test "$auths" == '[]'; } && return 0
+
+  restart_auth=false
+  for role in $(yq -r '.[].role' <<< "$auths" | sort -u)
+  do
+    { test -z "$role" || test "${role,,}" == null ; } && continue
+    if ! _ensure_valid_cluster_role "$role"
+    then
+      error "Not a valid cluster role: $role"
+      return 1
+    fi
+    auth_infos=$(yq -o=j -I=0 -r '[.[] | select(.role == "'"$role"'")] | flatten' <<< "$auths")
+    num_auth_infos=$(jq -r 'length' <<< "$auth_infos")
+    if test "$num_auth_infos" -gt 1
+    then
+      error "Basic auth has $num_auth_infos sections that configure the '$role' role, but only one can exist"
+      return 1
+    fi
+    changes_made=false
+    htpasswd_file="$(mktemp /tmp/htpasswd.XXXXXXXX)"
+    while read -r userdata
+    do
+      username=$(jq -r '.name' <<< "$userdata" | grep -iv null | cat)
+      if test -z "$username"
+      then
+        error "One of the users in the '$role' section has a blank username."
+        return 1
+      fi
+      test "${username,,}" == null && continue
+      _user_exists_in_htpasswd_secret "$username" "$role" && continue
+
+      password=$(jq -r '.password' <<< "$userdata" | grep -iv null | cat)
+      if test -z "$password"
+      then
+        error "One of the users in the '$role' section has a blank password."
+        return 1
+      fi
+      info "Creating basic auth user '$username' (role: $role)"
+      htpasswd -c -B -b "$htpasswd_file" "$username" "$password" || return 1
+      info "Granting '$username' $role access"
+      exec_oc_postinstall adm policy add-cluster-role-to-user "$role" "$username"
+      changes_made=true
+    done < <(jq -cr '.[0].users[]' <<< "$auth_infos")
+    if test "$changes_made" == true
+    then
+      info "Saving login details to cluster"
+      exec_oc_postinstall delete secret -n openshift-config "$(_get_auth_secret_name basic "$role")" 2>/dev/null || true
+      exec_oc_postinstall create secret generic -n openshift-config \
+        --from-file=htpasswd="$htpasswd_file" \
+        "$(_get_auth_secret_name basic "$role")"
+      _update_cluster_identity_providers "$(cat <<-EOF
+  apiVersion: config.openshift.io/v1
+  kind: OAuth
+  metadata:
+    name: cluster
+  spec:
+    identityProviders:
+    - name: basic-$role
+      mappingMethod: claim 
+      type: HTPasswd
+      htpasswd:
+        fileData:
+          name: $(_get_auth_secret_name basic "$role")
+EOF
+)"
+      exec_oc_postinstall rollout restart -n openshift-authentication deployment/oauth-openshift
+    fi
+  done
+}
+
+create_cluster_users_google_auth() {
+  _client_secret_exists_in_secret() {
+    local client_secret role data
+    client_secret="$1"
+    role="$2"
+    test "$client_secret" == "$(_get_auth_secret google "$role" '.data.clientSecret' | base64 -d)"
+  }
+
+  _google_idp_exists() {
+    local role
+    role="$1"
+    test -n "$(exec_oc_postinstall get oauth cluster -o yaml |
+      yq -r ".spec.identityProviders[] | select(.name == \"google-$role\") | .name"  |
+      grep -Ev '^null$' |
+      cat)"
+  }
+
+  auths=$(_get_from_config '.deploy.cluster_config.cluster_auth.google_oauth.auths')
+  { test -z "$auths" || test "$auths" == '[]'; } && return 0
+
+  details=$(_get_from_config '.deploy.cluster_config.cluster_auth.google_oauth.additional_details')
+  for role in $(yq -r '.[].role' <<< "$auths" | sort -u)
+  do
+    { test -z "$role" || test "${role,,}" == null ; } && continue
+    if ! _ensure_valid_cluster_role "$role"
+    then
+      error "Not a valid cluster role: $role"
+      return 1
+    fi
+    auth_infos=$(yq -o=j -I=0 -r '[.[] | select(.role == "'"$role"'")] | flatten' <<< "$auths")
+    num_auth_infos=$(jq -r 'length' <<< "$auth_infos")
+    if test "$num_auth_infos" -gt 1
+    then
+      error "Google auth has $num_auth_infos sections that configure the '$role' role, but only one can exist"
+      return 1
+    fi
+    changes_made=false
+    client_id=$(yq -r '.client_id' <<< "$details")
+    client_secret=$(yq -r '.client_secret' <<< "$details")
+    if test -z "$client_id" || test -z "$client_secret"
+    then
+      error "client_id and client_secret must be defined"
+      return 1
+    fi
+    hosted_domain=$(yq -r '.approved_domain' <<< "$details" | grep -iv null | cat)
+    if test -z "$hosted_domain"
+    then
+      error "approved_domain must be defined."
+      return 1
+    fi
+    if ! _client_secret_exists_in_secret "$client_secret"
+    then
+      info "Mapping Google OAuth app '$client_id' to role '$role'"
+      exec_oc_postinstall delete secret -n openshift-config "$(_get_auth_secret_name google "$role")" 2>/dev/null || true
+      exec_oc_postinstall create secret generic -n openshift-config \
+        --from-literal=clientSecret="$client_secret" \
+        "$(_get_auth_secret_name google "$role")"
+    fi
+    if ! _google_idp_exists "$role"
+    then
+      _update_cluster_identity_providers "$(cat <<-EOF
+  apiVersion: config.openshift.io/v1
+  kind: OAuth
+  metadata:
+    name: cluster
+  spec:
+    identityProviders:
+    - name: google-$role
+      mappingMethod: claim
+      type: Google
+      google:
+        hostedDomain: $hosted_domain
+        clientID: $client_id
+        clientSecret:
+          name: $(_get_auth_secret_name google "$role")
+EOF
+)"
+    fi
+    while read -r email
+    do
+      info "Granting '$email' '$role' access"
+      exec_oc_postinstall adm policy add-cluster-role-to-user "$role" "$email"
+    done < <(jq -r '.[0].users[]' <<< "$auth_infos" | grep -iv null | cat)
+  done
+}
+
 create_ssh_key
 load_keys_into_ssh_agent
 upload_key_into_ec2
@@ -506,14 +888,19 @@ create_security_group_rules
 create_openshift_install_config_file
 create_installation_manifests
 remove_default_machinesets_from_installation_manifests
+configure_control_plane_scheduling
 create_ignition_files
 sync_bootstrap_ignition_files_with_s3_bucket
 create_bootstrap_machine
 create_control_plane_machines
 create_worker_machines
 wait_for_bootstrap_complete
+wait_for_first_worker_csr
 wait_for_and_register_worker_node_csrs
 wait_for_workers_to_become_ready
-wait_for_install_to_complete
+wait_for_ingress_load_balancer_to_be_created
 create_ingress_dns_records
+wait_for_install_to_complete
 delete_bootstrap_machine
+create_cluster_users_htpasswd
+create_cluster_users_google_auth

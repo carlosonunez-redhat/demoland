@@ -4,11 +4,17 @@ common:
             # aws.sts: AWS credentials for assuming into another role.
             # encrypted
             sts:
-                aws_access_key_id: ENC[AES256_GCM,data:gM+RJt6ReeHUGzJA2C+jRI9Esi8=,iv:nypR43kBLeSolhQRTJ1PYxhSnTJUFjhVH3YLUfrOCIc=,tag:loLoIh08PjUwMKUHvhNY9g==,type:str]
-                aws_secret_access_key: ENC[AES256_GCM,data:OiW+GJkO/yYcg1aSBEx+z+SUDl8crUi9fBbNmatzfTlzBkqfggPk5Q==,iv:IF8qx1VbSG0CwgznIT8wQHTr30NTpnDRvvLQV3zCELE=,tag:OTetTsacYGLvEHDdk6slbw==,type:str]
+                aws_access_key_id: ENC[AES256_GCM,data:mYNULftSVHse9fm/BaL+VQM94uc=,iv:JK/04GrWmZdwo3IoDWC9h5jCtpNTUIrlkPL6chw35EM=,tag:/kJ2wQFERMEDgGTyd1XiDA==,type:str]
+                aws_secret_access_key: ENC[AES256_GCM,data:z09ryg56yGwuO0NSYO9V0mwn3qlNlbZXWT8RNye8BJHCzu77TnpLXQ==,iv:p/ExtXbwm0ADQPQbW4GWxhYe9kdk1ItDwi783wF+Q50=,tag:BOWoMNyBe9prhp8SwOIqQw==,type:str]
                 aws_default_region: ENC[AES256_GCM,data:yhbppXp4Emsv,iv:PoWpnhgYk18InCtqBcLK5yrI8vrHqTX9BDR2kQ0Kya0=,tag:7Jooayomp5o2DNnbqlvfFg==,type:str]
-                aws_role_arn: ENC[AES256_GCM,data:FjVGndd2Y0BP9NxjeGL6g6v4aQxpMviETtG4ioR4RsM3cXMU+nCrqY2wDpnWG1vl,iv:Rh7QZDsLZip/3qrwEzQv9mCoNHuVowbmUI0+TPAajp4=,tag:pWRtrIX0H3n4fOlHyfp7FA==,type:str]
-                aws_role_external_id: ENC[AES256_GCM,data:CE/kXZadb+1L4PRIED1o5FQndFXJxgeI,iv:Wew/tIrrm41xIk29+p0tll5aXE2HWn8z1hkAMlpTUjo=,tag:BRuhdSkoeKZtbqktHxi37A==,type:str]
+                aws_role_arn: ENC[AES256_GCM,data:yA+WDikbuiX3IyphIDT2++hXaXx5WGHgx3a1OonJM40yVkRJqVWsBCTyue3RhbYO,iv:KrwbybYkkIVgaNb4QCerejvGMbYb2JbUupaFLOs83RU=,tag:qePeUIvZeelVzep8FrCpfQ==,type:str]
+                aws_role_external_id: ENC[AES256_GCM,data:ZtjjLB7VfRetsFKhCTbgU1F886U=,iv:H/73XQG/VEQV8JYQ8QiRYbU+2k13w2s+tLwJ8v5kw8Q=,tag:gcXR3Fc+PSwR6lw3lvvyUg==,type:str]
+        gcp:
+            # gcp.project_id: The GCP project to scope resources into.
+            # encrypted
+            project_id: ENC[AES256_GCM,data:oRgMnbl4yDcCKtFPo/2RvW/gMWne,iv:2f6IQZC+ZBNdDbjTM6SEbi6tHjrtMp03ojDyeSjlgzc=,tag:+SSiF0dYUT9MXUbmVF5pDA==,type:str]
+            # gcp.service_account: The service account to use
+            service_account: {}
 environments:
     example:
         version: 20260402
@@ -21,7 +27,7 @@ environments:
         #
         # ```yaml
         # depends_on:
-        # - ocp-single-worker
+        # - ocp-custom-env
         # ```
         depends_on: []
         common_options:
@@ -114,33 +120,92 @@ environments:
                     quantity_per_zone: 1
                     instance_type: m5.xlarge
                     spot: false
-    ocp-single-worker:
-        alias_of: ocp
+    ocp-aws-sno:
+        alias_of: ocp-aws-upi
         deploy:
-            cluster_config:
-                openshift_version: 4.20.14
             node_config:
                 bootstrap:
-                    instance_type: c8i.xlarge
+                    ignition_file_s3_key: bootstrap.ign
+                    instance_type: c8i.2xlarge
                     spot: false
                     quantity_per_zone: 1
                 control_plane:
-                    quantity_per_zone: 3
-                    instance_type: c8i.2xlarge
+                    quantity_per_zone: 1
+                    instance_type: c8i.8xlarge
                     spot: false
                 workers:
-                    quantity_per_zone: 1
+                    quantity_per_zone: 0
                     instance_type: c8i.2xlarge
                     spot: false
-    ocp:
+    ocp-aws-sno-metal:
+        alias_of: ocp-aws-upi
+        deploy:
+            node_config:
+                bootstrap:
+                    ignition_file_s3_key: bootstrap.ign
+                    instance_type: c8i.2xlarge
+                    spot: false
+                    quantity_per_zone: 1
+                control_plane:
+                    quantity_per_zone: 1
+                    instance_type: c5n.metal
+                    spot: false
+                workers:
+                    quantity_per_zone: 0
+                    instance_type: c8i.2xlarge
+                    spot: false
+    ocp-aws-upi:
         version: 20250827
+        components:
+            - openshift-gitops
+            - web-terminal
         deploy:
             environment_vars: []
+            cluster_config:
+                openshift_version: 4.20.14
+                cluster_auth:
+                    basic:
+                        auths:
+                            - role: cluster-admin
+                              users:
+                                - name: admin
+                                  # encrypted
+                                  password: ENC[AES256_GCM,data:MqmXZe+8jvwtow==,iv:QEJ4FsEpaKltj/x7VMm3uSAC0etp9iYDoHw/kvxQqGY=,tag:BAwMHVAR9Qh0hUAhkgjqCg==,type:str]
+                    google_oauth:
+                        additional_details:
+                            approved_domain: redhat.com
+                            # Unfortunately, Google Cloud does not expose an API for automating
+                            # the creation of OAuth clients. They USED to through the IAP
+                            # service, but they deprecated this service without a replacement.
+                            # This means you'll need to do the below by hand.
+                            #
+                            # To create the OAuth client:
+                            #
+                            # - Visit https://console.cloud.google.com/auth/clients, then click on
+                            #   "Create Client" and create a "Web Application"-type client.
+                            #   Afterwards, scroll down to the "Allowed redirect URIs" section and
+                            #   add the following:
+                            #
+                            #   https://oauth-openshift.apps.CLUSTER_NAME.DOMAIN_NAME/oauth2callback/google-admin
+                            #
+                            #   Click "Save" once done.
+                            #
+                            # - Click "Create Secret" on the bottom right-hand side of the screen.
+                            #   Use the "Client ID" and "Client Secret" that are generated to fill
+                            #   in the properties below.
+                            # encrypted
+                            client_id: ENC[AES256_GCM,data:lfl04ePhwAa6hlKeEUWbFHDjinevL09g98acGKEtTrqPhXxB58nEJSwUxxriOckL3Oa9Fioli1xUUHn5mosBX441V2Uq1gXh,iv:FdiSljwq1M5rKx9lOHLfHRMBc78l4pkWmr4IwRZG5Dk=,tag:hjpRvjRP4QaY8P3xrsWWcA==,type:str]
+                            # encrypted
+                            client_secret: ENC[AES256_GCM,data:hN90snaXnEwMhkUdadJBL1pQd0pN/yNhm2XdRiGYatFLE4k=,iv:g61EfjQXRwADmWCe15fz1AcppbawHtl+JXs423jwDTw=,tag:DxqLfkbAIVdMw1i/sf55ng==,type:str]
+                        auths:
+                            - role: cluster-admin
+                              users:
+                                - cnunez@redhat.com
             cloud_config:
                 aws:
                     networking:
                         dns:
-                            domain_name: sandbox15.opentlc.com
+                            domain_name: sandbox5544.opentlc.com
                         cidr_block: 10.0.0.0/16
                         region: us-east-2
                         availability_zones:
@@ -156,27 +221,27 @@ environments:
             node_config:
                 common:
                     # encrypted
-                    pull_secret: ENC[AES256_GCM,data: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,iv:eQ/2mP9+lNSOgXHhY6v+dkgAhxpH1IL++YGPOgguMdQ=,tag:j4h7/zKX4jLq20SRq0pE3A==,type:str]
+                    pull_secret: ENC[AES256_GCM,data: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,iv:D6kgOgfXxxS0OiuFlAJiCvMC3nR1TxBErY2Qo5irmdI=,tag:pcifbEhSaDLdA0hcgG6FEA==,type:str]
                 bootstrap:
-                    instance_type: t3.xlarge
+                    instance_type: c8i.2xlarge
                     spot: false
                     quantity_per_zone: 1
                 control_plane:
-                    quantity_per_zone: 1
-                    instance_type: t3.xlarge
+                    quantity_per_zone: 3
+                    instance_type: c8i.2xlarge
                     spot: false
                 workers:
-                    quantity_per_zone: 0
-                    instance_type: t3.xlarge
+                    quantity_per_zone: 3
+                    instance_type: c8i.2xlarge
                     spot: false
             secrets:
                 ssh_key:
                     name: ocp-aws-ssh-key
                     # encrypted
-                    data: ENC[AES256_GCM,data:U2eobbE6upIEWrxHBbiL1zSEMdXQBDwRWpiZyGog9UJMPT/JwpXKdy5pD0wR2O3Gg/QVR2lJH4pZGJum/Xeuccm6/rFfxLP913xX76Ps+W6AP10YowpbOAjcX/bubm+FA5WZnIs0CFr8LUSzmKzrKxv1ITL5vxECbXOseszrMvBnDUoduAj5b8X31/FmPzPJQ1hBIQm66Ko9qB5yY09MpxeWmWOB4ZjR6n2tbsRve886UEq922SdhaldEozb2zq+OC4U1eKBOc4Rq0JoWCam2NnM/Y8vCrgOd9wo5taB+RAR4v+0WqRZlZtFoRxv8L2BAZkuZ3mObqbb5PcH/a/w5HzJ/V82mm5UN3Ie6rBLR1W2SsdWh4ZHE2qhYMpgU/XreRTGwG+/b3hU/z2ik7wgVo7MIXTvDpGqN8tf70IzmMXX2EpHWQMAO4Re+UB8b7GP7xFREbCjC7hnFQoel3AJNUPVdFFsGFdgDHyRa09BamVfnlhWtVfChrY2xl1X5NroZZT7Qn9uOvw6gj7mJhrmbq0JfCaetecTwqY=,iv:/j7qGCxTK0lBUSONjta9cn2A3X4idjk3zamBgFkFLbc=,tag:IR2K25bjQdDe7+KU/OyyCg==,type:str]
+                    data: ENC[AES256_GCM,data:V8nJtkO0PMcyHYTB7xbDQRQf+nsii8Txmwpf2kONl8N7dcQoxVfbHTnJlu4gbbgp/GYN0yY0ZahzgmLZfruPalVEAl99HgvxjIntsMKbEzcuiainKJNHKfBy3ybAU5im5bU+VOSgbtgZ+cD5KOnqI9w50SwYg8NtqteJn1zgcaTNxhdRXo/LDeg0iMNJDsYbmOKerbeFBF2mZp73VJD6J6+B8LggBeMdb82sFQA92Hs5d1KB1m8y1z69q7xkzLxJuQb0J/p1+5U/Yp/BZ0f+TYh/wZ7BB4/1M8cCdPZVFhe+7HC16KPbG+dTrNWhcZfJJt477kZ+tgIX9XP2MkHP40be8mzJgCCdhSMUIBCbH/8JmULlnxR0mwTmlJJv2zq+b62hjA18IAcAhItTuiuRhMXECwDk0IoUarh5BMWIrEz6br13hwK/7n0YPcBc7ox6SdhRaeFww5P6xyh5J73CCa20EqXy3sEzAb0JEFTFeC4HuY8LCPnegguBuecqqtqzkf8RZU5wY662GqTtl+4DxQWHlmAiQw4tfMU=,iv:Pv54grl9gNb9hQW5j5BJfi1u/HeFP+65+9a2TuP1Tvs=,tag:y5YUBQ5GviOthRc3qEEmkQ==,type:str]
 sops:
-    lastmodified: "2026-04-16T17:36:19Z"
-    mac: ENC[AES256_GCM,data:VcgrNb+3zKGyh0+XuwkazVzl+I+Sayef0+xVCsWm0jJ5OwCg3hJoCeEI0fkuz8mnwNClezEZd6WWPEDrBFnuSD7dwt0gIrLnmmL9CClWJ2MliWHSbx1+DQHQyI2ct/mDCYSprBGHttEfqaH33PTQPJwbTO8IcFB/u8ICKwypKwc=,iv:BtkPYhVxzk3ZvN6W5WsFVZv45IIghxJTfwczJWHVtXM=,tag:LL4kTmRxuC0Eomd3sXpk2w==,type:str]
+    lastmodified: "2026-04-21T02:46:47Z"
+    mac: ENC[AES256_GCM,data:gdgfKqm2Ro9X4xq3SvwOg9QrGUkbaBca2ORIWJfo3UtOaHobuqcfbuD/k9D8Zel9GXopPiDMUy8+xBatQtcIDC+98ldrtaKiA093XvoVCgEXbcSt3TMLNzNAzfVaojIcAy91JXcr0XSMwx32nvb7Gjy6Q15vKf7EfsSe2qt23As=,iv:2laZ/rcHYA2FXJtqv1LQkwZnMY/W6w/qKJ1QyLms79E=,tag:u+DmsCf1J5MpJJvqv2q31A==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-

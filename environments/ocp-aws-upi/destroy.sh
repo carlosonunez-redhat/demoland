@@ -65,11 +65,9 @@ EOF
   fi
   for sg_info in $sg_list
   do
-    set -x
     sg_id=$(jq -r '.id' <<< "$sg_info")
     sg_rule=$(jq -cr '.rule' <<< "$sg_info")
     _delete_sg_rules_wait_until_deleted "$sg_id" "[$sg_rule]"
-    set +x
   done
 }
 
@@ -263,7 +261,6 @@ delete_extra_cluster_associated_sgs() {
 }
 
 
-export $(log_into_aws) || exit 1
 delete_ingress_dns_records
 delete_worker_machines
 delete_control_plane_machines

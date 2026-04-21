@@ -22,18 +22,24 @@ Parameters:
   HostedZoneName:
     Description: The Route53 zone to register the targets with, such as example.com. Omit the trailing period.
     Type: String
+  PrivateHostedZoneName:
+    Description: The private Route53 zone to register the targets with, such as example.com. Omit the trailing period.
+    Type: String
+  PrivateHostedZoneId:
+    Description: The private Route53 public zone ID to register the targets with, such as Z21IXYZABCZ2A4.
+    Type: String
 
 Resources:
-  IngressRecord:
+  IngressRecordPrivate:
     Type: AWS::Route53::RecordSetGroup
     Properties:
       Comment: Alias record for OpenShift Ingress
-      HostedZoneId: !Ref HostedZoneId
+      HostedZoneId: !Ref PrivateHostedZoneId
       RecordSets:
       - Name:
           !Join [
             ".",
-            ["*", "apps", !Ref ClusterName, !Join ["", [!Ref HostedZoneName, "."]]],
+            ["*", "apps", !Join ["", [!Ref PrivateHostedZoneName, "."]]],
           ]
         Type: A
         AliasTarget:

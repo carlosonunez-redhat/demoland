@@ -52,9 +52,31 @@ confirm_cluster_name_matches_regex() {
   return 1
 }
 
+confirm_more_than_two_workers_if_greater_than_zero() {
+  pf_log info "Checking that more than two workers have been requested (if greater than zero)"
+  num_workers="$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"
+  { test "$num_workers" -eq 0 || test "$num_workers" -ge 2; } && return 0
+  error "You requested a single worker. Single worker clusters are unsupported by this environment.
+
+Set '.deploy.node_config.workers.quantity_per_zone' to more than two and try again.
+
+If you REALLY want a single-worker cluster, set '.deploy.node_config.workers.quantity_per_zone' to \
+zero, then, in your environment, add a MachineSet with a single replica in it"
+  return 1
+}
+
+confirm_control_plane_nodes_valid() {
+  pf_log info "Checking that control plane is set to one or three nodes"
+  num_nodes="$(_get_from_config '.deploy.node_config.control_plane.quantity_per_zone')"
+  { test "$num_nodes" -eq 1 || test "$num_nodes" -eq 3; } && return 0
+  error "You want '$num_nodes' control plane nodes, but only one or three are supported."
+  return 1
+}
+
 # won't export correctly if quoted
 # shellcheck disable=SC2046
-export $(log_into_aws) || exit 1
 confirm_config_is_correct
 confirm_route_53_public_zone_available
 confirm_cluster_name_matches_regex
+confirm_more_than_two_workers_if_greater_than_zero
+confirm_control_plane_nodes_valid

@@ -1,7 +1,8 @@
 # shellcheck shell=bash
 _cluster_name() {
-  printf "demoland-%s" "$(_get_top_level_environment_name | tr -dc '[:alnum:]')" |
-    head -c 18
+    _get_top_level_environment_name |
+      tr -dc '[:alnum:]' |
+      head -c 18
 }
 
 _cluster_infra_name() {
@@ -32,7 +33,14 @@ exec_oc() {
 }
 
 exec_oc_postinstall() {
-  _exec_oc "$(_get_file_from_openshift_install_dir 'auth/kubeconfig')" "$@"
+  config=$(_get_file_from_openshift_install_dir 'auth/kubeconfig')
+  ctx=$(_exec_oc "$config" config get-contexts -o name | grep -E '(^admin$|kube:admin)')
+  if test -z "$ctx"
+  then
+    error "Couldn't find 'kube:admin' context from openshift-install generated Kubeconfig"
+    return 1
+  fi
+  _exec_oc "$(_get_file_from_openshift_install_dir 'auth/kubeconfig')" --context "$ctx" "$@"
 }
 
 print_oc_command() {
