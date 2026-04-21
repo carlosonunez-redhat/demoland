@@ -383,10 +383,12 @@ _ensure_container_secrets_vol_populated environment:
   cloud_creds_data_enc=$(base64 -w 0 <<< "$cloud_creds_data"); \
   {{ container_bin }} run --rm \
     -v "$vol:/secrets" \
-    bash:5 -c "echo '$env_data_enc' | base64 -d > /secrets/config.yaml" && \
+    -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
+    bash:5 -c "echo '$env_data_enc' | base64 -d > /secrets/config-\$(cat /environment_info/root_environment_id).yaml" && \
   {{ container_bin }} run --rm \
     -v "$vol:/secrets" \
-    bash:5 -c "echo '$cloud_creds_data_enc' | base64 -d > /secrets/cloud_creds.yaml"
+    -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
+    bash:5 -c "echo '$cloud_creds_data_enc' | base64 -d > /secrets/cloud_creds-\$(cat /environment_info/root_environment_id).yaml"
 
 _ensure_container_volume_exists environment:
   set +u; \
