@@ -12,6 +12,7 @@ container_postinstall_vol := 'demo-environment-postinstall-vol'
 config_file := source_dir() + '/config.yaml'
 yq_image := 'mikefarah/yq'
 default_openshift_version := "4.19.27"
+environment_info_vol_sentinel_file := shell("echo /tmp/env_info_vol_$(date +%s)")
 
 [doc("Creates a new environment")]
 create_new_environment environment:
@@ -53,12 +54,11 @@ _run_stage_with_dependencies environment +stages:\
     (_generate_toplevel_environment_info environment)
   set +u; \
   env_info_vol="$(just _container_environment_info_vol '{{ environment }}')"; \
-  export ENV_INFO_VOL="$env_info_vol"; \
   envs="{{ environment }}"; \
   test -z "$SKIP_DEPENDENCIES" && envs="$(just _get_dependent_environments {{ environment }});{{ environment }}"; \
   set -eu; \
   for env in $(echo "$envs" | sed -E 's/^;//' | tr ';' '\n'); \
-  do just _confirm_environment "$env" || exit 1; \
+  do ENV_INFO_VOL="$env_info_vol" just _confirm_environment "$env" || exit 1; \
   done; \
   for env in $(echo "$envs" | sed -E 's/^;//' | tr ';' '\n'); \
   do \
@@ -233,13 +233,13 @@ _container_postinstall_vol environment:
 
 _container_environment_info_vol environment:
   set +u; \
-  if test -n "$ENV_INFO_VOL"; \
+  if test -f "{{ environment_info_vol_sentinel_file }}" ; \
   then \
-    echo "$ENV_INFO_VOL"; \
+    cat "{{ environment_info_vol_sentinel_file }}"; \
     exit 0; \
   fi; \
   set -u; \
-  env=$(just _resolved_environment_name '{{ environment }}' | \
+  env=$(echo "{{ environment }}" | \
         base64 -w 0 | \
         tr -d '=' | \
         head -c 8); \
@@ -350,7 +350,8 @@ _generate_toplevel_environment_info environment:
     {{ container_bin }} run --rm \
       -v "${vol}:/info" \
       bash:5 -c "echo '$v' > /info/$k"; \
-  done
+  done; \
+  echo "$vol" > "{{ environment_info_vol_sentinel_file }}"
 
 _ensure_toplevel_environment_info_available environment:
   vol=$(just _container_environment_info_vol {{ environment }}); \
