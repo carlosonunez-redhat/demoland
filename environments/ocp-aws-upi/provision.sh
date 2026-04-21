@@ -375,6 +375,7 @@ create_openshift_install_config_file() {
       external_subnet_ids "$external_subnet_ids"
       internal_subnet_ids "$internal_subnet_ids"
       disable_workers "false"
+      enable_sno "$enable_sno"
     )
   fi
   render_and_save_install_config "${values[@]}"
