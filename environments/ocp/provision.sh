@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -e
 source "$INCLUDE_DIR/helpers/aws.sh"
+source "$INCLUDE_DIR/helpers/gcp.sh"
 source "$INCLUDE_DIR/helpers/config.sh"
 source "$INCLUDE_DIR/helpers/data.sh"
 source "$INCLUDE_DIR/helpers/errors.sh"
