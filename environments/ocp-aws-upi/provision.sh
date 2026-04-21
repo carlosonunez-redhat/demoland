@@ -55,12 +55,13 @@ _get_auth_secret() {
   local type role query
   type="$1"
   role="$2"
+  query="$3"
   f="/tmp/auth_file_$(echo "${type}-${role}" |base64 -w 0 | tr -d '=')"
   test -f "$f" || 2>/dev/null exec_oc_postinstall get secret -n openshift-config \
     "$(_get_auth_secret_name "$type" "$role")" \
     -o yaml > "$f"
   test -s "$f" || return 0
-  yq -r "$3" "$f"
+  yq -r "$query" "$f"
 }
 
 _ensure_valid_cluster_role() {
@@ -789,11 +790,26 @@ EOF
 }
 
 create_cluster_users_google_auth() {
+  _client_secret_exists_in_secret() {
+    local client_secret role data
+    client_secret="$1"
+    role="$2"
+    test "$client_secret" == "$(_get_auth_secret google "$role" '.data.clientSecret' | base64 -d)"
+  }
+
+  _google_idp_exists() {
+    local role
+    role="$1"
+    test -n "$(exec_oc_postinstall get oauth cluster -o yaml |
+      yq -r ".spec.identityProviders[] | select(.name == \"google-$role\") | .name"  |
+      grep -Ev '^null$' |
+      cat)"
+  }
+
   auths=$(_get_from_config '.deploy.cluster_config.cluster_auth.google_oauth.auths')
   { test -z "$auths" || test "$auths" == '[]'; } && return 0
 
   details=$(_get_from_config '.deploy.cluster_config.cluster_auth.google_oauth.additional_details')
-  restart_auth=false
   for role in $(yq -r '.[].role' <<< "$auths" | sort -u)
   do
     { test -z "$role" || test "${role,,}" == null ; } && continue
@@ -823,33 +839,39 @@ create_cluster_users_google_auth() {
       error "approved_domain must be defined."
       return 1
     fi
-    info "Mapping Google OAuth app '$client_id' to role '$role'"
-    exec_oc_postinstall delete secret -n openshift-config "$(_get_auth_secret_name google "$role")" 2>/dev/null || true
-    exec_oc_postinstall create secret generic -n openshift-config \
-      --from-literal=clientSecret="$client_secret" \
-      "$(_get_auth_secret_name google "$role")"
-    _update_cluster_identity_providers "$(cat <<-EOF
-apiVersion: config.openshift.io/v1
-kind: OAuth
-metadata:
-  name: cluster
-spec:
-  identityProviders:
-  - name: google-$role
-    mappingMethod: claim 
-    type: Google
-    google:
-      hostedDomain: $hosted_domain
-      clientID: $client_id
-      clientSecret:
-        name: $(_get_auth_secret_name google "$role")
+    if ! _client_secret_exists_in_secret "$client_secret"
+    then
+      info "Mapping Google OAuth app '$client_id' to role '$role'"
+      exec_oc_postinstall delete secret -n openshift-config "$(_get_auth_secret_name google "$role")" 2>/dev/null || true
+      exec_oc_postinstall create secret generic -n openshift-config \
+        --from-literal=clientSecret="$client_secret" \
+        "$(_get_auth_secret_name google "$role")"
+    fi
+    if ! _google_idp_exists "$role"
+    then
+      _update_cluster_identity_providers "$(cat <<-EOF
+  apiVersion: config.openshift.io/v1
+  kind: OAuth
+  metadata:
+    name: cluster
+  spec:
+    identityProviders:
+    - name: google-$role
+      mappingMethod: claim
+      type: Google
+      google:
+        hostedDomain: $hosted_domain
+        clientID: $client_id
+        clientSecret:
+          name: $(_get_auth_secret_name google "$role")
 EOF
 )"
+    fi
     while read -r email
     do
       info "Granting '$email' '$role' access"
       exec_oc_postinstall adm policy add-cluster-role-to-user "$role" "$email"
-    done < <(jq -r '.users[]' <<< "$auth_infos" | grep -iv null | cat)
+    done < <(jq -r '.[0].users[]' <<< "$auth_infos" | grep -iv null | cat)
   done
 }
 
