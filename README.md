@@ -5,7 +5,15 @@ product internals.
 
 ## Demolands
 
-- [OCP](./ocp)
+### Base Environments
+
+#### `ocp-aws-upi`
+
+| :-----      | :-----                                                                                                                |
+| **Code**    | [link](./environments/ocp-aws-upi)                                                                                    |
+| **Purpose** | Deploys an OpenShift cluster on AWS with three worker nodes and three control plane nodes.                            |
+| **Aliases** | - **ocp-aws-sno**: Creates a single-node OpenShift cluster.                                                           |
+|             | - **ocp-aws-sno-metal**: Same as `ocp-aws-sno`, but deploys on a metal instance that's compatible with OpenShift Virt |
 
 ## Deployment
 
