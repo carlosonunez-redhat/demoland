@@ -9,6 +9,7 @@ product internals.
 
 #### `ocp-aws-upi`
 
+|             |                                                                                                                       |
 | :-----      | :-----                                                                                                                |
 | **Code**    | [link](./environments/ocp-aws-upi)                                                                                    |
 | **Purpose** | Deploys an OpenShift cluster on AWS with three worker nodes and three control plane nodes.                            |
