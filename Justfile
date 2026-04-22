@@ -12,7 +12,14 @@ container_postinstall_vol := 'demo-environment-postinstall-vol'
 config_file := source_dir() + '/config.yaml'
 yq_image := 'mikefarah/yq'
 default_openshift_version := "4.19.27"
-environment_info_vol_sentinel_file := shell("echo /tmp/env_info_vol_$(date +%s)")
+
+[doc("Cleans temporary files and such unless another just operation is happening.")]
+clean:
+  just_processes=$(ps -ef | grep just | grep -v grep | wc -l); \
+  test "$just_processes" -gt 1 && exit 0; \
+  just _log info "Cleaning up temp files."; \
+  rm -rf /tmp/*demoland_temp*;
+
 
 [doc("Creates a new environment")]
 create_new_environment environment:
@@ -36,29 +43,35 @@ delete_environment environment: (_confirm_environment environment)
   fi; \
   just _delete_env_dir '{{ environment }}' && just _delete_env_from_config '{{ environment }}';
 
+[doc("Lists environments.")]
+list_environments:
+  sops decrypt {{ config_file }} | yq -r '.environments | to_entries | .[].key' | grep -v example
 
 [doc("Checks an environment before a deployment.")]
 precheck environment: \
   (_run_stage_with_dependencies environment "_precheck")
 
 [doc("Deploys an environment")]
-deploy environment: (_run_stage_with_dependencies environment "_precheck" "_provision" "_expose" "_postinstall")
+deploy environment: clean \
+    (_run_stage_with_dependencies environment "_precheck" "_provision" "_expose" "_postinstall")
 
 [doc("Destroys an environment")]
-destroy environment: (_run_stage_with_dependencies environment "_destroy")
+destroy environment: clean \
+    (_run_stage_with_dependencies environment "_destroy")
 
 [doc("Performs post-install steps, like installing operators and such.")]
 postinstall environment: (_run_stage_with_dependencies environment "_postinstall")
 
 _run_stage_with_dependencies environment +stages:\
-    (_generate_toplevel_environment_info environment)
+    (_generate_toplevel_environment_info environment) \
+    (_generate_container_vol environment ) \
+    (_generate_container_secrets_vol environment )
   set +u; \
-  env_info_vol="$(just _container_environment_info_vol '{{ environment }}')"; \
   envs="{{ environment }}"; \
   test -z "$SKIP_DEPENDENCIES" && envs="$(just _get_dependent_environments {{ environment }});{{ environment }}"; \
   set -eu; \
   for env in $(echo "$envs" | sed -E 's/^;//' | tr ';' '\n'); \
-  do ENV_INFO_VOL="$env_info_vol" just _confirm_environment "$env" || exit 1; \
+  do just _confirm_environment "$env" || exit 1; \
   done; \
   for env in $(echo "$envs" | sed -E 's/^;//' | tr ';' '\n'); \
   do \
@@ -188,8 +201,11 @@ _get_dependent_environments environment:
   set +u; \
   env_data=$(sops --decrypt --extract '["environments"]["{{ environment }}"]' \
     --output-type yaml "{{ config_file }}" | grep -Ev '^[ ]{0,}#') || exit 1; \
+  dependencies=$(just _run_yq "$env_data" '.depends_on'); \
+  if test -z "$dependencies" || test "$dependencies" == null; \
+  then exit 0; \
+  fi; \
   just _run_yq "$env_data" '.depends_on | join(";")' | grep -Ev '^null$'; \
-  exit 0;
 
 _environment_name environment:
   echo '{{ environment }}' | tr ' ' '_'
@@ -219,23 +235,12 @@ _add_env_to_config environment:
 _delete_env_from_config environment:
   sops unset {{ config_file }} '["environments"]["{{ environment }}"]'
 
-_container_vol environment:
-  env=$(just _resolved_environment_name '{{ environment }}'); \
-  echo "{{ container_vol }}-$env"
-
-_container_secrets_vol environment:
-  env=$(just _resolved_environment_name '{{ environment }}'); \
-  echo "{{ container_secrets_vol }}-$env"
-
-_container_postinstall_vol environment:
-  env=$(just _resolved_environment_name '{{ environment }}'); \
-  echo "{{ container_postinstall_vol }}-$env"
-
-_container_environment_info_vol environment:
+_print_container_vol_name_for_environment environment vol_name:
   set +u; \
-  if test -f "{{ environment_info_vol_sentinel_file }}" ; \
+  sentinel_f=$(just _sentinel_file '{{ vol_name }}'); \
+  if test -f "$sentinel_f" ; \
   then \
-    cat "{{ environment_info_vol_sentinel_file }}"; \
+    cat "$sentinel_f"; \
     exit 0; \
   fi; \
   set -u; \
@@ -243,7 +248,19 @@ _container_environment_info_vol environment:
         base64 -w 0 | \
         tr -d '=' | \
         head -c 8); \
-  echo "{{ container_environment_info_vol }}-$env"
+  echo "{{ vol_name }}-$env" | tee "$sentinel_f"
+
+_container_vol environment: \
+  ( _print_container_vol_name_for_environment environment container_vol)
+
+_container_secrets_vol environment: \
+  ( _print_container_vol_name_for_environment environment container_secrets_vol)
+
+_container_postinstall_vol environment: \
+  ( _print_container_vol_name_for_environment environment container_postinstall_vol)
+
+_container_environment_info_vol environment: \
+  ( _print_container_vol_name_for_environment environment container_environment_info_vol)
 
 _container_vol_shared:
   echo "{{ container_vol }}-shared"
@@ -257,7 +274,6 @@ _container_image environment:
 
 _execute_containerized environment file ignore_not_found='false' custom_message='none': \
     ( _ensure_container_image_exists environment ) \
-    ( _ensure_container_volume_exists environment ) \
     ( _ensure_container_secrets_vol_populated environment )
   file=$(just _get_environment_directory_file {{ environment }} {{ file }}); \
   if ! test -f "$file"; \
@@ -351,7 +367,6 @@ _generate_toplevel_environment_info environment:
       -v "${vol}:/info" \
       bash:5 -c "echo '$v' > /info/$k"; \
   done; \
-  echo "$vol" > "{{ environment_info_vol_sentinel_file }}"
 
 _ensure_toplevel_environment_info_available environment:
   vol=$(just _container_environment_info_vol {{ environment }}); \
@@ -368,7 +383,7 @@ _ensure_toplevel_environment_has_kubeconfig environment:
   just _log error "A kubeconfig isn't available yet for environment '$(just _toplevel_environment '{{ environment }}')'"; \
   exit 1
 
-_ensure_container_secrets_vol_populated environment:
+_generate_container_secrets_vol environment:
   set +u; \
   vol=$(just _container_secrets_vol {{ environment }}); \
   if test -n "$REBUILD_SECRETS_VOLUME" || \
@@ -376,7 +391,11 @@ _ensure_container_secrets_vol_populated environment:
   then \
     test -n "$REBUILD_SECRETS_VOLUME" && {{ container_bin }} volume rm -f "$vol" >/dev/null; \
     {{ container_bin }} volume create "$vol" >/dev/null; \
-  fi; \
+  fi;
+
+_ensure_container_secrets_vol_populated environment:
+  set +u; \
+  vol=$(just _container_secrets_vol {{ environment }}); \
   env_data=$(just _merge_aliased_environment '{{ environment }}'); \
   cloud_creds_data=$(just _merge_cloud_creds '{{ environment }}'); \
   env_data_enc=$(base64 -w 0 <<< "$env_data"); \
@@ -390,7 +409,7 @@ _ensure_container_secrets_vol_populated environment:
     -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
     bash:5 -c "echo '$cloud_creds_data_enc' | base64 -d > /secrets/cloud_creds-\$(cat /environment_info/root_environment_id).yaml"
 
-_ensure_container_volume_exists environment:
+_generate_container_vol environment:
   set +u; \
   data=$(just _container_vol {{ environment }}); \
   shared=$(just _container_vol_shared); \
@@ -503,6 +522,17 @@ _do_yq_encoded_merge inputA inputB:
      'yq eval-all ". as \$item ireduce ({}; . * \$item )" \
       <(echo "{{ inputA }}" | base64 -d) \
       <(echo "{{ inputB }}" | base64 -d)'
+
+_sentinel_file name:
+  topmost_pid() { \
+    pid="${1:-$$}"; \
+    last="${2:-$$}"; \
+    comm=$(ps -p "$pid" -o command | grep -v 'COMMAND'); \
+    test "$comm" == '-bash' && echo "$last" && return 0; \
+    parent=$(ps -p $pid -o ppid= | tr -d ' '); \
+    topmost_pid "$parent" "$pid"; \
+  }; \
+  echo "/tmp/demoland_temp_{{ name }}_$(topmost_pid)";
 
 
 [positional-arguments]
