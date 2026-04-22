@@ -878,6 +878,83 @@ EOF
   done
 }
 
+enable_nested_virtualization_on_worker_nodes() {
+  _exec_ec2_instance_op_and_wait() {
+    local instance_id want_state change_state change_op
+    instance_id="$1"
+    want_state="$2"
+    change_state="$3"
+    change_op="$4"
+    attempts=0
+    max_attempts=180
+    want_state="$2"
+    while test "$attempts" -ne "$max_attempts"
+    do
+      state=$(aws ec2 describe-instances --instance-id "$instance_id" \
+        --query 'Reservations[0].Instances[0].State.Name' --output text)
+      case "${state,,}" in
+        "${change_state,,}")
+          info "---> [$instance_id] Changing '$state'"
+           _exec_aws ec2 "${change_op}" --instance-id "$instance_id" || return 1
+           ;;
+        "${want_state,,}")
+          return 0
+          ;;
+        *)
+          info "---> [$instance_id] Waiting for state '$want_state'; got '$state'"
+          attempts=$((attempts+1))
+          sleep 1
+          ;;
+      esac
+    done
+    return 1
+  }
+
+  _shut_down_and_wait() {
+    _exec_ec2_instance_op_and_wait "$1" 'stopped' 'running' 'stop-instances'
+  }
+
+  _start_instance_and_wait() {
+    _exec_ec2_instance_op_and_wait "$1" 'running' 'stopped' 'start-instances'
+  }
+
+  test -f "$(_get_file_from_openshift_install_dir '.nested_virt_configured')" && return 0
+  instances=$(_exec_aws ec2 describe-instances \
+    --query 'Reservations[].Instances[?(State.Name == `running`) &&
+(@.Tags[?Key==`aws:cloudformation:logical-id` && contains(Value, `Worker`)]) &&
+(@.Tags[?Key==`Name` && contains(Value, `'"$(_cluster_infra_name)"'`)])]' |
+    jq -cr 'flatten | .[] |
+select(.InstanceType | test("^(c8i|m8i|r8i)")) |
+{
+  id: .InstanceId,
+  size: .InstanceType,
+  cpuOptions: .CpuOptions
+}')
+  if test -z "$instances"
+  then
+    touch "$(_get_file_from_openshift_install_dir '.nested_virt_configured')"
+    return 0
+  fi
+  for instance_data in $instances
+  do
+    instance_virt_enabled=$(jq -r '.cpuOptions.virtEnabled' <<< "$instance_data")
+    test "$instance_virt_enabled" == enabled && continue
+
+    instance_id=$(jq -r '.id' <<< "$instance_data")
+    cores=$(jq -r '.cpuOptions.CoreCount' <<< "$instance_data")
+    threads_per_core=$(jq -r '.cpuOptions.ThreadsPerCore' <<< "$instance_data")
+    info "Enabling virtualization for worker instance '$instance_id'"
+    _shut_down_and_wait "$instance_id"
+    _exec_aws ec2 modify-instance-cpu-options --instance-id "$instance_id" \
+      --core-counts "$cores" \
+      --threads-per-core "$threads_per_core" \
+      --nested-virtualization enabled \
+      --cpu-cores
+    _start_instance_and_wait "$instance_id"
+  done
+  touch "$(_get_file_from_openshift_install_dir '.nested_virt_configured')"
+}
+
 create_ssh_key
 load_keys_into_ssh_agent
 upload_key_into_ec2
@@ -904,5 +981,6 @@ wait_for_ingress_load_balancer_to_be_created
 create_ingress_dns_records
 wait_for_install_to_complete
 delete_bootstrap_machine
+enable_nested_virtualization_on_worker_nodes
 create_cluster_users_htpasswd
 create_cluster_users_google_auth
