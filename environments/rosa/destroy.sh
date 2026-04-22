@@ -19,6 +19,8 @@ source "$ENVIRONMENT_INCLUDE_DIR/rosa.sh"
 # The 'delete' command doesn't have a 'network' subcommand, so we
 # have to destroy the network "manually."
 destroy_network_classic() {
+  _rosa_cluster_type_disabled classic && return 0
+
   _destroy_network classic
 }
 
@@ -30,7 +32,7 @@ destroy_account_roles() {
   test "$(wc -l <<< "$roles")" -le 1 && return 0
 
   info "Deleting ROSA account roles"
-  rosa delete account-roles \
+  _exec_rosa delete account-roles \
     --classic \
     --hosted-cp \
     --prefix "$(_rosa_cluster_name)" \
@@ -42,12 +44,14 @@ destroy_oidc_configuration() {
   _oidc_config_created || return 0
 
   info "Deleting AWS OIDC config for ROSA"
-  rosa delete oidc-config \
+  _exec_rosa delete oidc-config \
     --mode auto \
     --yes
 }
 
 destroy_operator_roles_classic() {
+  _rosa_cluster_type_disabled classic && return 0
+
   _operator_roles_created classic || return 0
 
   info "Destroying ROSA HCP operator roles"
@@ -69,9 +73,11 @@ destroy_operator_roles_hcp() {
 
 
 destroy_cluster_classic() {
+  _rosa_cluster_type_disabled classic && return 0
+
   _all_clusters classic >/dev/null || return 0
 
-  _cluster_uninstalling classic || rosa delete cluster \
+  _cluster_uninstalling classic || _exec_rosa delete cluster \
     --cluster "$(_rosa_cluster_name)-classic" \
     --yes
 
@@ -81,7 +87,7 @@ destroy_cluster_classic() {
 destroy_cluster_hcp() {
   _all_clusters hcp >/dev/null || return 0
 
-  _cluster_uninstalling hcp || rosa delete cluster \
+  _cluster_uninstalling hcp || _exec_rosa delete cluster \
     --cluster "$(_rosa_cluster_name)-hcp" \
     --yes
 
