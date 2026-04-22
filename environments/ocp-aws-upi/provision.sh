@@ -159,7 +159,7 @@ configure_control_plane_scheduling() {
   test -d "$(_get_file_from_openshift_install_dir 'manifests')" || return 0
 
   num_cp_nodes="$(_get_from_config '.deploy.node_config.control_plane.quantity_per_zone')"
-  cp_schedulable="$(_get_from_config '.deploy.node_config.control_plane.schedulable')"
+  cp_schedulable="$(_get_from_config '.deploy.node_config.control_plane.schedulable' | grep -Ev '^null$' | cat)"
   test -z "$cp_schedulable" &&
     test "$num_cp_nodes" -ne 1 &&
     return 0
