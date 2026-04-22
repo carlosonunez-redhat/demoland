@@ -534,6 +534,7 @@ create_worker_machines() {
 }
 
 wait_for_bootstrap_complete() {
+  { control_plane_nodes_exist && worker_nodes_exist; } && return 0
   _exec_openshift_install_aws wait-for bootstrap-complete --log-level debug
 }
 
