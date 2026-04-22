@@ -85,6 +85,14 @@ environments:
         # ```
         components:
             - example
+    appdev_with_vm:
+        version: 20260124
+        depends_on:
+            - ocp-aws-upi-virt
+        common_options:
+            # common_options.ignore_installconfig_check: Ignores checking for an installconfig in this
+            # environment.
+            ignore_installconfig_check: true
     rosa:
         version: 20260124
         common_options:
@@ -146,6 +154,23 @@ environments:
                         cidr_block:
                             classic: 172.0.0.0/16
                             hcp: 10.0.0.0/16
+    ocp-aws-upi-virt:
+        alias_of: ocp-aws-upi
+        deploy:
+            node_config:
+                bootstrap:
+                    ignition_file_s3_key: bootstrap.ign
+                    instance_type: c8i.2xlarge
+                    spot: false
+                    quantity_per_zone: 1
+                control_plane:
+                    quantity_per_zone: 1
+                    instance_type: c8i.2xlarge
+                    spot: false
+                workers:
+                    quantity_per_zone: 3
+                    instance_type: c8i.8xlarge
+                    spot: false
     ocp-aws-sno:
         alias_of: ocp-aws-upi
         deploy:
@@ -266,8 +291,8 @@ environments:
                     # encrypted
                     data: ENC[AES256_GCM,data:V8nJtkO0PMcyHYTB7xbDQRQf+nsii8Txmwpf2kONl8N7dcQoxVfbHTnJlu4gbbgp/GYN0yY0ZahzgmLZfruPalVEAl99HgvxjIntsMKbEzcuiainKJNHKfBy3ybAU5im5bU+VOSgbtgZ+cD5KOnqI9w50SwYg8NtqteJn1zgcaTNxhdRXo/LDeg0iMNJDsYbmOKerbeFBF2mZp73VJD6J6+B8LggBeMdb82sFQA92Hs5d1KB1m8y1z69q7xkzLxJuQb0J/p1+5U/Yp/BZ0f+TYh/wZ7BB4/1M8cCdPZVFhe+7HC16KPbG+dTrNWhcZfJJt477kZ+tgIX9XP2MkHP40be8mzJgCCdhSMUIBCbH/8JmULlnxR0mwTmlJJv2zq+b62hjA18IAcAhItTuiuRhMXECwDk0IoUarh5BMWIrEz6br13hwK/7n0YPcBc7ox6SdhRaeFww5P6xyh5J73CCa20EqXy3sEzAb0JEFTFeC4HuY8LCPnegguBuecqqtqzkf8RZU5wY662GqTtl+4DxQWHlmAiQw4tfMU=,iv:Pv54grl9gNb9hQW5j5BJfi1u/HeFP+65+9a2TuP1Tvs=,tag:y5YUBQ5GviOthRc3qEEmkQ==,type:str]
 sops:
-    lastmodified: "2026-04-22T04:02:26Z"
-    mac: ENC[AES256_GCM,data:zh36NaSdYTt0Nm9eQe5DreJRr+XsTBILCu2xiwZKFMK1T/xDdzjvC4WZIfJQ+JGMnS8sw+t379suQfvP2eTP8RdpyonbaZXTbv1DiFa0+rBdXQq3c/s6pyezR2jGl4yaHINiOCAL01BaTntuEzabJMffgiCepstfzh5g+6hY3oQ=,iv:LChp08pPO4ZEkVfw2Q+4Rxoza5a3HwSdwrg1sbE5udo=,tag:yfhErCnA96cn65+mbkYLGw==,type:str]
+    lastmodified: "2026-04-22T13:45:22Z"
+    mac: ENC[AES256_GCM,data:rPHacB+lTiYl/6N8v0Wi56lvN4avplPWtfzerXTRRRceaa9mJTXK1btA+bn4/wRzyKfO6bIbsnDgTDRJFnNOKIg2Jgb7WKLS8P26yzDkAQB7XQLcaXWbfQWysnKeylK6dwU3r04tb8/8LVu2l1ZqXDqK9Hpi6at/GxtzVosbHq4=,iv:WW2vvd2DqDDH9w2TKcrkbcOc/NbafclhyqnNBbzs6Po=,tag:IfqFgQTvbfrDlnUFS6lcug==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
