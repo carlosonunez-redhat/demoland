@@ -289,6 +289,12 @@ _execute_containerized environment file ignore_not_found='false' custom_message=
     just _log "$level" "$message"; \
     test "{{ ignore_not_found }}" == 'false' && exit 1; \
   fi; \
+  file_lines=$(grep -Ev '^#|source.*\.sh$' "$file" | grep -Ev '^$' | wc -l); \
+  if test "$file_lines" -eq 0; \
+  then \
+    just _log info "'$file' is empty. Go put some stuff into it!"; \
+    exit 0; \
+  fi; \
   command=({{ container_bin }} run --rm -it \
     -v "$(just _container_vol {{ environment }}):/data" \
     -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
@@ -428,25 +434,31 @@ _ensure_container_image_exists environment:
   {{ container_bin }} images  | grep -q "$image_name" && \
     test -z "$REBUILD_IMAGE" && \
     exit 0; \
-    container_file=$(just _get_property_from_env_config \
-      {{ environment }} \
-      '.deploy.container_file'); \
-    test -z "$container_file" && \
-      container_file=$(just _get_environment_directory_file {{ environment }} Containerfile); \
-    if ! test -f "$container_file"; \
-    then \
-      just _log error "Containerfile not found at: $container_file"; \
-      exit 1; \
-    fi; \
-    openshift_version=$(just _get_property_from_env_config_use_alias \
-      {{ environment }} \
-      '.deploy.cluster_config.openshift_version'); \
-    test -z "$openshift_version" && openshift_version={{ default_openshift_version }}; \
-    just _log info "(re)building deployer image '$image_name' [openshift version: $openshift_version]"; \
-    {{ container_bin }} build -t "$image_name" \
-      -f "$container_file" \
-      --build-arg OPENSHIFT_VERSION="$openshift_version" \
-      $PWD
+  container_file=$(just _get_property_from_env_config \
+    {{ environment }} \
+    '.deploy.container_file'); \
+  test -z "$container_file" && \
+    container_file=$(just _get_environment_directory_file {{ environment }} Containerfile); \
+  if ! test -f "$container_file"; \
+  then \
+    just _log error "Containerfile not found at: $container_file"; \
+    exit 1; \
+  fi; \
+  file_lines=$(cat "$container_file" | grep -Ev '^#|^FROM' | wc -l); \
+  if test "$file_lines" -eq 0; \
+  then \
+    just _log error "Containerfile for '{{ environment }}' at '$container_file' is empty!"; \
+    exit 1; \
+  fi; \
+  openshift_version=$(just _get_property_from_env_config_use_alias \
+    {{ environment }} \
+    '.deploy.cluster_config.openshift_version'); \
+  test -z "$openshift_version" && openshift_version={{ default_openshift_version }}; \
+  just _log info "(re)building deployer image '$image_name' [openshift version: $openshift_version]"; \
+  {{ container_bin }} build -t "$image_name" \
+    -f "$container_file" \
+    --build-arg OPENSHIFT_VERSION="$openshift_version" \
+    $PWD
 
 _confirm_environment environment: \
     ( _confirm_environment_in_config environment ) \
