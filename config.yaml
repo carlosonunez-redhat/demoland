@@ -9,6 +9,13 @@ common:
                 aws_default_region: ENC[AES256_GCM,data:yhbppXp4Emsv,iv:PoWpnhgYk18InCtqBcLK5yrI8vrHqTX9BDR2kQ0Kya0=,tag:7Jooayomp5o2DNnbqlvfFg==,type:str]
                 aws_role_arn: ENC[AES256_GCM,data:yA+WDikbuiX3IyphIDT2++hXaXx5WGHgx3a1OonJM40yVkRJqVWsBCTyue3RhbYO,iv:KrwbybYkkIVgaNb4QCerejvGMbYb2JbUupaFLOs83RU=,tag:qePeUIvZeelVzep8FrCpfQ==,type:str]
                 aws_role_external_id: ENC[AES256_GCM,data:ZtjjLB7VfRetsFKhCTbgU1F886U=,iv:H/73XQG/VEQV8JYQ8QiRYbU+2k13w2s+tLwJ8v5kw8Q=,tag:gcXR3Fc+PSwR6lw3lvvyUg==,type:str]
+            # aws.iam_user: AWS credentials assigned to IAM users. Must set AWS_DISABLE_STS=1 in
+            # your environment variables to take effect.
+            # encrypted
+            iam_user:
+                aws_access_key_id: ENC[AES256_GCM,data:xXHA,iv:eVJJgg0G/93nrWrLvG6wrUpQhkOcVsag3u8wxme/0lM=,tag:MzuB/La1pXLI7tS07xBDdQ==,type:str]
+                aws_secret_access_key: ENC[AES256_GCM,data:qYD6,iv:ONgzmJFn299MSirZjqf6l+rEprJi1SzFfcum+76J2Zs=,tag:G9Ke64L4D8rFSRWrvG0SZw==,type:str]
+                aws_default_region: ENC[AES256_GCM,data:5l4i,iv:7gZRTefhTRvwZarYda7KOYXktCc3SgSfPkzcnVWCj4s=,tag:3GilTtcC5vxIA2/4LzUkNg==,type:str]
         gcp:
             # gcp.project_id: The GCP project to scope resources into.
             # encrypted
@@ -47,12 +54,17 @@ environments:
         #
         # EXAMPLE:
         #
+        # # STS credentials
         # ```yaml
         # cloud_credentials:
         #   aws:
-        #     aws_access_key_id: AKIA12345...
-        #     aws_secret_access_key: superdupersecret
-        #     aws_default_region: us-west-1
+        #     # encrypted
+        #     sts:
+        #       aws_access_key_id: AKIA12345...
+        #       aws_secret_access_key: superdupersecret
+        #       aws_default_region: us-west-1
+        #       aws_role_arn: foo
+        #       aws_role_external_id: superdupersecret
         # ```
         cloud_credentials:
             aws: {}
@@ -75,51 +87,65 @@ environments:
             - example
     rosa:
         version: 20260124
-        depends_on:
-            - ocp-rosa
-        alias_of: null
         common_options:
             # common_options.ignore_installconfig_check: Ignores checking for an installconfig in this
             # environment.
             ignore_installconfig_check: true
+        cloud_credentials:
+            aws:
+                # encrypted
+                iam_user:
+                    aws_access_key_id: ENC[AES256_GCM,data:Ww78sLGOw9+KqwWawvxZSXimHAw=,iv:oe52og1sJNP/itMY1DlS6TaJ0gQKUGAQ82vSCMCg6l8=,tag:WcXl+DB3xt5xsJxGjfzT6A==,type:str]
+                    aws_secret_access_key: ENC[AES256_GCM,data:kufhvrqEv6hRV1yyrU9jIVdnCn8mAe2/xRmslCT8TCsXXMbJGv+C7g==,iv:eW93HnA+fgKmm9aVe9iWRtmyR2erU0Q2sJA2q8hE3v8=,tag:zS4q90PJbx9+z0uHc2Mulg==,type:str]
+                    aws_default_region: ENC[AES256_GCM,data:lpeXPB0tymh6,iv:0jWk/hreDKLYSQHLLtMdD4IfrV3bKWLgbQihecUfUJA=,tag:XMCzYl4/swkA50596OvwdA==,type:str]
+                    aws_role_arn: ENC[AES256_GCM,data:Jc5vSsSrG+EcUtM0jsAhQ4SNYrCCbBhSu8RmIY8BKH3FdncUJxcR/e3hXeq1PFR2,iv:njkqkly3FUXFvHsGqx05/wnDdmxBBOVAgmb6W2BGi4k=,tag:ZRP/XX9b1nfBoq9DBjEg1A==,type:str]
+                    aws_role_external_id: ENC[AES256_GCM,data:c9BWuw10DN3cECzp4z3gZ9nPX88=,iv:ZD6FMOeprIX+pIIFCSsOTZixntrK3DTWLl56BH2VJaQ=,tag:eybqDuMF4xLhqfiiTJszGA==,type:str]
         deploy:
             environment_vars:
-                # encrypted
-                - ENC[AES256_GCM,data:guYKv6j7UpFhlPaRG33g3cFCVKhfakK1QXu0wTZ/Lx2i0D7IKdo=,iv:Yf8UlNv20/T9i881BuEudxKw44EMqQpRPiun/3dtLd0=,tag:pCVqH4pc99z7tITEe/LVuQ==,type:str]
-                # encrypted
-                - ENC[AES256_GCM,data:4lAYrW0svvRjz3tB+6hxGwNACNxkxXUmb2Yg2mFOTySPi1ObZ4pzX6taFdBlM+oQSz3lkMWG8A6OmUjy3/U=,iv:/NwOsP1kUV7Urv/arCQKY2sxK7hPacRE4ZXnciSjVvI=,tag:O0X6RF9NTNOakl7Ez1+Kig==,type:str]
-                - AWS_DEFAULT_REGION=us-east-2
-                - AWS_ROLE_ARN=arn:aws:iam::829168431290:role/admin-access-role
-                # encrypted
-                - ENC[AES256_GCM,data:0zy3L3sVDtrqKEy0rWRQ4ALtiaX+Ec5flkhTcB9gTXOseRUWCjZBKbn1yerNKSoOcyA/bQs=,iv:JkiHxfBBlkm7lsAZkfqieXTrTIYrC8lfaQRh4Tos/H8=,tag:wcmwbPCEcBpMAmqGymJAbg==,type:str]
                 # encrypted
                 - ENC[AES256_GCM,data:NaWQ9lNWGii9gRsM8ZD6eH4lH87RYhv9+eAjiEjr12Jfo78A/2iBPNF1V9s9Tbu4cu3k,iv:3YY5/q318zgBNcGvH8thQxTRgJ8lnVfLFk5KlEEair0=,tag:RtCkrrnghl291NuVmkEfcA==,type:str]
                 # encrypted
                 - ENC[AES256_GCM,data:uFVnQVD02n6Oqtc66iWJv9DLL7SmB5tIpHT+cStD6woI7b2gB/xZ+r1NDgnLi7tmhzln,iv:oI3OhoX6TN0uimRabih++nPUDrhtpNNyO1iIlcyzAIk=,tag:Yphaxv1NARnHY/UXW5/GYg==,type:str]
             cluster_config:
                 name: rosa-demoland
+                cluster_auth:
+                    google_oauth:
+                        additional_details:
+                            approved_domain: redhat.com
+                            # Unfortunately, Google Cloud does not expose an API for automating
+                            # the creation of OAuth clients. They USED to through the IAP
+                            # service, but they deprecated this service without a replacement.
+                            # This means you'll need to do the below by hand.
+                            #
+                            # To create the OAuth client:
+                            #
+                            # - Visit https://console.cloud.google.com/auth/clients, then click on
+                            #   "Create Client" and create a "Web Application"-type client.
+                            #   Afterwards, scroll down to the "Allowed redirect URIs" section and
+                            #   add the following:
+                            #
+                            #   https://oauth-openshift.apps.CLUSTER_NAME.DOMAIN_NAME/oauth2callback/google-admin
+                            #
+                            #   Click "Save" once done.
+                            #
+                            # - Click "Create Secret" on the bottom right-hand side of the screen.
+                            #   Use the "Client ID" and "Client Secret" that are generated to fill
+                            #   in the properties below.
+                            # encrypted
+                            client_id: ENC[AES256_GCM,data:n3NgZb10Rzf2LiunPR/P7+69EaBi8e3T4YjAja458qmnGspskTq5FF8ezYwB3DfWHkQXtN7dRoAmDm9sQ9PTexWPQxUV5VdX,iv:NUq+HXaD/QPg7NMD4yJtl43hSj1A7L+jsBEPRlQMl3A=,tag:9P1ghXxO/J3+g8lSy6p6fw==,type:str]
+                            # encrypted
+                            client_secret: ENC[AES256_GCM,data:gOawLQbRC+2LxZVtk2/1yEsndbcHPd+NkA28U857mcuaSzQ=,iv:8MZp9+i9qaVx33zRgodQ+GpJ+0DPtq+DXGfCW1uZRlA=,tag:T57CTxWgdou1F5KuR14q9Q==,type:str]
+                        auths:
+                            - role: cluster-admin
+                              users:
+                                - cnunez@redhat.com
             cloud_config:
                 aws:
                     networking:
                         availability_zones: 3
-                        cidr_block: 172.0.0.0/16
-    ocp-rosa:
-        alias_of: ocp
-        deploy:
-            node_config:
-                bootstrap:
-                    ignition_file_s3_key: bootstrap.ign
-                    instance_type: m5.xlarge
-                    spot: false
-                    quantity_per_zone: 1
-                control_plane:
-                    quantity_per_zone: 1
-                    instance_type: m5.xlarge
-                    spot: false
-                workers:
-                    quantity_per_zone: 1
-                    instance_type: m5.xlarge
-                    spot: false
+                        cidr_block:
+                            classic: 172.0.0.0/16
+                            hcp: 10.0.0.0/16
     ocp-aws-sno:
         alias_of: ocp-aws-upi
         deploy:
@@ -240,8 +266,8 @@ environments:
                     # encrypted
                     data: ENC[AES256_GCM,data:V8nJtkO0PMcyHYTB7xbDQRQf+nsii8Txmwpf2kONl8N7dcQoxVfbHTnJlu4gbbgp/GYN0yY0ZahzgmLZfruPalVEAl99HgvxjIntsMKbEzcuiainKJNHKfBy3ybAU5im5bU+VOSgbtgZ+cD5KOnqI9w50SwYg8NtqteJn1zgcaTNxhdRXo/LDeg0iMNJDsYbmOKerbeFBF2mZp73VJD6J6+B8LggBeMdb82sFQA92Hs5d1KB1m8y1z69q7xkzLxJuQb0J/p1+5U/Yp/BZ0f+TYh/wZ7BB4/1M8cCdPZVFhe+7HC16KPbG+dTrNWhcZfJJt477kZ+tgIX9XP2MkHP40be8mzJgCCdhSMUIBCbH/8JmULlnxR0mwTmlJJv2zq+b62hjA18IAcAhItTuiuRhMXECwDk0IoUarh5BMWIrEz6br13hwK/7n0YPcBc7ox6SdhRaeFww5P6xyh5J73CCa20EqXy3sEzAb0JEFTFeC4HuY8LCPnegguBuecqqtqzkf8RZU5wY662GqTtl+4DxQWHlmAiQw4tfMU=,iv:Pv54grl9gNb9hQW5j5BJfi1u/HeFP+65+9a2TuP1Tvs=,tag:y5YUBQ5GviOthRc3qEEmkQ==,type:str]
 sops:
-    lastmodified: "2026-04-21T02:46:47Z"
-    mac: ENC[AES256_GCM,data:gdgfKqm2Ro9X4xq3SvwOg9QrGUkbaBca2ORIWJfo3UtOaHobuqcfbuD/k9D8Zel9GXopPiDMUy8+xBatQtcIDC+98ldrtaKiA093XvoVCgEXbcSt3TMLNzNAzfVaojIcAy91JXcr0XSMwx32nvb7Gjy6Q15vKf7EfsSe2qt23As=,iv:2laZ/rcHYA2FXJtqv1LQkwZnMY/W6w/qKJ1QyLms79E=,tag:u+DmsCf1J5MpJJvqv2q31A==,type:str]
+    lastmodified: "2026-04-22T04:02:26Z"
+    mac: ENC[AES256_GCM,data:zh36NaSdYTt0Nm9eQe5DreJRr+XsTBILCu2xiwZKFMK1T/xDdzjvC4WZIfJQ+JGMnS8sw+t379suQfvP2eTP8RdpyonbaZXTbv1DiFa0+rBdXQq3c/s6pyezR2jGl4yaHINiOCAL01BaTntuEzabJMffgiCepstfzh5g+6hY3oQ=,iv:LChp08pPO4ZEkVfw2Q+4Rxoza5a3HwSdwrg1sbE5udo=,tag:yfhErCnA96cn65+mbkYLGw==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-

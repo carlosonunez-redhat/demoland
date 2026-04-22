@@ -1,15 +1,40 @@
 export OCM_CONFIG="$(_get_file_from_secrets_dir 'ocm/ocm.json')"
 
+_rosa() {
+  # There's no way to change the logging level that's shown.
+  # https://github.com/openshift/rosa/blob/master/pkg/reporter/reporter.go#L114
+  result=$(2>&1 rosa "$@")
+  rc="$?"
+  echo "$result"| grep -Ev '^WARN:|^INFO: Logged in as.*' | cat
+  return "$rc"
+}
+
 _exec_rosa() {
+  export $(log_into_aws)
   if test -n "$ROSA_CLIENT_ID" && test -n "$ROSA_CLIENT_SECRET"
-  then rosa login --client-id="$ROSA_CLIENT_ID" --client-secret="$ROSA_CLIENT_SECRET" || return 1
-  else rosa login --token="$(_get_from_config '.deploy.rosa_config.auth.token')" || return 1
+  then >&2 _rosa login --client-id="$ROSA_CLIENT_ID" --client-secret="$ROSA_CLIENT_SECRET" || return 1
+  else >&2 _rosa login --token="$(_get_from_config '.deploy.rosa_config.auth.token')" || return 1
   fi
-  rosa "$@"
+  _rosa "$@"
+}
+
+_rosa_cluster_type_disabled() {
+  k="ROSA_DISABLE_CLUSTER_TYPE_${1^^}"
+  test -n "${!k}"
 }
 
 _rosa_cluster_name() {
   _get_from_config '.deploy.cluster_config.name'
+}
+
+_rosa_cluster_api_url() {
+  _exec_rosa describe cluster -c "$(_rosa_cluster_name)-$1" -o json |
+    jq -r '.api.url'
+}
+
+_rosa_cluster_console_url() {
+  _exec_rosa describe cluster -c "$(_rosa_cluster_name)-$1" -o json |
+    jq -r '.console.url'
 }
 
 _rosa_network_stack() {
@@ -17,7 +42,7 @@ _rosa_network_stack() {
 }
 
 _rosa_oidc_id() {
-  aws iam list-open-id-connect-providers |
+  _exec_aws iam list-open-id-connect-providers |
     grep openshiftapps |
     cat |
     head -1 |
@@ -30,7 +55,7 @@ _rosa_installer_role_arn() {
   type="$1"
   prefix="$(_rosa_cluster_name)-Installer-Role"
   test "${type,,}" == 'hcp' && prefix="$(_rosa_cluster_name)-HCP-ROSA-Installer-Role"
-  aws iam list-roles --output text |
+  _exec_aws iam list-roles --output text |
     grep "$prefix" |
     cat |
     head -1 |
@@ -39,13 +64,13 @@ _rosa_installer_role_arn() {
 
 _network_deployed() {
   local status
-  status=$(2>/dev/null aws cloudformation describe-stacks --stack-name "$(_rosa_network_stack "$1")" --output json | jq -r '.Stacks[0].StackStatus')
+  status=$(2>/dev/null _exec_aws cloudformation describe-stacks --stack-name "$(_rosa_network_stack "$1")" --output json | jq -r '.Stacks[0].StackStatus')
   test -n "$status" && test "${status,,}" == create_complete
 }
 
 _network_being_destroyed() {
   local status
-  status=$(2>/dev/null aws cloudformation describe-stacks --stack-name "$(_rosa_network_stack "$1")" --output json | jq -r '.Stacks[0].StackStatus')
+  status=$(2>/dev/null _exec_aws cloudformation describe-stacks --stack-name "$(_rosa_network_stack "$1")" --output json | jq -r '.Stacks[0].StackStatus')
   test -n "$status" && test "${status,,}" == delete_in_progress
 }
 
@@ -56,7 +81,7 @@ _oidc_config_created() {
 _operator_roles_created() {
   local type
   type="${1?Please provide an operator role (classic, hcp)}"
-  roles=$(aws iam list-roles |
+  roles=$(_exec_aws iam list-roles |
     grep "$(_rosa_cluster_name)-${type}" |
     cat |
     cut -f2)
@@ -146,7 +171,7 @@ _destroy_network() {
   if ! _network_being_destroyed "$1"
   then
     info "Destroying ROSA network for cluster $(_rosa_cluster_name) (type: $1)"
-    if ! aws cloudformation delete-stack --stack-name "$(_rosa_network_stack "$1")"
+    if ! _exec_aws cloudformation delete-stack --stack-name "$(_rosa_network_stack "$1")"
     then
       error "Failed to delete ROSA network CFn stack '$(_rosa_network_stack "$1")'; delete manually"
       return 1
@@ -161,7 +186,7 @@ _destroy_network() {
     then return 0
     fi
 
-    status=$(aws cloudformation describe-stacks --stack-name "$(_rosa_network_stack "$1")" --output json | jq '.Stacks[0].StackStatus')
+    status=$(_exec_aws cloudformation describe-stacks --stack-name "$(_rosa_network_stack "$1")" --output json | jq '.Stacks[0].StackStatus')
     info "[${attempts}/${max_attempts}] Deleting '$(_rosa_network_stack "$1")', status: $status"
     attempts=$((attempts+1))
   done

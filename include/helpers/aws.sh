@@ -29,6 +29,21 @@ _aws_sts_assumerole() {
 }
 
 log_into_aws() {
+  if test -n "$AWS_DISABLE_STS"
+  then
+    ak=$(_get_cloud_cred 'aws.iam_user' aws_access_key_id)
+    sk=$(_get_cloud_cred 'aws.iam_user' aws_secret_access_key)
+    region=$(_get_cloud_cred 'aws.iam_user' aws_default_region)
+    if test -z "$ak" || test -z "$sk"  || test -z "$region"
+    then
+      error "Couldn't find AWS credentials. Ensure they are defined in the \
+'cloud_creds.aws.iam_user' key in your config."
+      return 1
+    fi
+    printf "AWS_ACCESS_KEY_ID=%s\nAWS_SECRET_ACCESS_KEY=%s\nAWS_DEFAULT_REGION=%s\nAWS_REGION=%s" \
+      "$ak" "$sk" "$region" "$region"
+    return 0
+  fi
   if test -f "$SESSION_FILE"
   then
     expiry=$(grep 'EXPIRES_ON' "$SESSION_FILE" | awk -F'=' '{print $NF}' | date -f - '+%s')
