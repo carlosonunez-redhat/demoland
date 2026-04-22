@@ -68,7 +68,13 @@ _run_stage_with_dependencies environment +stages:\
     (_generate_container_secrets_vol environment )
   set +u; \
   envs="{{ environment }}"; \
-  test -z "$SKIP_DEPENDENCIES" && envs="$(just _get_dependent_environments {{ environment }});{{ environment }}"; \
+  if test -z "$SKIP_DEPENDENCIES"; \
+  then \
+    if echo '{{ stages }}' | grep -q destroy; \
+    then envs="{{ environment }};$(just _get_dependent_environments {{ environment }})"; \
+    else envs="$(just _get_dependent_environments {{ environment }});{{ environment }}"; \
+    fi; \
+  fi; \
   set -eu; \
   for env in $(echo "$envs" | sed -E 's/^;//' | tr ';' '\n'); \
   do just _confirm_environment "$env" || exit 1; \
