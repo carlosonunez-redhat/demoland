@@ -69,6 +69,7 @@ _ensure_valid_cluster_role() {
 }
 
 control_plane_nodes_exist() {
+  local num_worker_nodes_want num_worker_nodes_want
   num_worker_nodes_want="$(_get_from_config '.deploy.node_config.control_plane.quantity_per_zone')"
   num_worker_nodes_got=$(_exec_aws ec2 describe-instances \
     --query 'Reservations[].Instances[?(State.Name == `running`) &&
@@ -78,12 +79,13 @@ control_plane_nodes_exist() {
 }
 
 worker_nodes_exist() {
+  local num_worker_nodes_want num_worker_nodes_want
   num_worker_nodes_want="$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"
   { test -z "$num_worker_nodes_want" || test "$num_worker_nodes_want" -eq 0; } && return 0
 
   num_worker_nodes_got=$(_exec_aws ec2 describe-instances \
     --query 'Reservations[].Instances[?(State.Name == `running`) &&
-(@.Tags[?Key==`aws:cloudformation:logical-id` && contains(Value, `Master`)]) &&
+(@.Tags[?Key==`aws:cloudformation:logical-id` && contains(Value, `Worker`)]) &&
 (@.Tags[?Key==`Name` && contains(Value, `'"$(_cluster_infra_name)"'`)])].InstanceId' --output text | wc -l)
   test "$num_worker_nodes_got" == "$num_worker_nodes_want"
 }
