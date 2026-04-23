@@ -921,8 +921,7 @@ enable_nested_virtualization_on_worker_nodes() {
 
   test -f "$(_get_file_from_openshift_install_dir '.nested_virt_configured')" && return 0
   instances=$(_exec_aws ec2 describe-instances \
-    --query 'Reservations[].Instances[?(State.Name == `running`) &&
-(@.Tags[?Key==`aws:cloudformation:logical-id` && contains(Value, `Worker`)]) &&
+    --query 'Reservations[].Instances[?(@.Tags[?Key==`aws:cloudformation:logical-id` && contains(Value, `Worker`)]) &&
 (@.Tags[?Key==`Name` && contains(Value, `'"$(_cluster_infra_name)"'`)])]' |
     jq -cr 'flatten | .[] |
 select(.InstanceType | test("^(c8i|m8i|r8i)")) |
@@ -939,7 +938,9 @@ select(.InstanceType | test("^(c8i|m8i|r8i)")) |
   for instance_data in $instances
   do
     instance_virt_enabled=$(jq -r '.cpuOptions.virtEnabled' <<< "$instance_data")
-    test "$instance_virt_enabled" == enabled && continue
+    test "$instance_virt_enabled" == enabled &&
+      _start_instance_and_wait "$instance_id" &&
+      continue
 
     instance_id=$(jq -r '.id' <<< "$instance_data")
     cores=$(jq -r '.cpuOptions.CoreCount' <<< "$instance_data")
@@ -947,10 +948,9 @@ select(.InstanceType | test("^(c8i|m8i|r8i)")) |
     info "Enabling virtualization for worker instance '$instance_id'"
     _shut_down_and_wait "$instance_id"
     _exec_aws ec2 modify-instance-cpu-options --instance-id "$instance_id" \
-      --core-counts "$cores" \
+      --core-count "$cores" \
       --threads-per-core "$threads_per_core" \
-      --nested-virtualization enabled \
-      --cpu-cores
+      --nested-virtualization enabled
     _start_instance_and_wait "$instance_id"
   done
   touch "$(_get_file_from_openshift_install_dir '.nested_virt_configured')"
@@ -974,6 +974,7 @@ sync_bootstrap_ignition_files_with_s3_bucket
 create_bootstrap_machine
 create_control_plane_machines
 create_worker_machines
+enable_nested_virtualization_on_worker_nodes
 wait_for_bootstrap_complete
 wait_for_first_worker_csr
 wait_for_and_register_worker_node_csrs
@@ -982,6 +983,5 @@ wait_for_ingress_load_balancer_to_be_created
 create_ingress_dns_records
 wait_for_install_to_complete
 delete_bootstrap_machine
-enable_nested_virtualization_on_worker_nodes
 create_cluster_users_htpasswd
 create_cluster_users_google_auth
