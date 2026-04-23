@@ -257,7 +257,8 @@ create_security_group_rules() {
 }
 
 create_bootstrap_machine() {
-  { control_plane_nodes_exist && worker_nodes_exist; } && return 0
+  test -f "$(_get_file_from_openshift_install_dir '.bootstrap_complete')" && return 0
+
   set -e
   sg_id=$(fail_if_nil "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId')" \
     "Master security group ID not found")
@@ -293,7 +294,8 @@ create_bootstrap_machine() {
   params_json=$(_create_aws_cf_params_json "${params[@]}")
   _create_aws_resources_from_cfn_stack_with_caps bootstrap_machine "$params_json" \
     "CAPABILITY_NAMED_IAM" \
-    "Creating bootstrap node..."
+    "Creating bootstrap node..." &&
+      touch -f "$(_get_file_from_openshift_install_dir '.bootstrap_complete')"
 }
 
 create_ignition_bucket_in_s3() {
@@ -534,7 +536,7 @@ create_worker_machines() {
 }
 
 wait_for_bootstrap_complete() {
-  { control_plane_nodes_exist && worker_nodes_exist; } && return 0
+  test -f "$(_get_file_from_openshift_install_dir '.bootstrap_complete')" && return 0
   _exec_openshift_install_aws wait-for bootstrap-complete --log-level debug
 }
 
