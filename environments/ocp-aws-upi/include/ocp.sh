@@ -30,6 +30,15 @@ _exec_openshift_install_aws() {
 }
 
 _cluster_router_fqdn() {
-  exec_oc_postinstall get service -n openshift-ingress router-default \
-    -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+  attempts=0
+  max_attempts=180
+  while test "$attempts" -lt "$max_attempts"
+  do
+    exec_oc_postinstall get service -n openshift-ingress router-default \
+      -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' && return 0
+    attempts=$((attempts+1))
+    info "Trying to get OpenShift router load balancer (Attempt $attempt/$max_attempts)"
+    sleep 1
+  done
+  return 1
 }
