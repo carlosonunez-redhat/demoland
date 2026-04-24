@@ -1,0 +1,18 @@
+#@ load("@ytt:data", "data")
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bootstrap
+  namespace: openshift-gitops
+spec:
+  project: default
+  destination:
+    namespace: openshift-gitops
+    server: https://kubernetes.default.svc
+  source:
+    repoURL: #@ data.values.repo_url
+    targetRevision: #@ data.values.repo_branch
+    path: ./environments/ocp-aws-upi/bootstrap
+  syncPolicy:
+    syncOptions:
+      - SkipDryRunOnMissingResources=true
