@@ -1,0 +1,10 @@
+patches:
+  - target:
+      kind: ArgoCD
+      name: openshift-gitops
+    patch: |-
+      - op: add
+        path: /spec/extraConfig
+        values:
+          timeout.reconciliation: 60s
+          timeout.reconciliation.jitter: 10s

@@ -14,5 +14,7 @@ spec:
     targetRevision: #@ data.values.repo_branch
     path: ./environments/ocp-aws-upi/bootstrap
   syncPolicy:
+    automated:
+      enabled: true
     syncOptions:
       - SkipDryRunOnMissingResources=true
