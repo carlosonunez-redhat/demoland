@@ -416,26 +416,31 @@ _ensure_container_secrets_vol_populated environment:
   secrets=$(just _run_yq "$env_data" '.deploy.secrets'); \
   env_data_enc=$(base64 -w 0 <<< "$env_data"); \
   cloud_creds_data_enc=$(base64 -w 0 <<< "$cloud_creds_data"); \
+  just _log info "Writing config and cloud credential secrets."; \
+  set -e; \
   {{ container_bin }} run --rm \
     -v "$vol:/secrets" \
     -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
-    bash:5 -c "echo '$env_data_enc' | base64 -d > /secrets/config-\$(cat /environment_info/root_environment_id).yaml" && \
+    bash:5 -c "echo '$env_data_enc' | base64 -d > /secrets/config.yaml-\$(cat /environment_info/root_environment_id)" && \
   {{ container_bin }} run --rm \
     -v "$vol:/secrets" \
     -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
-    bash:5 -c "echo '$cloud_creds_data_enc' | base64 -d > /secrets/cloud_creds-\$(cat /environment_info/root_environment_id).yaml"; \
+    bash:5 -c "echo '$cloud_creds_data_enc' | base64 -d > /secrets/cloud_creds.yaml-\$(cat /environment_info/root_environment_id)"; \
+  set +e; \
   while read -r secret_name; \
   do \
     name=$(just _run_yq "$secrets" ".${secret_name}.name"); \
     data=$(just _run_yq "$secrets" ".${secret_name}.data"); \
     just _log info "Writing secret '$name'"; \
     data_enc=$(base64 -w 0 <<< "$data"); \
+    set -e; \
     {{ container_bin }} run --rm \
       -v "$vol:/secrets" \
       -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
     bash:5 -c "f=\"/secrets/$name-\$(cat /environment_info/root_environment_id)\"; \
       test -d \$(dirname \"\$f\") || mkdir -p \$(dirname \$f); \
       echo $data_enc | base64 -d > \"\$f\""; \
+    set +e; \
   done < <(just _run_yq "$secrets" '[.|to_entries[]] | flatten |.[].key')
 
 _generate_container_vol environment:

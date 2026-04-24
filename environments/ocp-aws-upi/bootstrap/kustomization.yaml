@@ -1,3 +1,4 @@
 resources:
   - ../../../components/web-terminal
   - ../../../components/dev-spaces
+  - ../../../components/openshift-gitops/modifications/faster_automatic_sync
