@@ -120,7 +120,10 @@ _postinstall environment: (_ensure_toplevel_environment_info_available environme
   (_ensure_container_postinstall_volume_exists environment) \
   (_ensure_openshift_client_image environment ) \
   (_clear_postinstall_volume environment) \
-  (_install_components_into_environment environment)
+  (_install_components_into_environment environment) \
+  (_execute_containerized environment 'postinstall.sh' \
+    'true' \
+    'Environment {{ environment }} has no postinstall steps.')
 
 _install_components_into_environment environment:
   just _get_environment_components '{{ environment }}' | \
@@ -410,6 +413,7 @@ _ensure_container_secrets_vol_populated environment:
   vol=$(just _container_secrets_vol {{ environment }}); \
   env_data=$(just _merge_aliased_environment '{{ environment }}'); \
   cloud_creds_data=$(just _merge_cloud_creds '{{ environment }}'); \
+  secrets=$(just _run_yq "$env_data" '.deploy.secrets'); \
   env_data_enc=$(base64 -w 0 <<< "$env_data"); \
   cloud_creds_data_enc=$(base64 -w 0 <<< "$cloud_creds_data"); \
   {{ container_bin }} run --rm \
@@ -419,7 +423,20 @@ _ensure_container_secrets_vol_populated environment:
   {{ container_bin }} run --rm \
     -v "$vol:/secrets" \
     -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
-    bash:5 -c "echo '$cloud_creds_data_enc' | base64 -d > /secrets/cloud_creds-\$(cat /environment_info/root_environment_id).yaml"
+    bash:5 -c "echo '$cloud_creds_data_enc' | base64 -d > /secrets/cloud_creds-\$(cat /environment_info/root_environment_id).yaml"; \
+  while read -r secret_name; \
+  do \
+    name=$(just _run_yq "$secrets" ".${secret_name}.name"); \
+    data=$(just _run_yq "$secrets" ".${secret_name}.data"); \
+    just _log info "Writing secret '$name'"; \
+    data_enc=$(base64 -w 0 <<< "$data"); \
+    {{ container_bin }} run --rm \
+      -v "$vol:/secrets" \
+      -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
+    bash:5 -c "f=\"/secrets/$name-\$(cat /environment_info/root_environment_id)\"; \
+      test -d \$(dirname \"\$f\") || mkdir -p \$(dirname \$f); \
+      echo $data_enc | base64 -d > \"\$f\""; \
+  done < <(just _run_yq "$secrets" '[.|to_entries[]] | flatten |.[].key')
 
 _generate_container_vol environment:
   set +u; \
@@ -564,6 +581,9 @@ _log level *message="No message?":
     ;; \
   info) \
     >&2 echo "{{ BOLD + UNDERLINE + GREEN }}${1^^}{{ NORMAL }}: ${@:2}"; \
+    ;; \
+  debug) \
+    >&2 echo "{{ BOLD + UNDERLINE + YELLOW }}${1^^}{{ NORMAL }}: ${@:2}"; \
     ;; \
   *) \
     >&2 echo "FATAL: invalid log level: $1"; \
