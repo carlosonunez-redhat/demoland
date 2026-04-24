@@ -28,4 +28,25 @@ bootstrap_with_gitops() {
     exec_oc_postinstall apply -f "$app_f"
 }
 
+configure_gitops_admins() {
+  admins=$(_get_from_config '.deploy.cluster_config.cluster_auth |
+    to_entries |
+    .[].value.auths[] |
+    select(.role == "cluster-admin") |
+    .users[].name' | grep -Ev '^null$' | cat)
+  test -z "$admins" && return 0
+
+  if test -z "$(exec_oc_postinstall get groups -o name | grep -q 'cluster-admins')"
+  then
+    info "Creating ArgoCD 'cluster-admins' group"
+    exec_oc_postinstall adm groups new cluster-admins
+  fi
+  for user in $admins
+  do
+    info "Adding '$user' to 'cluster-admins'"
+    exec_oc_postinstall adm groups add-users cluster-admins "$user"
+  done
+}
+
+configure_gitops_admins
 bootstrap_with_gitops

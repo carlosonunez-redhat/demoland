@@ -877,7 +877,7 @@ EOF
     do
       info "Granting '$email' '$role' access"
       exec_oc_postinstall adm policy add-cluster-role-to-user "$role" "$email"
-    done < <(jq -r '.[0].users[]' <<< "$auth_infos" | grep -iv null | cat)
+    done < <(jq -r '.[0].users[].name' <<< "$auth_infos" | grep -iv null | cat)
   done
 }
 
@@ -958,6 +958,10 @@ select(.InstanceType | test("^(c8i|m8i|r8i)")) |
   touch "$(_get_file_from_openshift_install_dir '.nested_virt_configured')"
 }
 
+map_cluster_admin_to_cluster_admins() {
+  exec_oc_postinstall adm policy add-cluster-role-to-group cluster-admin 'system:cluster-admins'
+}
+
 create_ssh_key
 load_keys_into_ssh_agent
 upload_key_into_ec2
@@ -987,3 +991,4 @@ wait_for_install_to_complete
 delete_bootstrap_machine
 create_cluster_users_htpasswd
 create_cluster_users_google_auth
+map_cluster_admin_to_cluster_admins
