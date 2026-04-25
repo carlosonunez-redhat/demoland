@@ -4,7 +4,7 @@ set quiet := true
 
 container_bin := env("CONTAINER_BIN", which('podman'))
 container_image := 'demo-environment-runner'
-oc_container_image := 'openshift-client'
+demoland_base_container_image := 'demoland-base'
 container_vol := 'demo-environment-runner-vol'
 container_secrets_vol := 'demo-environment-runner-secrets-vol'
 container_environment_info_vol := 'demo-environment-runner-env-info-vol'
@@ -118,7 +118,6 @@ _expose environment: (_ensure_toplevel_environment_info_available environment)
 _postinstall environment: (_ensure_toplevel_environment_info_available environment) \
   (_ensure_toplevel_environment_has_kubeconfig environment) \
   (_ensure_container_postinstall_volume_exists environment) \
-  (_ensure_openshift_client_image environment ) \
   (_clear_postinstall_volume environment) \
   (_install_components_into_environment environment) \
   (_execute_containerized environment 'postinstall.sh' \
@@ -157,28 +156,30 @@ _create_component_kustomization environment component:
   {{ container_bin }} run --rm -v "$(just _container_postinstall_vol '{{ environment }}'):/vol" \
       bash:5 -c "echo '$k_enc' | base64 -d > /vol/kustomization.yaml"
 
-_install_component environment component:
+_install_component environment component: (_ensure_demoland_base_image environment)
   env=$(just _resolved_environment_name '{{ environment }}'); \
   just _log info "[postinstall] Installing component '{{ component }}' in environment '$env'"; \
   {{ container_bin }} run --rm \
     -v "$(just _container_postinstall_vol '{{ environment }}'):/vol" \
     -v "$(just _container_secrets_vol_shared):/shared/secrets" \
-    {{ oc_container_image }} \
-    --kubeconfig $(just _toplevel_environment_kubeconfig '{{ environment }}') apply -k /vol
+    {{ demoland_base_container_image }} \
+    oc --kubeconfig $(just _toplevel_environment_kubeconfig '{{ environment }}') apply -k /vol
 
 
-_ensure_openshift_client_image environment:
+_ensure_demoland_base_image environment:
   set +u; \
-  test -z "$REBUILD_OPENSHIFT_CLIENT_IMAGE" && \
-    {{ container_bin }} image ls | grep -q "{{ oc_container_image }}" && exit 0; \
+  test -z "$REBUILD_DEMOLAND_BASE_IMAGE" && \
+    {{ container_bin }} image ls | grep -q "{{ demoland_base_container_image }}" && exit 0; \
   set -u; \
   openshift_version=$(just _get_property_from_env_config_use_alias \
     {{ environment }} \
     '.deploy.cluster_config.openshift_version'); \
   test -z "$openshift_version" && openshift_version={{ default_openshift_version }}; \
-  just _log info "(re)building OpenShift client image [openshift version: $openshift_version]"; \
-  {{ container_bin }} image build -t "{{ oc_container_image }}" \
-    --build-arg OPENSHIFT_VERSION="$openshift_version" - < "$PWD/include/containerfiles/client.Dockerfile"
+  just _log info "building demoland environment base image [openshift version: $openshift_version]"; \
+  test -n "${REBUILD_DEMOLAND_BASE_IMAGE:-}" && \
+    just _log info "(re)building demoland environment base image [openshift version: $openshift_version]"; \
+  {{ container_bin }} image build -t "{{ demoland_base_container_image }}" \
+    --build-arg OPENSHIFT_VERSION="$openshift_version" - < "$PWD/include/containerfiles/base.Dockerfile"
 
 _ensure_component_exists environment component:
   test -d "$PWD/components/{{ component }}" && exit 0; \
@@ -283,7 +284,8 @@ _container_image environment:
 
 _execute_containerized environment file ignore_not_found='false' custom_message='none': \
     ( _ensure_container_image_exists environment ) \
-    ( _ensure_container_secrets_vol_populated environment )
+    ( _ensure_container_secrets_vol_populated environment ) \
+    ( _ensure_demoland_base_image environment )
   file=$(just _get_environment_directory_file {{ environment }} {{ file }}); \
   if ! test -f "$file"; \
   then \
@@ -472,7 +474,7 @@ _ensure_container_image_exists environment:
     just _log error "Containerfile not found at: $container_file"; \
     exit 1; \
   fi; \
-  file_lines=$(cat "$container_file" | grep -Ev '^#|^FROM' | wc -l); \
+  file_lines=$(cat "$container_file" | wc -l); \
   if test "$file_lines" -eq 0; \
   then \
     just _log error "Containerfile for '{{ environment }}' at '$container_file' is empty!"; \
