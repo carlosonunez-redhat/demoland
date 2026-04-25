@@ -423,11 +423,11 @@ _ensure_container_secrets_vol_populated environment:
   {{ container_bin }} run --rm \
     -v "$vol:/secrets" \
     -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
-    bash:5 -c "echo '$env_data_enc' | base64 -d > /secrets/config.yaml-\$(cat /environment_info/root_environment_id)" && \
+    bash:5 -c "echo '$env_data_enc' | base64 -d | sed 's/\$\$/$/g' > /secrets/config.yaml-\$(cat /environment_info/root_environment_id)" && \
   {{ container_bin }} run --rm \
     -v "$vol:/secrets" \
     -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
-    bash:5 -c "echo '$cloud_creds_data_enc' | base64 -d > /secrets/cloud_creds.yaml-\$(cat /environment_info/root_environment_id)"; \
+    bash:5 -c "echo '$cloud_creds_data_enc' | base64 -d | sed 's/$$/$/g' > /secrets/cloud_creds.yaml-\$(cat /environment_info/root_environment_id)"; \
   set +e; \
   while read -r secret_name; \
   do \
@@ -441,7 +441,7 @@ _ensure_container_secrets_vol_populated environment:
       -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
     bash:5 -c "f=\"/secrets/$name-\$(cat /environment_info/root_environment_id)\"; \
       test -d \$(dirname \"\$f\") || mkdir -p \$(dirname \$f); \
-      echo $data_enc | base64 -d > \"\$f\""; \
+      echo '$data_enc' | base64 -d > \"\$f\""; \
     set +e; \
   done < <(just _run_yq "$secrets" '[.|to_entries[]] | flatten |.[].key')
 
