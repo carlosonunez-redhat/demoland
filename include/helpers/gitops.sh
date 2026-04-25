@@ -32,7 +32,7 @@ setup_gitops() {
   )
   secrets_f="/tmp/gitops_secret_$(_cluster_name)"
   app_f="/tmp/gitops_app_$(_cluster_name)"
-  info "Setting up '$app_name' GitOps application"
+  info "Setting up '$app_name' GitOps application (environment: $environment_name)"
   render_include_yaml_template repo_credentials_secret "${values[@]}"  > "$secrets_f" &&
     render_include_yaml_template gitops_application "${values[@]}" > "$app_f" &&
     exec_oc_postinstall apply -f "$secrets_f" &&
