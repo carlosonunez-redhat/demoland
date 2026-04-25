@@ -30,6 +30,7 @@ as_yaml_list() {
 
 _render_yaml_template() {
   local file cmd
+  file="$1"
   if ! test -f "$file"
   then
     error "YAML template not found: $file"
@@ -47,11 +48,11 @@ _render_yaml_template() {
 }
 
 render_yaml_template() {
-  _render_yaml_template "$(_template_file "$1")" "$@"
+  _render_yaml_template "$(_template_file "$1")" "${@:2}"
 }
 
 render_include_yaml_template() {
-  _render_yaml_template "$(_include_template_file "$1")" "$@"
+  _render_yaml_template "$(_include_template_file "$1")" "${@:2}"
 }
 
 render_yaml_template_with_values_file() {
