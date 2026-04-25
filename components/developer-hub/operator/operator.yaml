@@ -9,4 +9,4 @@ spec:
   channel: fast
   installPlanApproval: Automatic
   name: rhdh
-  startingCSV: rhdh-operator-v1.9.3
+  startingCSV: rhdh-operator.v1.9.3
