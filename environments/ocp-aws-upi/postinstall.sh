@@ -14,4 +14,4 @@ source "$ENVIRONMENT_INCLUDE_DIR/aws.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/ocp.sh"
 
 configure_gitops_admins
-setup_gitops ocp-aws-upi bootstrap bootstrap
+setup_gitops_postinstall ocp-aws-upi bootstrap bootstrap

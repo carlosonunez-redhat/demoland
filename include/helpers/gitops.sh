@@ -1,18 +1,7 @@
 # shellcheck shell=bash
 
-# setup_gitops @ENVIRONMENT_NAME @GITOPS_FOLDER @APP_NAME:
-#
-# Creates an ArgoCD Application for an environment assuming
-# that the following secrets exist for an environment (or its dependent environments)
-# in `config.yaml` AND that the environment has a folder called `gitops` (or @GITOPS_FOLDER) in its
-# toplevel directory:
-#
-# - gitops/repo: The demoland repository to connect this App to.
-# - gitops/branch: The branch in `gitops/repo` to sync with.
-# - gitops/key: The SSH private key to use when cloning `gitops/repo` (enables
-#   cloning private Demoland repos)
-setup_gitops() {
-  local environment_name gitops_dir app_name
+_setup_gitops() {
+  local environment_name gitops_dir app_name exec_oc_fn
   environment_name="$1"
   if test -z "$environment_name"
   then
@@ -21,6 +10,7 @@ setup_gitops() {
   fi
   gitops_dir="${2:-gitops}"
   app_name="${3:-$environment_name}"
+  exec_oc_fn="$4"
   set -e
   values=(
     repo_url "$(_get_secret 'gitops/repo')"
@@ -35,14 +25,38 @@ setup_gitops() {
   info "Setting up '$app_name' GitOps application (environment: $environment_name)"
   render_include_yaml_template repo_credentials_secret "${values[@]}"  > "$secrets_f" &&
     render_include_yaml_template gitops_application "${values[@]}" > "$app_f" &&
-    exec_oc_postinstall apply -f "$secrets_f" &&
-    exec_oc_postinstall apply -f "$app_f"
+    "$exec_oc_fn" apply -f "$secrets_f" &&
+    "$exec_oc_fn" apply -f "$app_f"
 }
+
+# setup_gitops @ENVIRONMENT_NAME @GITOPS_FOLDER @APP_NAME:
+#
+# Creates an ArgoCD Application for an environment assuming
+# that the following secrets exist for an environment (or its dependent environments)
+# in `config.yaml` AND that the environment has a folder called `gitops` (or @GITOPS_FOLDER) in its
+# toplevel directory:
+#
+# - gitops/repo: The demoland repository to connect this App to.
+# - gitops/branch: The branch in `gitops/repo` to sync with.
+# - gitops/key: The SSH private key to use when cloning `gitops/repo` (enables
+#   cloning private Demoland repos)
 
 # configure_gitops_admins: Makes every user with a 'cluster-admin' cluster role mapping
 # an admin in ArgoCD/OpenShift GitOps.
 #
 # See also: https://docs.redhat.com/en/documentation/red_hat_openshift_gitops/1.20/html-single/managing_cluster_configuration/index#configuring-rbac_managing-openshift-cluster-configuration
+setup_gitops() {
+  _setup_gitops "$1" "$2" "$3" 'exec_oc'
+}
+
+# setup_gitops_postinstall @ENVIRNOMENT_NAME @GITOPS_FOLDER @APP_NAME:
+#
+# Same as 'setup_gitops', but uses the cluster kubeconfig in the 'openshift-install'
+# directory instead of the kubeconfig in the environment's toplevel directory.
+setup_gitops_postinstall() {
+  _setup_gitops "$1" "$2" "$3" 'exec_oc_postinstall'
+}
+
 configure_gitops_admins() {
   admins=$(_get_from_config '.deploy.cluster_config.cluster_auth |
     to_entries |
