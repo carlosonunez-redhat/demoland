@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rhdh-config
+  namespace: rhdh
+data: |-
+  auth:
+    environment: production
+    providers:
+      github:
+        production:
+          clientId: ${GITHUB_CLIENT_ID}
+          clientSecret: ${GITHUB_CLIENT_SECRET}
+  signInPage: github

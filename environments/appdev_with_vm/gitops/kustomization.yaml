@@ -1,0 +1,12 @@
+resources:
+  - rhdh-config.yaml
+  - ../../../components/developer-hub/resources/backstage
+patches:
+  - target:
+      kind: Backstage
+      name: replace-me
+      namespace: rhdh
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: appdev-with-vm

@@ -1,0 +1,20 @@
+apiVersion: rhdh.redhat.com/v1alpha5
+kind: Backstage
+metadata:
+  name: replace-me
+  namespace: rhdh
+spec:
+  application:
+    dynamicPluginsConfigMapName: rhdh-plugins
+    appConfig:
+      mountPath: /opt/app-root/src
+      configMaps:
+         - name: rhdh-config
+    extraEnvs:
+      secrets:
+         - name: rhdh-secrets
+    extraFiles: {}
+    route:
+      enabled: true
+  database:
+    enableLocalDb: true

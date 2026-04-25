@@ -1,2 +1,1 @@
-FROM fedora:43
-ENTRYPOINT [ "bash", "-c", "echo WIP" ]
+FROM demoland-base

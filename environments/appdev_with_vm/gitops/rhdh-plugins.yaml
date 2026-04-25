@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rhdh-plugins
+  namespace: rhdh
+data: |-
+  plugins:
+    - package : './dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-org-dynamic'
+      disabled: false
