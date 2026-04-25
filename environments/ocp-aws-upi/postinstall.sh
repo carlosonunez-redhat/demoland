@@ -36,7 +36,7 @@ configure_gitops_admins() {
     .users[].name' | grep -Ev '^null$' | cat)
   test -z "$admins" && return 0
 
-  if test -z "$(exec_oc_postinstall get groups -o name | grep -q 'cluster-admins')"
+  if ! { exec_oc_postinstall get groups -o name | grep -Eq '.*/cluster-admins$'; }
   then
     info "Creating ArgoCD 'cluster-admins' group"
     exec_oc_postinstall adm groups new cluster-admins
