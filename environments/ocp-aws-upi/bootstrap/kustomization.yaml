@@ -1,4 +1,19 @@
 resources:
-  - ../../../components/web-terminal
-  - ../../../components/dev-spaces
-  - ../../../components/openshift-gitops/modifications/faster_automatic_sync
+  - ../../../components/web-terminal/operator
+  - ../../../components/dev-spaces/operator
+  - ../../../components/dev-spaces/resources/checluster
+  - ../../../components/openshift-gitops/resources/argocd-instance
+patches:
+  - target:
+      name: replace-me
+      kind: ArgoCD
+      namespace: openshift-gitops
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: openshift-gitops
+      - op: replace
+        path: /spec/extraConfig
+        value:
+          timeout.reconciliation: 60s,
+          timeout.reconciliation.jitter: 10s
