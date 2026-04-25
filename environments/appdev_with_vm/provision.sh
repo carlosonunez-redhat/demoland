@@ -16,3 +16,6 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 #
 # source "$ENVIRONMENT_INCLUDE_DIR/foo.sh"
 
+set -e
+create_secrets
+setup_gitops appdev_with_vm gitops appdev-with-vm

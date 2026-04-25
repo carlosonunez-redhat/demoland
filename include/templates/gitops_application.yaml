@@ -2,7 +2,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: bootstrap
+  name: #@ data.values.app_name
   namespace: openshift-gitops
 spec:
   project: default
@@ -12,9 +12,10 @@ spec:
   source:
     repoURL: #@ data.values.repo_url
     targetRevision: #@ data.values.repo_branch
-    path: ./environments/ocp-aws-upi/bootstrap
+    path: #@ "./environments/{}/{}".format(data.values.environment_name, data.values.gitops_dir)
   syncPolicy:
     automated:
       enabled: true
     syncOptions:
       - SkipDryRunOnMissingResources=true
+
