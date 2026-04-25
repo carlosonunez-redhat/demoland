@@ -8,5 +8,5 @@ spec:
   source: redhat-operators
   channel: fast
   installPlanApproval: Automatic
-  name: devspaces
+  name: rhdh
   startingCSV: rhdh-operator-v1.9.3
