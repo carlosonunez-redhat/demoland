@@ -33,4 +33,6 @@ create_rhdh_ns() {
 set -e
 create_rhdh_ns
 create_rhdh_secrets
-setup_gitops appdev_with_vm gitops appdev-with-vm
+for dir in operators resources
+do setup_gitops appdev_with_vm "gitops/$dir" "appdev-with-vm-$dir"
+done
