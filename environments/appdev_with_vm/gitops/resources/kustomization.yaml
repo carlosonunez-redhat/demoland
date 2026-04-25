@@ -1,6 +1,6 @@
 resources:
   - rhdh-config.yaml
-  - ../../../components/developer-hub/resources/backstage
+  - ../../../../components/developer-hub/resources/backstage
 patches:
   - target:
       kind: Backstage
