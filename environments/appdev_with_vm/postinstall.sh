@@ -21,7 +21,14 @@ create_rhdh_secrets() {
   exec_oc -n rhdh get secrets -o name | grep -q 'secret/rhdh-secrets' && return 0
 
   info "Saving Developer Hub secrets"
-  exec_oc -n rhdh create secret generic rhdh-secrets --from-file=secrets.txt="$(_get_file_from_secrets_dir 'rhdh-secrets')"
+  literals=()
+  while read -r kvp
+  do
+    k=$(cut -f1 -d '=' <<< "$kvp")
+    v=$(cut -f2 -d '=' <<< "$kvp")
+    literals+=("--from-literal=$k=$v")
+  done < <(_get_secret 'rhdh-secrets')
+  exec_oc -n rhdh create secret generic rhdh-secrets "${literals[@]}"
 }
 
 create_rhdh_ns() {
@@ -30,9 +37,33 @@ create_rhdh_ns() {
   exec_oc create ns rhdh
 }
 
+wait_for_backstage_accessible() {
+  attempts=0
+  max_attempts=600
+  while test "$attempts" -lt "$max_attempts"
+  do
+    bs_name=$(yq -r '.patches[] | select(.patch | contains("/metadata/name")) | .patch' \
+        "$(dirname "$0")/gitops/resources/kustomization.yaml" |
+      grep 'value:' |
+      cut -f2 -d':' |
+      tr -d ' ')
+    bs_route=$(exec_oc get route -n rhdh "backstage-${bs_name}" -o jsonpath='{.status.ingress[0].host}')
+    if test -n "$bs_route"
+    then
+      want_code=200
+      got_code="$(curl -sS -o /dev/null -w '%{http_code}' -kL "https://$bs_route")"
+      test "$want_code" == "$got_code" && return 0
+    fi
+    info "[${attempts}/${max_attempts}] Waiting for Backstage to become available (fqdn: $bs_route, want_code: $want_code, got_code: $got_code)"
+    attempts=$((attempts+1))
+    sleep 1
+  done
+}
+
 set -e
 create_rhdh_ns
 create_rhdh_secrets
 for dir in operators resources
 do setup_gitops appdev_with_vm "gitops/$dir" "appdev-with-vm-$dir"
 done
+wait_for_backstage_accessible
