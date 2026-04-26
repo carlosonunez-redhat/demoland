@@ -27,8 +27,18 @@ create_rhdh_secrets() {
     k=$(cut -f1 -d '=' <<< "$kvp")
     v=$(cut -f2 -d '=' <<< "$kvp")
     literals+=("--from-literal=$k=$v")
-  done < <(_get_secret 'rhdh-secrets')
+  done < <(_get_secret 'rhdh-secrets' | grep -v '_base64=')
+  set -x
   exec_oc -n rhdh create secret generic rhdh-secrets "${literals[@]}"
+  while read -r kvp
+  do
+    k=$(cut -f1 -d '=' <<< "$kvp" | sed -E 's/_base64$//')
+    v=$(cut -f2 -d '=' <<< "$kvp")
+    patch="$(printf '[{"op":"add","path":"/data/%s","value":"%s"}]' \
+      "$k" "$v")"
+    exec_oc -n rhdh patch secret rhdh-secrets --type json \
+      --patch "$patch"
+  done < <(_get_secret 'rhdh-secrets' | grep '_base64=')
 }
 
 create_rhdh_ns() {

@@ -5,6 +5,15 @@ metadata:
   namespace: rhdh
 data:
   app-config.yaml: |-
+    integrations:
+      github:
+        - host: github.com
+          apps:
+            - appId: ${GITHUB_APP_ID}
+              clientId: ${GITHUB_CLIENT_ID}
+              clientSecret: ${GITHUB_CLIENT_SECRET}
+              privateKey: |
+                ${GITHUB_APP_PRIVATE_KEY}
     auth:
       environment: production
       providers:
