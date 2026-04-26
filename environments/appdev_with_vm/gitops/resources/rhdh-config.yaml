@@ -5,6 +5,10 @@ metadata:
   namespace: rhdh
 data:
   app-config.yaml: |-
+    integrations:
+      github:
+        - host: github.com
+          token: ${GITHUB_TOKEN}
     auth:
       environment: production
       providers:
