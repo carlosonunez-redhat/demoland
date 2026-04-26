@@ -13,3 +13,16 @@ data:
             clientId: ${GITHUB_CLIENT_ID}
             clientSecret: ${GITHUB_CLIENT_SECRET}
     signInPage: github
+    catalog:
+      providers:
+        githubOrg:
+          id: github-${GITHUB_ORG}
+          githubUrl: "${GITHUB_URL}"
+          orgs: [ "${GITHUB_ORG}" ]
+          schedule:
+            frequency:
+              minutes: 30
+            initialDelay:
+              seconds: 15
+            timeout:
+              minutes: 15
