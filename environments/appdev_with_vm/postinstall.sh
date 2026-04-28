@@ -57,7 +57,7 @@ wait_for_backstage_accessible() {
       grep 'value:' |
       cut -f2 -d':' |
       tr -d ' ')
-    bs_route=$(exec_oc get route -n rhdh "backstage-${bs_name}" -o jsonpath='{.status.ingress[0].host}')
+    bs_route=$(exec_oc get route -n rhdh "backstage-${bs_name}" -o jsonpath='{.status.ingress[0].host}' || true)
     if test -n "$bs_route"
     then
       want_code=200
