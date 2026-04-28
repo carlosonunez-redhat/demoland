@@ -1,6 +1,4 @@
 resources:
-  - ../../../components/web-terminal/operator
-  - ../../../components/dev-spaces/operator
   - ../../../components/dev-spaces/resources/checluster
   - ../../../components/openshift-gitops/resources/argocd-instance
 patches:
