@@ -14,6 +14,12 @@ _template_file() {
     "${1//.y*ml/}"
 }
 
+_include_template_file() {
+  printf "%s/templates/%s.yaml" \
+    "$INCLUDE_DIR" \
+    "${1//.y*ml/}"
+}
+
 as_yaml_list() {
   local ls
   while read -r elem
@@ -22,9 +28,9 @@ as_yaml_list() {
   printf '[%s]' "$(sed -E 's/^,//' <<< "$ls")"
 }
 
-render_yaml_template() {
+_render_yaml_template() {
   local file cmd
-  file="$(_template_file "$1")"
+  file="$1"
   if ! test -f "$file"
   then
     error "YAML template not found: $file"
@@ -39,6 +45,14 @@ render_yaml_template() {
   done
   cmd+=(-f "$file")
   "${cmd[@]}"
+}
+
+render_yaml_template() {
+  _render_yaml_template "$(_template_file "$1")" "${@:2}"
+}
+
+render_include_yaml_template() {
+  _render_yaml_template "$(_include_template_file "$1")" "${@:2}"
 }
 
 render_yaml_template_with_values_file() {
