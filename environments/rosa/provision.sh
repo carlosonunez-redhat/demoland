@@ -168,6 +168,7 @@ set_up_google_idp() {
       --client-id "$client_id" \
       --client-secret "$client_secret" \
       --hosted-domain "$hosted_domain" \
+      --version "$(just _get_from_config 'deploy.cluster_config.openshift_version')" \
       --yes
     while read -r email
     do
