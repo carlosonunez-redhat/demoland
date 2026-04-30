@@ -112,7 +112,17 @@ environments:
                 - ROSA_DISABLE_CLUSTER_TYPE="true"
         # these secrets will get mounted into a folder called /secrets within the
         # container that builds your cluster.
-        secrets: {}
+        secrets:
+            gitops_repo:
+                name: gitops/repo
+                data: ssh://git@github.com:22/carlosonunez-redhat/demoland
+            gitops_branch:
+                name: gitops/branch
+                data: spike/rosa-gitops-agent
+            gitops_repo_key:
+                name: gitops/key
+                # encrypted
+                data: ENC[AES256_GCM,data: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,iv:zhb7gVUSEXhfzqplpGt2aAXohfJkkA3BExTsljNZrS0=,tag:4QEsNPxZHjA8v98ExHdxFw==,type:str]
         # cloud_credentials: Overrides the default cloud configs set by
         # 'common.cloud_credentials'.
         #
@@ -330,8 +340,8 @@ environments:
                     # encrypted
                     data: ENC[AES256_GCM,data:V8nJtkO0PMcyHYTB7xbDQRQf+nsii8Txmwpf2kONl8N7dcQoxVfbHTnJlu4gbbgp/GYN0yY0ZahzgmLZfruPalVEAl99HgvxjIntsMKbEzcuiainKJNHKfBy3ybAU5im5bU+VOSgbtgZ+cD5KOnqI9w50SwYg8NtqteJn1zgcaTNxhdRXo/LDeg0iMNJDsYbmOKerbeFBF2mZp73VJD6J6+B8LggBeMdb82sFQA92Hs5d1KB1m8y1z69q7xkzLxJuQb0J/p1+5U/Yp/BZ0f+TYh/wZ7BB4/1M8cCdPZVFhe+7HC16KPbG+dTrNWhcZfJJt477kZ+tgIX9XP2MkHP40be8mzJgCCdhSMUIBCbH/8JmULlnxR0mwTmlJJv2zq+b62hjA18IAcAhItTuiuRhMXECwDk0IoUarh5BMWIrEz6br13hwK/7n0YPcBc7ox6SdhRaeFww5P6xyh5J73CCa20EqXy3sEzAb0JEFTFeC4HuY8LCPnegguBuecqqtqzkf8RZU5wY662GqTtl+4DxQWHlmAiQw4tfMU=,iv:Pv54grl9gNb9hQW5j5BJfi1u/HeFP+65+9a2TuP1Tvs=,tag:y5YUBQ5GviOthRc3qEEmkQ==,type:str]
 sops:
-    lastmodified: "2026-04-30T22:16:38Z"
-    mac: ENC[AES256_GCM,data:GaYeMIIV7oSlj9asBj0WQUfTIINCPxm4QGcbPz5gbEDTEi+imm7oVCSm5bn6hEkI+fKMQip5OWdZstXlNv5hlu3jzjmKRwVu0V5JcV3fDSwPS6vzK9YV29D4HYhNQH4h71jPwhOlGNR6fTDq8vPwkZ9Wus1RvuyAdVgvZmybHMo=,iv:xvVeXSfnFTCX1GTFEnIdUhh8WOQ2EmtpdqC7Nd19clw=,tag:vap2ybxdl789+K645I9htQ==,type:str]
+    lastmodified: "2026-04-30T22:24:42Z"
+    mac: ENC[AES256_GCM,data:JIH/LxkXQsL0CB4qfDvjDQ76hXrdcgUNgJu0AProl/0gd5B1gDpwaGUY85Dz6HA/BJTp7i4LI8mHQO9lVx461a9gSATjAZBU+3SSGb8BoZ+ASGlVwK+0Uk4V+bSp5XUGeOBoannIo2R+v9QIrOgQCa3uPKpmLCpU7kHVfetyPcw=,iv:Ha4ltDZtHhmoUwE7bH9CMayqEPKAphp8dGhjaPLEwWc=,tag:kQcmNdSw9AMBBWWaeKzSpA==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
