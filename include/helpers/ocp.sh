@@ -19,7 +19,7 @@ _cluster_ignition_files_bucket() {
 
 _oc_cmd() {
   local oc_bin
-  oc_bin="${OC_BIN:-/usr/bin/oc}"
+  oc_bin="${OC_BIN:-/usr/local/bin/oc}"
   cmd=("$oc_bin" --kubeconfig "$1" "${@:2}")
   echo "${cmd[@]}"
 }
