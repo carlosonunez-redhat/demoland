@@ -9,5 +9,5 @@ roleRef:
 subjects:
 - apiGroup: rbac.authorization.k8s.io
   kind: ServiceAccount
-  name: system:serviceaccount:openshift-gitops:openshift-gitops-argocd-application-controller
+  name: openshift-gitops-argocd-application-controller
   namespace: openshift-gitops
