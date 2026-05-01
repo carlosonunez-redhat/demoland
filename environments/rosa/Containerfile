@@ -17,7 +17,7 @@ RUN \
 RUN tar -xvzf /tmp/file.tar.gz -C /tmp
 RUN chmod +x /tmp/rosa
 
-FROM fedora:41 AS final
+FROM demoland-base AS final
 RUN dnf -y update
 RUN dnf -y install yq jq awscli openssh ssh-agent
 COPY --from=rosa_client /tmp/rosa /usr/bin/rosa
