@@ -16,10 +16,10 @@ patches:
           overrides:
             components:
               - name: cluster-api-provider-aws-preview
-                enabled: "true"
+                enabled: true
               - name: cluster-api
-                enabled: "true"
+                enabled: true
               - name: hypershift-local-hosting
-                enabled: "false"
+                enabled: false
               - name: hypershift
-                enabled: "false"
+                enabled: false
