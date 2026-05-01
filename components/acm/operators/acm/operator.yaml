@@ -1,0 +1,21 @@
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: rhacm-og
+  namespace: openshift-cluster-management
+spec:
+  targetNamespaces:
+  - openshift-cluster-management
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: acm-operator-subscription
+  namespace: openshift-cluster-management
+spec:
+  sourceNamespace: openshift-marketplace
+  source: redhat-operators
+  channel: release-2.14
+  installPlanApproval: Automatic
+  name: advanced-cluster-management
