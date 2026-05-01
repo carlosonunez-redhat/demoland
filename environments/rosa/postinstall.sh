@@ -16,7 +16,6 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 # variable, like shown in the comment below.
 #
 # source "$ENVIRONMENT_INCLUDE_DIR/foo.sh"
-source "$ENVIRONMENT_INCLUDE_DIR/rosa.sh"
 
 configure_gitops_admins
 setup_gitops rosa bootstrap/operators bootstrap-cluster-operators
