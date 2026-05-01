@@ -1,3 +1,2 @@
 resources:
   - ../../../../components/acm/operators/acm
-  - ../../../../components/acm/operators/multiclusterengine

@@ -3,16 +3,16 @@ apiVersion: operators.coreos.com/v1
 kind: OperatorGroup
 metadata:
   name: rhacm-og
-  namespace: openshift-cluster-management
+  namespace: open-cluster-management
 spec:
   targetNamespaces:
-  - openshift-cluster-management
+  - open-cluster-management
 ---
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
   name: acm-operator-subscription
-  namespace: openshift-cluster-management
+  namespace: open-cluster-management
 spec:
   sourceNamespace: openshift-marketplace
   source: redhat-operators
