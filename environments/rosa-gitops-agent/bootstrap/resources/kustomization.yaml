@@ -1,9 +1,9 @@
 # source: https://cloud.redhat.com/experts/rosa/acm/
 resources:
-  - ../../../../components/acm/resources/multiclusterhub
+  - ../../../../components/acm/resources/multiclusterengine
 patches:
   - target:
-      name: multiclusterhub
+      name: multiclusterengine
       namespace: open-cluster-management
     patch: |-
       - op: add
@@ -15,6 +15,8 @@ patches:
         value:
           overrides:
             components:
+              - name: cluster-api-provider-aws-preview
+                enabled: true
               - name: cluster-api
                 enabled: true
               - name: hypershift-local-hosting
