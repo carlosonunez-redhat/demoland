@@ -19,3 +19,4 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/rosa.sh"
 
 setup_gitops rosa-gitops-agent bootstrap/operators environment-operators
+setup_gitops rosa-gitops-agent bootstrap/resources environment-resources
