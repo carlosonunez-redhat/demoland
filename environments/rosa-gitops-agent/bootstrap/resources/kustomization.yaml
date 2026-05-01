@@ -1,5 +1,6 @@
 # source: https://cloud.redhat.com/experts/rosa/acm/
 resources:
+  - ../../../../components/acm/resources/multiclusterhub
   - ../../../../components/acm/resources/multiclusterengine
 patches:
   - target:
