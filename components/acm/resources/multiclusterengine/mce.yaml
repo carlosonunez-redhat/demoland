@@ -1,4 +1,4 @@
-apiVersion: operator.open-cluster-management.io/v1
+apiVersion: multicluster.openshift.io/v1
 kind: MultiClusterEngine
 metadata:
   name: multiclusterengine
