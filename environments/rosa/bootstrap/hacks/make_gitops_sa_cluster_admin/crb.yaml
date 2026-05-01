@@ -3,11 +3,9 @@ kind: ClusterRoleBinding
 metadata:
   name: cluster-admin-gitops
 roleRef:
-  apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: cluster-admin
 subjects:
-- apiGroup: rbac.authorization.k8s.io
-  kind: ServiceAccount
+- kind: ServiceAccount
   name: openshift-gitops-argocd-application-controller
   namespace: openshift-gitops
