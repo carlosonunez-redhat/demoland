@@ -2,8 +2,7 @@
 # Exposes data and secrets between environments during a deployment run.
 #
 # This adds some functions for working with cloud providers, the config file, and
-# other useful things.
-source "$INCLUDE_DIR/helpers/aws.sh"
+# other useful things.  source "$INCLUDE_DIR/helpers/aws.sh"
 source "$INCLUDE_DIR/helpers/config.sh"
 source "$INCLUDE_DIR/helpers/data.sh"
 source "$INCLUDE_DIR/helpers/errors.sh"
@@ -19,3 +18,4 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 
 configure_gitops_admins
 setup_gitops rosa bootstrap/operators bootstrap-cluster-operators
+setup_gitops rosa bootstrap/hacks bootstrap-cluster-hacks
