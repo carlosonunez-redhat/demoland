@@ -168,17 +168,52 @@ set_up_google_idp() {
       --client-id "$client_id" \
       --client-secret "$client_secret" \
       --hosted-domain "$hosted_domain" \
-      --version "$(just _get_from_config 'deploy.cluster_config.openshift_version')" \
       --yes
     while read -r email
     do
       info "Granting '$email' '$role' access"
       _exec_rosa grant user "$role" --user="$email" -c "$(_rosa_cluster_name)-$type"
-    done < <(jq -r '.[0].users[]' <<< "$auth_infos" | grep -iv null | cat)
+    done < <(jq -r '.[0].users[].name' <<< "$auth_infos" | grep -iv null | cat)
   done
 }
 
-set -e
+set_up_basic_idp() {
+  _idp_exists() {
+    _exec_rosa list idps -c "$(_rosa_cluster_name)-$1" |
+      grep -q "$2"
+  }
+  local type
+  type="$1"
+
+  _rosa_cluster_type_disabled "$type" && return 0
+  auths=$(_get_from_config '.deploy.cluster_config.cluster_auth.basic.auths')
+  for role in $(yq -r '.[].role' <<< "$auths" | sort -u)
+  do
+    { test -z "$role" || test "${role,,}" == null ; } && continue
+    _idp_exists "$type" "basic-${role}" && return 0
+    auths=$(_get_from_config '.deploy.cluster_config.cluster_auth.basic.auths')
+    { test -z "$auths" || test "$auths" == '[]'; } && return 0
+    auth_infos=$(yq -o=j -I=0 -r '[.[] | select(.role == "'"$role"'")] | flatten' <<< "$auths")
+    num_auth_infos=$(jq -r 'length' <<< "$auth_infos")
+    if test "$num_auth_infos" -gt 1
+    then
+      error "Basic auth has $num_auth_infos sections that configure the '$role' role, but only one can exist"
+      return 1
+    fi
+    users=$(jq -r '[.[0].users[] | .name + ":" + .password] | join(",")' <<< "$auth_infos")
+    _exec_rosa create idp \
+      -c "$(_rosa_cluster_name)-$type" \
+      --type htpasswd \
+      --name "basic-$role" \
+      --users "$users" \
+      --yes
+    while read -r email
+    do
+      info "Granting '$email' '$role' access"
+      _exec_rosa grant user "$role" --user="$email" -c "$(_rosa_cluster_name)-$type"
+    done < <(jq -r '.[0].users[].name' <<< "$auth_infos" | grep -iv null | cat)
+  done
+}
 deploy_network_classic
 deploy_network_hcp
 create_account_roles
@@ -187,5 +222,7 @@ create_operator_roles_classic
 create_operator_roles_hcp
 create_cluster_classic
 set_up_google_idp classic
+set_up_basic_idp classic
 create_cluster_hcp
 set_up_google_idp hcp
+set_up_basic_idp hcp

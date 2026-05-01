@@ -18,45 +18,24 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/rosa.sh"
 generate_kubeconfig() {
   cluster_name="$(_rosa_cluster_name)-$1"
-  temp_password="Temp$(date +%s)$(tr -dc '[:alnum:]' < /dev/urandom | head -c 16)"
-
-  _delete_temp_admin_user() {
-      info "Deleting previous cluster admin in cluster '$cluster_name'"
-    _exec_rosa delete admin -c "$cluster_name" --yes
-  }
-
-  _create_temp_admin_user() {
-    _exec_rosa list idp -c "$cluster_name" | grep -q cluster-admin && _delete_temp_admin_user
-    while test "$attempts" -ne "$max_attempts"
-    do
-      _exec_rosa create admin -c "$cluster_name" -p "$temp_password" && return 0
-      info "Waiting for cluster-admin to be deleted in cluster '$cluster_name' (attempt $attempts of $max_attempts)"
-      sleep 1
-    done
-  }
 
   _login() {
-    attempts=0
-    max_attempts=120
-    while test "$attempts" -ne "$max_attempts"
-    do
-      oc login "$(_rosa_cluster_api_url "$1")" \
-        --username cluster-admin \
-        --password "$temp_password" && return 0
-      info "Waiting for cluster-admin to become available on cluster '$cluster_name' (attempt $attempts of $max_attempts)"
-      sleep 1
-      attempts=$((attempts+1))
-    done
-    return 1
+    user=$(_get_from_config '.deploy.cluster_config.cluster_auth.basic.auths[] | select(.role == "cluster-admin") | .users[0].name')
+    password=$(_get_from_config '.deploy.cluster_config.cluster_auth.basic.auths[] | select(.role == "cluster-admin") | .users[0].password')
+    oc login "$(_rosa_cluster_api_url "$1")" \
+      --username "$user" \
+      --password "$password" && return 0
   }
 
   _save_kubeconfig() {
-    cat $HOME/.kube/config > "$(_get_file_from_shared_secret_dir "kubeconfigs/$(_rosa_cluster_name "$1").kubeconfig")"
+    fp="$(_get_file_from_shared_secret_dir "kubeconfigs/$(_rosa_cluster_name "$1").kubeconfig")"
+    cat "$HOME/.kube/config" > "$fp"
+    echo "$fp" > /environment_info/kubeconfig_path
   }
-  _create_temp_admin_user "$1" &&
+  _rosa_cluster_type_disabled "$1" && return 0
+
     _login "$1" &&
-    _save_kubeconfig "$1" &&
-    _delete_temp_admin_user "$1"
+    _save_kubeconfig "$1"
 }
 
 yay_success() {
