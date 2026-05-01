@@ -26,5 +26,17 @@ verify_local_environment() {
   _exec_rosa verify openshift-client
 }
 
+verify_credentials() {
+  info "Verifying that credentials exist in environment"
+  client_id=$(_get_from_config '.deploy.rosa_config.auth.client_id')
+  client_secret=$(_get_from_config '.deploy.rosa_config.auth.client_id')
+  token=$(_get_from_config '.deploy.rosa_config.auth.token')
+  { test -n "$client_id" && test -n "$client_secret"; } && return 0
+  test -n "$token" && return 0
+  error "ROSA Client ID/Client Secret or token missing from config."
+  return 1
+}
+
 verify_local_environment
 verify_aws_quotas
+verify_credentials

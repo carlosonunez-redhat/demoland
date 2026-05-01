@@ -79,10 +79,12 @@ create_cluster_classic() {
 
   if ! _cluster_pending classic
   then
-    info "Creating classic ROSA cluster"
+    version="$(_get_from_config 'deploy.cluster_config.openshift_version')"
+    info "Creating classic ROSA cluster (OpenShift version: $version)"
     _exec_rosa create cluster \
       --yes \
       --cluster-name "$(_rosa_cluster_name)-classic" \
+      --version "$version" \
       --sts \
       --mode auto \
       --oidc-config-id "$(_rosa_oidc_id)" \
@@ -98,7 +100,6 @@ create_cluster_hcp() {
 
   if ! _cluster_pending hcp
   then
-    info "Creating HCP ROSA cluster"
     subnets=$(_exec_aws ec2 describe-subnets --filters "Name=tag:Name,Values=$(_rosa_network_stack hcp)*" \
       --query 'Subnets[].SubnetId' \
       --output text | tr '\t' ',')
@@ -108,6 +109,8 @@ create_cluster_hcp() {
       return 1
     fi
     billing_account=$(_exec_aws sts get-caller-identity | jq -r .Account)
+    version="$(_get_from_config 'deploy.cluster_config.openshift_version')"
+    info "Creating HCP ROSA cluster (OpenShift version: $version)"
     _exec_rosa create cluster \
       --yes \
       --hosted-cp \
@@ -118,7 +121,8 @@ create_cluster_hcp() {
       --operator-roles-prefix "$(_rosa_cluster_name)-hcp" \
       --machine-cidr "$(_get_from_config '.deploy.cloud_config.aws.networking.cidr_block.hcp')" \
       --subnet-ids "$subnets" \
-      --billing-account "$billing_account"
+      --billing-account "$billing_account" \
+      --version "$version"
   fi
 
   _wait_for_cluster_created hcp

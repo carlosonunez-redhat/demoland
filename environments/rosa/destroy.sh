@@ -28,7 +28,7 @@ destroy_network_hcp() {
   _destroy_network hcp
 }
 destroy_account_roles() {
-  roles=$(aws iam list-roles | grep "$(_rosa_cluster_name)" | cat)
+  roles=$(_exec_aws iam list-roles | grep "$(_rosa_cluster_name)" | cat)
   test "$(wc -l <<< "$roles")" -le 1 && return 0
 
   info "Deleting ROSA account roles"
@@ -43,10 +43,14 @@ destroy_account_roles() {
 destroy_oidc_configuration() {
   _oidc_config_created || return 0
 
-  info "Deleting AWS OIDC config for ROSA"
-  _exec_rosa delete oidc-config \
-    --mode auto \
-    --yes
+  while read -r arn
+  do
+    id=$(echo "$arn" | awk -F'/' '{print $NF}')
+    info "Deleting AWS OIDC config for ROSA [arn: $arn, id: $id]"
+    _exec_rosa delete oidc-config --mode auto --yes --oidc-config-id "$id"
+    _exec_aws iam delete-open-id-connect-provider \
+      --open-id-connect-provider-arn "$arn"
+  done < <(_exec_aws iam list-open-id-connect-providers | jq -r '.OpenIDConnectProviderList[].Arn')
 }
 
 destroy_operator_roles_classic() {

@@ -6,14 +6,18 @@ _rosa() {
   result=$(2>&1 rosa "$@")
   rc="$?"
   echo "$result"| grep -Ev '^WARN:|^INFO: Logged in as.*' | cat
+  test "$rc" -ne 0 && error "rosa CLI command failed. Output: $result"
   return "$rc"
 }
 
 _exec_rosa() {
   export $(log_into_aws)
-  if test -n "$ROSA_CLIENT_ID" && test -n "$ROSA_CLIENT_SECRET"
-  then >&2 _rosa login --client-id="$ROSA_CLIENT_ID" --client-secret="$ROSA_CLIENT_SECRET" || return 1
-  else >&2 _rosa login --token="$(_get_from_config '.deploy.rosa_config.auth.token')" || return 1
+  client_id=$(_get_from_config '.deploy.rosa_config.auth.client_id')
+  client_secret=$(_get_from_config '.deploy.rosa_config.auth.client_secret')
+  token=$(_get_from_config '.deploy.rosa_config.auth.token')
+  if test -n "$client_id" && test -n "$client_secret"
+  then >&2 _rosa login --client-id="$client_id" --client-secret="$client_secret" || return 1
+  else >&2 _rosa login --token="$token" || return 1
   fi
   _rosa "$@"
 }
@@ -33,6 +37,8 @@ _rosa_cluster_api_url() {
 }
 
 _rosa_cluster_console_url() {
+  _rosa_cluster_type_disabled "$1" && return 0
+
   _exec_rosa describe cluster -c "$(_rosa_cluster_name)-$1" -o json |
     jq -r '.console.url'
 }
