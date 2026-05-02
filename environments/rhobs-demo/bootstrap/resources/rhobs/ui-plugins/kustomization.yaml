@@ -1,0 +1,3 @@
+resources:
+  - ../../../../../../components/cluster-observability-operator/resources/ui-plugins/monitoring
+
