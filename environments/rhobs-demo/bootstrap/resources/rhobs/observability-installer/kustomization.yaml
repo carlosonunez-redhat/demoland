@@ -9,7 +9,7 @@ patches:
     patch: |-
       - op: replace
         path: /spec/capabilities/storage/objectStorage/s3CCO/bucket
-        value: 3qqaxq4w-rhobs-s3-bucket
+        value: "3qqaxq4w-rhobs-s3-bucket"
       - op: replace
         path: /spec/capabilities/storage/objectStorage/s3CCO/region
-        value: us-east-2
+        value: "us-east-2"
