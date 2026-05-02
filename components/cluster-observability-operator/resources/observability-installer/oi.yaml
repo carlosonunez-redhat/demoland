@@ -1,5 +1,5 @@
 apiVersion: observability.openshift.io/v1alpha1
-kind: ObservabilityOperator
+kind: ObservabilityInstaller
 metadata:
   name: rhobs
   namespace: openshift-observability
