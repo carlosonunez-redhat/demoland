@@ -136,6 +136,10 @@ _wait_for_cf_stack_until_state() {
       return 1
     fi
     case "${stack_state}" in
+      update_complete)
+        info "[iteration #${iterations}] '$stack_name': Stack updated externally; skipping"; \
+        return 0
+        ;;
       "$desired_state")
         test "$iterations" != 0 &&
           info "[iteration #${iterations}] '$stack_name': ${desired_state^^} achieved!"

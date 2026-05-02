@@ -1,0 +1,17 @@
+resources:
+  - ../../../components/dev-spaces/resources/checluster
+  - ../../../components/openshift-gitops/resources/argocd-instance
+patches:
+  - target:
+      name: replace-me
+      kind: ArgoCD
+      namespace: openshift-gitops
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: openshift-gitops
+      - op: replace
+        path: /spec/extraConfig
+        value:
+          timeout.reconciliation: 60s,
+          timeout.reconciliation.jitter: 10s

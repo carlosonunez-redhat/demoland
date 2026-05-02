@@ -69,6 +69,7 @@ _ensure_valid_cluster_role() {
 }
 
 control_plane_nodes_exist() {
+  local num_worker_nodes_want num_worker_nodes_want
   num_worker_nodes_want="$(_get_from_config '.deploy.node_config.control_plane.quantity_per_zone')"
   num_worker_nodes_got=$(_exec_aws ec2 describe-instances \
     --query 'Reservations[].Instances[?(State.Name == `running`) &&
@@ -78,12 +79,13 @@ control_plane_nodes_exist() {
 }
 
 worker_nodes_exist() {
+  local num_worker_nodes_want num_worker_nodes_want
   num_worker_nodes_want="$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"
   { test -z "$num_worker_nodes_want" || test "$num_worker_nodes_want" -eq 0; } && return 0
 
   num_worker_nodes_got=$(_exec_aws ec2 describe-instances \
     --query 'Reservations[].Instances[?(State.Name == `running`) &&
-(@.Tags[?Key==`aws:cloudformation:logical-id` && contains(Value, `Master`)]) &&
+(@.Tags[?Key==`aws:cloudformation:logical-id` && contains(Value, `Worker`)]) &&
 (@.Tags[?Key==`Name` && contains(Value, `'"$(_cluster_infra_name)"'`)])].InstanceId' --output text | wc -l)
   test "$num_worker_nodes_got" == "$num_worker_nodes_want"
 }
@@ -157,7 +159,7 @@ configure_control_plane_scheduling() {
   test -d "$(_get_file_from_openshift_install_dir 'manifests')" || return 0
 
   num_cp_nodes="$(_get_from_config '.deploy.node_config.control_plane.quantity_per_zone')"
-  cp_schedulable="$(_get_from_config '.deploy.node_config.control_plane.schedulable')"
+  cp_schedulable="$(_get_from_config '.deploy.node_config.control_plane.schedulable' | grep -Ev '^null$' | cat)"
   test -z "$cp_schedulable" &&
     test "$num_cp_nodes" -ne 1 &&
     return 0
@@ -255,7 +257,8 @@ create_security_group_rules() {
 }
 
 create_bootstrap_machine() {
-  { control_plane_nodes_exist && worker_nodes_exist; } && return 0
+  test -f "$(_get_file_from_openshift_install_dir '.bootstrap_complete')" && return 0
+
   set -e
   sg_id=$(fail_if_nil "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId')" \
     "Master security group ID not found")
@@ -291,7 +294,8 @@ create_bootstrap_machine() {
   params_json=$(_create_aws_cf_params_json "${params[@]}")
   _create_aws_resources_from_cfn_stack_with_caps bootstrap_machine "$params_json" \
     "CAPABILITY_NAMED_IAM" \
-    "Creating bootstrap node..."
+    "Creating bootstrap node..." &&
+      touch -f "$(_get_file_from_openshift_install_dir '.bootstrap_complete')"
 }
 
 create_ignition_bucket_in_s3() {
@@ -532,6 +536,7 @@ create_worker_machines() {
 }
 
 wait_for_bootstrap_complete() {
+  test -f "$(_get_file_from_openshift_install_dir '.bootstrap_complete')" && return 0
   _exec_openshift_install_aws wait-for bootstrap-complete --log-level debug
 }
 
@@ -872,8 +877,89 @@ EOF
     do
       info "Granting '$email' '$role' access"
       exec_oc_postinstall adm policy add-cluster-role-to-user "$role" "$email"
-    done < <(jq -r '.[0].users[]' <<< "$auth_infos" | grep -iv null | cat)
+    done < <(jq -r '.[0].users[].name' <<< "$auth_infos" | grep -iv null | cat)
   done
+}
+
+enable_nested_virtualization_on_worker_nodes() {
+  _exec_ec2_instance_op_and_wait() {
+    local instance_id want_state change_state change_op
+    instance_id="$1"
+    want_state="$2"
+    change_state="$3"
+    change_op="$4"
+    attempts=0
+    max_attempts=180
+    want_state="$2"
+    while test "$attempts" -ne "$max_attempts"
+    do
+      state=$(aws ec2 describe-instances --instance-id "$instance_id" \
+        --query 'Reservations[0].Instances[0].State.Name' --output text)
+      case "${state,,}" in
+        "${change_state,,}")
+          info "---> [$instance_id] Changing '$state'"
+           _exec_aws ec2 "${change_op}" --instance-id "$instance_id" || return 1
+           ;;
+        "${want_state,,}")
+          return 0
+          ;;
+        *)
+          info "---> [$instance_id] Waiting for state '$want_state'; got '$state'"
+          attempts=$((attempts+1))
+          sleep 1
+          ;;
+      esac
+    done
+    return 1
+  }
+
+  _shut_down_and_wait() {
+    _exec_ec2_instance_op_and_wait "$1" 'stopped' 'running' 'stop-instances'
+  }
+
+  _start_instance_and_wait() {
+    _exec_ec2_instance_op_and_wait "$1" 'running' 'stopped' 'start-instances'
+  }
+
+  test -f "$(_get_file_from_openshift_install_dir '.nested_virt_configured')" && return 0
+  instances=$(_exec_aws ec2 describe-instances \
+    --query 'Reservations[].Instances[?(@.Tags[?Key==`aws:cloudformation:logical-id` && contains(Value, `Worker`)]) &&
+(@.Tags[?Key==`Name` && contains(Value, `'"$(_cluster_infra_name)"'`)])]' |
+    jq -cr 'flatten | .[] |
+select(.InstanceType | test("^(c8i|m8i|r8i)")) |
+{
+  id: .InstanceId,
+  size: .InstanceType,
+  cpuOptions: .CpuOptions
+}')
+  if test -z "$instances"
+  then
+    touch "$(_get_file_from_openshift_install_dir '.nested_virt_configured')"
+    return 0
+  fi
+  for instance_data in $instances
+  do
+    instance_virt_enabled=$(jq -r '.cpuOptions.virtEnabled' <<< "$instance_data")
+    test "$instance_virt_enabled" == enabled &&
+      _start_instance_and_wait "$instance_id" &&
+      continue
+
+    instance_id=$(jq -r '.id' <<< "$instance_data")
+    cores=$(jq -r '.cpuOptions.CoreCount' <<< "$instance_data")
+    threads_per_core=$(jq -r '.cpuOptions.ThreadsPerCore' <<< "$instance_data")
+    info "Enabling virtualization for worker instance '$instance_id'"
+    _shut_down_and_wait "$instance_id"
+    _exec_aws ec2 modify-instance-cpu-options --instance-id "$instance_id" \
+      --core-count "$cores" \
+      --threads-per-core "$threads_per_core" \
+      --nested-virtualization enabled
+    _start_instance_and_wait "$instance_id"
+  done
+  touch "$(_get_file_from_openshift_install_dir '.nested_virt_configured')"
+}
+
+map_cluster_admin_to_cluster_admins() {
+  exec_oc_postinstall adm policy add-cluster-role-to-group cluster-admin 'system:cluster-admins'
 }
 
 create_ssh_key
@@ -894,6 +980,7 @@ sync_bootstrap_ignition_files_with_s3_bucket
 create_bootstrap_machine
 create_control_plane_machines
 create_worker_machines
+enable_nested_virtualization_on_worker_nodes
 wait_for_bootstrap_complete
 wait_for_first_worker_csr
 wait_for_and_register_worker_node_csrs
@@ -904,3 +991,4 @@ wait_for_install_to_complete
 delete_bootstrap_machine
 create_cluster_users_htpasswd
 create_cluster_users_google_auth
+map_cluster_admin_to_cluster_admins
