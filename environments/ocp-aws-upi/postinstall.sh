@@ -16,3 +16,4 @@ source "$ENVIRONMENT_INCLUDE_DIR/ocp.sh"
 configure_gitops_admins
 setup_gitops_postinstall ocp-aws-upi bootstrap/operators bootstrap-cluster-operators
 setup_gitops_postinstall ocp-aws-upi bootstrap/resources bootstrap-cluster-resources
+setup_gitops_postinstall ocp-aws-upi bootstrap/hacks bootstrap-cluster-hacks
