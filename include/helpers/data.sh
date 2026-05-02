@@ -33,3 +33,7 @@ _get_top_level_environment_name() {
 _get_top_level_environment_id() {
   cat "/environment_info/root_environment_id"
 }
+
+_get_environment_dir() {
+  echo '/app/environment'
+}
