@@ -21,14 +21,21 @@ create_rhobs_s3_bucket() {
 }
 
 replace_bucket_vars_in_kustomizations() {
-  local replacements_made region
+  local replacements_made region file want got patch new_patch
   replacements_made=0
   region=$(_exec_aws ec2 describe-availability-zones --output text --query 'AvailabilityZones[0].[RegionName]')
-  while read -r file
+  file="$(_get_environment_dir)/bootstrap/resources/rhobs/observability-installer/kustomization.yaml"
+  for key in bucket region
   do
+    want=$(rhobs_s3_bucket)
+    test "$key" == region && want="$region"
+    patch=$(yq -r '.patches[0].patch | fromyaml' "$file")
+    got=$(yq -r ".[] | select(.path | contains(\"$key\")) | .value" <<< "$patch")
+    test "$want" == "$got" && continue
     replacements_made=$((replacements_made+1))
-    sed -i "s/%REPLACE_BUCKET%/$(rhobs_s3_bucket)/g ; s/%REPLACE_REGION%/$region/g" "$file"
-  done < <(grep -lr "%REPLACE_" "$(_get_environment_dir)/bootstrap")
+    info "==> Replacing '$key' (want: $want, got: $got)"
+    sed -i "s;$got;$want;g" "$file"
+  done
   echo "$replacements_made"
 }
 
