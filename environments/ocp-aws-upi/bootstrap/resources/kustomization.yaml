@@ -1,6 +1,6 @@
 resources:
-  - ../../../components/dev-spaces/resources/checluster
-  - ../../../components/openshift-gitops/resources/argocd-instance
+  - ../../../../components/dev-spaces/resources/checluster
+  - ../../../../components/openshift-gitops/resources/argocd-instance
 patches:
   - target:
       name: replace-me

@@ -1,3 +1,3 @@
 resources:
-  - ../../../components/web-terminal/operator
-  - ../../../components/dev-spaces/operator
+  - ../../../../components/web-terminal/operator
+  - ../../../../components/dev-spaces/operator
