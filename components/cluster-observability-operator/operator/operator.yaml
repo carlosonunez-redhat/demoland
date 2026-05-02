@@ -8,4 +8,5 @@ spec:
   source: redhat-operators
   channel: stable
   installPlanApproval: Automatic
-  name: cluster-observability-operator.v1.4.0
+  name: cluster-observability-operator
+  startingCSV: cluster-observability-operator.v1.4.0
