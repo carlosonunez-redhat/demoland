@@ -21,13 +21,14 @@ create_rhobs_s3_bucket() {
 }
 
 replace_bucket_vars_in_kustomizations() {
-  local replacements_made
+  local replacements_made region
   replacements_made=0
+  region=$(_exec_aws ec2 describe-availability-zones --output text --query 'AvailabilityZones[0].[RegionName]')
   while read -r file
   do
     replacements_made=$((replacements_made+1))
-    sed -i "s/\$REPLACE_BUCKET\$/$(rhobs_s3_bucket)/g ; s/\$REPLACE_REGION\$/$(_exec_aws configure get region)/g" "$file"
-  done < <(grep -lr "\$REPLACE_" "$(_get_environment_dir)/bootstrap")
+    sed -i "s/%REPLACE_BUCKET%/$(rhobs_s3_bucket)/g ; s/%REPLACE_REGION%/$region/g" "$file"
+  done < <(grep -lr "%REPLACE_" "$(_get_environment_dir)/bootstrap")
   echo "$replacements_made"
 }
 
