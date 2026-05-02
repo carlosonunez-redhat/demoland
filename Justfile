@@ -60,7 +60,7 @@ destroy environment: clean \
     (_run_stage_with_dependencies environment "_destroy")
 
 [doc("Performs post-install steps, like installing operators and such.")]
-postinstall environment: (_run_stage_with_dependencies environment "_postinstall")
+postinstall environment: (_run_stage_with_dependencies environment "_precheck" "_postinstall")
 
 _run_stage_with_dependencies environment +stages:\
     (_generate_toplevel_environment_info environment) \
