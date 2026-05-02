@@ -26,8 +26,8 @@ replace_bucket_vars_in_kustomizations() {
   while read -r file
   do
     replacements_made=$((replacements_made+1))
-    sed "s/\$REPLACE_BUCKET\$/$(rhobs_s3_bucket)/g ; s/\$REPLACE_REGION\$/$(_exec_aws configure get region)/g" "$file"
-  done < <(grep -lr "\$REPLACE_" ./bootstrap)
+    sed -i "s/\$REPLACE_BUCKET\$/$(rhobs_s3_bucket)/g ; s/\$REPLACE_REGION\$/$(_exec_aws configure get region)/g" "$file"
+  done < <(grep -lr "\$REPLACE_" "$(_get_environment_dir)/bootstrap")
   echo "$replacements_made"
 }
 
@@ -37,7 +37,7 @@ replacements=$(replace_bucket_vars_in_kustomizations)
 if test "$replacements" -gt 0
 then
   info "Variables in GitOps kustomizations replaced. Commit first then perform post-install again."
-  return 0
+  exit 0
 fi
 setup_gitops rhobs-demo bootstrap/operators bootstrap-rhobs-demo-operators
 setup_gitops rhobs-demo bootstrap/resources/rhobs rh-observability
