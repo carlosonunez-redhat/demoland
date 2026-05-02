@@ -1,8 +1,0 @@
-patches:
-  - target:
-      kind: Pod
-      name: should-be-replaced
-    patch: |-
-      - op: replace
-        path: /metadata/name
-        value: the-overlay-is-working

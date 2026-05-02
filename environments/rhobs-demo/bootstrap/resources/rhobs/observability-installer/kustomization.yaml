@@ -1,0 +1,15 @@
+resources:
+  - ../../../../../../components/cluster-observability-operator/resources/observability-installer
+patches:
+  - target:
+      name: rhobs
+      namespace: openshift-observability
+    # DO NOT MODIFY THE VALUES BELOW
+    # They will be overridden by 'just postinstall.'
+    patch: |-
+      - op: replace
+        path: /spec/capabilities/storage/objectStorage/s3CCO/bucket
+        value: $REPLACE_BUCKET$
+      - op: replace
+        path: /spec/capabilities/storage/objectStorage/s3CCO/region
+        value: $REPLACE_REGION$
