@@ -2,6 +2,7 @@ resources:
   - ../../../../../../components/cluster-observability-operator/resources/observability-installer
 patches:
   - target:
+      kind: ObservabilityInstaller
       name: rhobs
       namespace: openshift-observability
     # DO NOT MODIFY THE VALUES BELOW
