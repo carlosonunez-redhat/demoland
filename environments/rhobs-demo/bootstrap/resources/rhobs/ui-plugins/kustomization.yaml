@@ -1,4 +1,5 @@
 resources:
   - ../../../../../../components/cluster-observability-operator/resources/ui-plugins/monitoring
   - ../../../../../../components/cluster-observability-operator/resources/ui-plugins/logging
+  - ../../../../../../components/cluster-observability-operator/resources/ui-plugins/troubleshooting
 
