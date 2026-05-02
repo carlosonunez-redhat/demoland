@@ -46,26 +46,26 @@ environments:
             environment_vars:
                 - SOME_KEY=some value
                 - ANOTHER_KEY=another value
-        # these secrets will get mounted into a folder called /secrets within the
-        # container that builds your cluster.
-        secrets: {}
-        # cloud_credentials: Overrides the default cloud configs set by
-        # 'common.cloud_credentials'.
-        #
-        # EXAMPLE:
-        #
-        # # STS credentials
-        # ```yaml
-        # cloud_credentials:
-        #   aws:
-        #     # encrypted
-        #     sts:
-        #       aws_access_key_id: AKIA12345...
-        #       aws_secret_access_key: superdupersecret
-        #       aws_default_region: us-west-1
-        #       aws_role_arn: foo
-        #       aws_role_external_id: superdupersecret
-        # ```
+            # these secrets will get mounted into a folder called /secrets within the
+            # container that builds your cluster.
+            secrets: {}
+            # cloud_credentials: Overrides the default cloud configs set by
+            # 'common.cloud_credentials'.
+            #
+            # EXAMPLE:
+            #
+            # # STS credentials
+            # ```yaml
+            # cloud_credentials:
+            #   aws:
+            #     # encrypted
+            #     sts:
+            #       aws_access_key_id: AKIA12345...
+            #       aws_secret_access_key: superdupersecret
+            #       aws_default_region: us-west-1
+            #       aws_role_arn: foo
+            #       aws_role_external_id: superdupersecret
+            # ```
         cloud_credentials:
             aws: {}
         # components: Additional components to install into your cluster.
@@ -96,12 +96,12 @@ environments:
         deploy:
             # environment_vars: Set within the container that provisions/destroys the environment.
             environment_vars: []
-        # these secrets will get mounted into a folder called /secrets within the
-        # container that builds your cluster.
-        secrets:
-            obs_s3_bucket:
-                name: obs-s3-bucket
-                data: 3qqaxq4w-rhobs-s3-bucket
+            # these secrets will get mounted into a folder called /secrets within the
+            # container that builds your cluster.
+            secrets:
+                obs_s3_bucket:
+                    name: rhobs/s3_bucket_name
+                    data: 3qqaxq4w-rhobs-s3-bucket
         cloud_credentials:
             aws: {}
         components: []
@@ -296,8 +296,8 @@ environments:
                     # encrypted
                     data: ENC[AES256_GCM,data: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,iv:HHjtH16Z0WCYc8fcQMlhgfFatunmKOYHQ/YkzZ04Fjc=,tag:cnN3kcQjpaiLvJ5yer/n2Q==,type:str]
 sops:
-    lastmodified: "2026-05-02T18:20:20Z"
-    mac: ENC[AES256_GCM,data:5vXe1tpb5FSqzmE9bR3RUztDLem8IAl2nxwMU6oX7OtxMXXgibYpc+EX+mqNUjGtAfMnhJlpkYD3QGViVOctoCjD7QMQgyRwlV0tTn78jwzbgY7xmkCye1xZBN0upBwlcP1epAfbUI13BfBqNNg9VY5dZF1d3xYga+iHK1OyrRc=,iv:oeTyryS8IyGT+YrFkvZ3GMlhGnXRLPm6ZWCCG3/Nh0w=,tag:GVpOlk5dUFVJzBuq3yKi4g==,type:str]
+    lastmodified: "2026-05-02T19:06:49Z"
+    mac: ENC[AES256_GCM,data:1xkeYlUSswW+oWmM7BY9TFcZKvInhpGnOEWo3oUoNrCRGtDFiy8iHrqRJRBIrkFoFJTT5dwHCYpIBe5G5iXknPcYi2iJl7MlmSAc6zyCoIuuPHFQPZconYqyoTo9YazSKbC6KWW+pNrzM7zvQ8kZtjB23gpDn4igZar1cG0dbxs=,iv:qVFk7eROvJFDdgaRkFO9SS4nU859sBM4d1UCeWN0ktQ=,tag:nhLQ43PForINHPj3CxupbA==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
