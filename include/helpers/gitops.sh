@@ -1,4 +1,29 @@
 # shellcheck shell=bash
+source "$(dirname "$0")/../include/helpers/ocp.sh"
+
+_wait_for_gitops_ready() {
+  _namespace_available() {
+    "$exec_oc_fn" get ns | grep -q 'openshift-gitops' && return 0
+    warning "[gitops] readiness: namespace available"
+    return 1
+  }
+
+  _application_crd_installed() {
+    "$exec_oc_fn" api-resources -o name | grep -q 'applications.argoproj.io' && return 0
+    warning "[gitops] readiness: Application CRD unavailable"
+    return 1
+  }
+  attempts=0
+  max_attempts=180
+  exec_oc_fn="$1"
+  while test "$attempts" -lt "$max_attempts"
+  do
+    _namespace_available && _application_crd_installed && return 0
+    info "[gitops] Waiting for prerequisites [attempt $attempts of $max_attempts]"
+    attempts=$((attempts+1))
+    sleep 1
+  done
+}
 
 _setup_gitops() {
   local environment_name gitops_dir app_name exec_oc_fn
@@ -12,6 +37,11 @@ _setup_gitops() {
   app_name="${3:-$environment_name}"
   exec_oc_fn="$4"
   set -e
+  if ! _wait_for_gitops_ready "$exec_oc_fn"
+  then
+    error "[gitops] Failed to become ready"
+    return 1
+  fi
   values=(
     repo_url "$(_get_secret 'gitops/repo')"
     repo_branch "$(_get_secret 'gitops/branch')"
@@ -20,8 +50,8 @@ _setup_gitops() {
     gitops_dir "$gitops_dir"
     app_name "$app_name"
   )
-  secrets_f="/tmp/gitops_secret_$(_cluster_name)"
-  app_f="/tmp/gitops_app_$(_cluster_name)"
+  secrets_f="/tmp/gitops_secret_$(date +%s)"
+  app_f="/tmp/gitops_app_$(date +%s)"
   info "Setting up '$app_name' GitOps application (environment: $environment_name)"
   render_include_yaml_template repo_credentials_secret "${values[@]}"  > "$secrets_f" &&
     render_include_yaml_template gitops_application "${values[@]}" > "$app_f" &&
@@ -29,6 +59,26 @@ _setup_gitops() {
     "$exec_oc_fn" apply -f "$app_f"
 }
 
+_configure_gitops_admins() {
+  exec_oc_fn="$1"
+  admins=$(_get_from_config '.deploy.cluster_config.cluster_auth |
+    to_entries |
+    .[].value.auths[] |
+    select(.role == "cluster-admin") |
+    .users[].name' | grep -Ev '^null$' | cat)
+  test -z "$admins" && return 0
+
+  if ! { "$exec_oc_fn" get groups -o name | grep -Eq '.*/cluster-admins$'; }
+  then
+    info "Creating ArgoCD 'cluster-admins' group"
+    "$exec_oc_fn" adm groups new cluster-admins
+  fi
+  for user in $admins
+  do
+    info "Adding '$user' to 'cluster-admins'"
+    "$exec_oc_fn" adm groups add-users cluster-admins "$user"
+  done
+}
 # setup_gitops @ENVIRONMENT_NAME @GITOPS_FOLDER @APP_NAME:
 #
 # Creates an ArgoCD Application for an environment assuming
@@ -57,22 +107,15 @@ setup_gitops_postinstall() {
   _setup_gitops "$1" "$2" "$3" 'exec_oc_postinstall'
 }
 
+# configure_gitops_admins: Maps users with the `cluster-admin` role to ArgoCD's list of admins.
 configure_gitops_admins() {
-  admins=$(_get_from_config '.deploy.cluster_config.cluster_auth |
-    to_entries |
-    .[].value.auths[] |
-    select(.role == "cluster-admin") |
-    .users[].name' | grep -Ev '^null$' | cat)
-  test -z "$admins" && return 0
-
-  if ! { exec_oc_postinstall get groups -o name | grep -Eq '.*/cluster-admins$'; }
-  then
-    info "Creating ArgoCD 'cluster-admins' group"
-    exec_oc_postinstall adm groups new cluster-admins
-  fi
-  for user in $admins
-  do
-    info "Adding '$user' to 'cluster-admins'"
-    exec_oc_postinstall adm groups add-users cluster-admins "$user"
-  done
+  _configure_gitops_admins 'exec_oc'
 }
+
+# configure_gitops_admins_postinstall: `configure_gitops_admins`, but after an OpenShift
+# cluster bring-up.
+configure_gitops_admins_postinstall() {
+  _configure_gitops_admins 'exec_oc_postinstall'
+}
+
+
