@@ -128,7 +128,7 @@ configure_gitops_admins_postinstall() {
 #   variables:
 #     key: string # `key` is a part of a path in a patch to modify.
 #                 # `value` is the desired value for that patch.
-modify_kustomizations() {
+render_kustomization_patches() {
   local replacements_made mod_yaml want got curr_mods patch_json
   replacements_made=0
   mod_yaml="$(yq -r '.' <<< "$1")"
