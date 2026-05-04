@@ -13,7 +13,7 @@ spec:
   storage:
     schemas:
       - version: v13
-        effectiveDate: "<yyyy>-<mm>-<dd>"
+        effectiveDate: 2026-02-04 # needs to be set to two months before install date
     secret:
       name: logging-loki-s3
       type: s3
