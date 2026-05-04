@@ -1,0 +1,24 @@
+resources:
+  - ../../../../../../components/openshift-logging/resources/loki-stack/secret/s3-cco
+  - ../../../../../../components/openshift-logging/resources/loki-stack/stack
+# automatically updated by 'postinstall'; any changes will be overwritten!
+patches:
+  - target:
+      kind: LokiStack
+      name: logging-loki
+      namespace: openshift-logging
+    patch: |-
+      - op: replace
+        path: /spec/storageClassName
+        value: gp3-csi
+  - target:
+      kind: Secret
+      name: logging-loki-s3
+      namespace: openshift-logging
+    patch: |-
+      - op: replace
+        path: /stringData/bucketnames
+        value: 3qqaxq4w-rhobs-s3-bucket
+      - op: replace
+        path: /stringData/region
+        value: us-east-2
