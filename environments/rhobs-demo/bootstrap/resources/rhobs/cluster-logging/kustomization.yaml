@@ -22,3 +22,6 @@ patches:
       - op: replace
         path: /stringData/region
         value: us-east-2
+      - op: replace
+        path: /stringData/endpoint
+        value: https://s3.us-east-2.amazonaws.com

@@ -34,7 +34,7 @@ modifications="$(cat <<-EOF
     storageClassName: "$default_sc"
     region: "$(_aws_default_region)"
     bucket: "$(rhobs_s3_bucket)"
-
+    endpoint: "https://s3.$(_aws_default_region).amazonaws.com"
 EOF
 )"
 replacements=$(render_kustomization_patches "$modifications")
