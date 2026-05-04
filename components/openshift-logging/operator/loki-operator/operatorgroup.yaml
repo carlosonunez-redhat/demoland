@@ -4,4 +4,4 @@ metadata:
   name: loki-operator
   namespace: openshift-operators-redhat
 spec:
-  upgradeStrategy: default
+  upgradeStrategy: Default
