@@ -21,32 +21,36 @@ create_rhobs_s3_bucket() {
 }
 
 apply_secrets() {
-  cat >/tmp/kustomization.yaml <<-EOF
-resources:
-- ../components/openshift-logging/resources/loki-stack/secret/s3-cco
-patches:
-  - target:
-      kind: Secret
-      name: logging-loki-s3
-      namespace: openshift-logging
-    patch: |-
-      - op: replace
-        path: /stringData/bucketnames
-        value: 3qqaxq4w-rhobs-s3-bucket
-      - op: replace
-        path: /stringData/region
-        value: us-east-2
-      - op: replace
-        path: /stringData/endpoint
-        value: https://s3.us-east-2.amazonaws.com
-      - op: replace
-        path: /stringData/access_key_id
-        value: "$(_get_secret 'rhobs/s3_bucket_ak')"
-      - op: replace
-        path: /stringData/access_key_secret
-        value: "$(_get_secret "rhobs/s3_bucket_sk")"
+  _apply_grafana_secret() {
+    cat >/tmp/kustomization.yaml <<-EOF
+  resources:
+  - ../components/$2/resources/$3/secret/s3
+  patches:
+    - target:
+        kind: Secret
+        name: "$1"
+        namespace: "$2"
+      patch: |-
+        - op: replace
+          path: /stringData/bucketnames
+          value: 3qqaxq4w-rhobs-s3-bucket
+        - op: replace
+          path: /stringData/region
+          value: us-east-2
+        - op: replace
+          path: /stringData/endpoint
+          value: https://s3.us-east-2.amazonaws.com
+        - op: replace
+          path: /stringData/access_key_id
+          value: "$(_get_secret 'rhobs/s3_bucket_ak')"
+        - op: replace
+          path: /stringData/access_key_secret
+          value: "$(_get_secret "rhobs/s3_bucket_sk")"
 EOF
-  exec_oc apply -k /tmp
+    exec_oc apply -k /tmp
+  }
+  _apply_grafana_secret tempostack-s3 openshift-tracing tempo-stack &&
+    _apply_grafana_secret logging-loki-s3 openshift-logging loki-stack
 }
 
 set -e
