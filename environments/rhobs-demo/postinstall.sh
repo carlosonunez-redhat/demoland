@@ -20,6 +20,35 @@ create_rhobs_s3_bucket() {
   _exec_aws s3 mb "s3://$(rhobs_s3_bucket)"
 }
 
+apply_secrets() {
+  _exec_oc apply -k "$(cat <<-EOF
+resources:
+- ../../components/openshift-logging/resources/loki-stack/secret/s3-cco
+patches:
+  - target:
+      kind: Secret
+      name: logging-loki-s3
+      namespace: openshift-logging
+    patch: |-
+      - op: replace
+        path: /stringData/bucketnames
+        value: 3qqaxq4w-rhobs-s3-bucket
+      - op: replace
+        path: /stringData/region
+        value: us-east-2
+      - op: replace
+        path: /stringData/endpoint
+        value: https://s3.us-east-2.amazonaws.com
+      - op: replace
+        path: /stringData/access_key_id
+        value: "$(_get_secret 'rhobs/s3_bucket_ak')"
+      - op: replace
+        path: /stringData/access_key_secret
+        value: "$(_get_secret "rhobs/s3_bucket_sk")"
+EOF
+)"
+}
+
 set -e
 create_rhobs_s3_bucket
 default_sc="$(exec_oc get sc -o yaml |
@@ -43,5 +72,6 @@ then
   info "$replacements kustomization replacements made. Commit first then perform post-install again."
   exit 0
 fi
+apply_secrets
 setup_gitops rhobs-demo bootstrap/operators bootstrap-rhobs-demo-operators
 setup_gitops rhobs-demo bootstrap/resources/rhobs rh-observability
