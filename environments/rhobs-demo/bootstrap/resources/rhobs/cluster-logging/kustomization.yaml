@@ -1,4 +1,5 @@
 resources:
+- ../../../../../../components/openshift-logging/resources/loki-stack/stack
 # automatically updated by 'postinstall'; any changes will be overwritten!
 patches:
   - target:

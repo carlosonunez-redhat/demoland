@@ -1,0 +1,3 @@
+resources:
+- ../../../../../../components/openshift-tracing/resources/tempo-stack/stack
+# automatically updated by 'postinstall'; any changes will be overwritten!

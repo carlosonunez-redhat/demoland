@@ -2,3 +2,4 @@ resources:
   - ./observability-installer
   - ./ui-plugins
   - ./cluster-logging
+  - ./cluster-tracing
