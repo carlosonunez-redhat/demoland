@@ -21,9 +21,9 @@ create_rhobs_s3_bucket() {
 }
 
 apply_secrets() {
-  _exec_oc apply -k "$(cat <<-EOF
+  cat >/tmp/kustomization.yaml <<-EOF
 resources:
-- ../../components/openshift-logging/resources/loki-stack/secret/s3-cco
+- ../components/openshift-logging/resources/loki-stack/secret/s3-cco
 patches:
   - target:
       kind: Secret
@@ -46,7 +46,7 @@ patches:
         path: /stringData/access_key_secret
         value: "$(_get_secret "rhobs/s3_bucket_sk")"
 EOF
-)"
+  exec_oc apply -k /tmp
 }
 
 set -e
