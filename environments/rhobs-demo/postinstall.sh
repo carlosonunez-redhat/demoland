@@ -20,31 +20,27 @@ create_rhobs_s3_bucket() {
   _exec_aws s3 mb "s3://$(rhobs_s3_bucket)"
 }
 
-replace_bucket_vars_in_kustomizations() {
-  local replacements_made region file want got patch new_patch
-  replacements_made=0
-  region=$(_exec_aws ec2 describe-availability-zones --output text --query 'AvailabilityZones[0].[RegionName]')
-  file="$(_get_environment_dir)/bootstrap/resources/rhobs/observability-installer/kustomization.yaml"
-  for key in bucket region
-  do
-    want=$(rhobs_s3_bucket)
-    test "$key" == region && want="$region"
-    patch=$(yq -r '.patches[0].patch | fromyaml' "$file")
-    got=$(yq -r ".[] | select(.path | contains(\"$key\")) | .value" <<< "$patch")
-    test "$want" == "$got" && continue
-    replacements_made=$((replacements_made+1))
-    info "==> Replacing '$key' (want: $want, got: $got)"
-    sed -i "s;$got;$want;g" "$file"
-  done
-  echo "$replacements_made"
-}
-
 set -e
 create_rhobs_s3_bucket
-replacements=$(replace_bucket_vars_in_kustomizations)
+default_sc="$(exec_oc get sc -o yaml |
+  yq -r '.items[] | select(.metadata.annotations | to_entries[] | .key | contains("is-default-class")) | .metadata.name')"
+modifications="$(cat <<-EOF
+- file: bootstrap/resources/rhobs/observability-installer/kustomization.yaml
+  variables:
+    region: "$(_aws_default_region)"
+    bucket: "$(rhobs_s3_bucket)"
+- file: bootstrap/resources/rhobs/cluster-logging/kustomization.yaml
+  variables:
+    storageClassName: "$default_sc"
+    region: "$(_aws_default_region)"
+    bucket: "$(rhobs_s3_bucket)"
+
+EOF
+)"
+replacements=$(render_kustomization_patches "$modifications")
 if test "$replacements" -gt 0
 then
-  info "Variables in GitOps kustomizations replaced. Commit first then perform post-install again."
+  info "$replacements kustomization replacements made. Commit first then perform post-install again."
   exit 0
 fi
 setup_gitops rhobs-demo bootstrap/operators bootstrap-rhobs-demo-operators

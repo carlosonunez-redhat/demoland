@@ -118,4 +118,44 @@ configure_gitops_admins_postinstall() {
   _configure_gitops_admins 'exec_oc_postinstall'
 }
 
+# render_kustomization_patches @YAML
+# Renders a Kustomization in an environment based on the YAML provided
+# by `@YAML`. Schema is below:
+#
+# ```yaml
+# ---
+# - file: string # path to kustomization file
+#   variables:
+#     key: string # `key` is a part of a path in a patch to modify.
+#                 # `value` is the desired value for that patch.
+modify_kustomizations() {
+  local replacements_made mod_yaml want got curr_mods patch_json
+  replacements_made=0
+  mod_yaml="$(yq -r '.' <<< "$1")"
+  if test -z "$mod_yaml"
+  then
+    error "Kustomization modifications YAML empty or malformed: $1"
+    return 1
+  fi
+  while read -r fname
+  do
+    file="$(_get_environment_dir)/$fname"
+    curr_mods=$(yq -r '.[] | select(.file | contains("'"$fname"'"))' <<< "$mod_yaml")
+    while read -r patch_json
+    do
+      while read -r var
+      do
+        got_json=$(jq -r '.[] | select(.path | test(".*/'"$var"'$")) | .' <<< "$patch_json" | grep -Ev '^null$' | cat)
+        test -z "$got_json" && continue
+        got=$(jq -r '.value' <<< "$got_json")
+        want=$(yq -r '.variables | to_entries[] | select(.key == "'"$var"'") | .value' <<< "$curr_mods")
+        test "$want" == "$got" && continue
+        replacements_made=$((replacements_made+1))
+        info "===> Modifying kustomization '$file' (key: '$var', want: '$want', got: '$got')"
+        sed -i "s;$got;$want;g" "$file"
+      done < <(yq -r '.variables | to_entries[] | .key' <<< "$curr_mods")
+    done < <(yq -o=j -I=0 -r '.patches[].patch | fromyaml' "$file")
+  done < <(yq -r '.[].file' <<< "$mod_yaml")
+  echo "$replacements_made"
+}
 
