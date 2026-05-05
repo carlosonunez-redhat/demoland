@@ -16,7 +16,7 @@ patches:
         path: /metadata/name
         value: kafka-node-pool
       - op: replace
-        path: /metadata/name
+        path: /metadata/namespace
         value: rhobs-messaging
       - op: replace
         path: "/metadata/labels/strimzi.io~1cluster"
