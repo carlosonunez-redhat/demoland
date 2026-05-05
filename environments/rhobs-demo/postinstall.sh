@@ -102,5 +102,6 @@ fi
 apply_secrets
 setup_gitops rhobs-demo bootstrap/operators bootstrap-rhobs-demo-operators
 setup_gitops rhobs-demo bootstrap/resources/rhobs rh-observability
+setup_gitops rhobs-demo bootstrap/resources/kafka kafka-cluster
 wait_for_observability_installer_to_be_created
 patch_observability_installer_with_access_key
