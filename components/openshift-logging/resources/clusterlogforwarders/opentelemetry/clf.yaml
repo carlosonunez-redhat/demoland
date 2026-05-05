@@ -1,7 +1,7 @@
 apiVersion: observability.openshift.io/v1
 kind: ClusterLogForwarder
 metadata:
-  name: collector-otel
+  name: otel-only
   namespace: openshift-logging
 spec:
   serviceAccount:
