@@ -1,0 +1,34 @@
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: otel
+  namespace: openshift-opentelemetry-operator
+spec:
+  mode: daemonset
+  config:
+    receivers:
+      otlp:
+        protocols:
+          grpc: {}
+          http: {}
+      jaeger:
+        protocols:
+          grpc: {}
+          thrift_binary: {}
+          thrift_compact: {}
+          thrift_http: {}
+      zipkin: {}
+    processors:
+      batch: {}
+      memory_limiter:
+        check_interval: 1s
+        limit_percentage: 50
+        spike_limit_percentage: 30
+    exporters:
+      debug: {}
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp,jaeger,zipkin]
+          processors: [memory_limiter,batch]
+          exporters: [debug]
