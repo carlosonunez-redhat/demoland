@@ -1,4 +1,3 @@
 resources:
-  - ../../../../components/cluster-observability-operator/operator
+  - ../../../../components/openshift-observability/operator
   - ../../../../components/openshift-logging/operator
-  - ../../../../components/openshift-tracing/operator

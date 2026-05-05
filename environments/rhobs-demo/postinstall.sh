@@ -49,8 +49,7 @@ apply_secrets() {
 EOF
     exec_oc apply -k /tmp
   }
-  _apply_grafana_secret tempostack-s3 openshift-tracing tempo-stack &&
-    _apply_grafana_secret logging-loki-s3 openshift-logging loki-stack
+  _apply_grafana_secret rhobs-secret openshift-observability secret
 }
 
 set -e
@@ -62,6 +61,7 @@ modifications="$(cat <<-EOF
   variables:
     region: "$(_aws_default_region)"
     bucket: "$(rhobs_s3_bucket)"
+    accessKeyID: "$(_get_secret 'rhobs/s3_bucket_ak')"
 - file: bootstrap/resources/rhobs/cluster-logging/kustomization.yaml
   variables:
     storageClassName: "$default_sc"

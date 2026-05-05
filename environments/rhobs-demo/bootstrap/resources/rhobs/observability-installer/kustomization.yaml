@@ -1,5 +1,5 @@
 resources:
-  - ../../../../../../components/cluster-observability-operator/resources/observability-installer
+  - ../../../../../../components/openshift-observability/resources/observability-installer
 patches:
   - target:
       kind: ObservabilityInstaller

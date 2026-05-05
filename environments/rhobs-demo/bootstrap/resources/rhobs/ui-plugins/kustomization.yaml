@@ -1,5 +1,5 @@
 resources:
-  - ../../../../../../components/cluster-observability-operator/resources/ui-plugins/monitoring
-  - ../../../../../../components/cluster-observability-operator/resources/ui-plugins/logging
-  - ../../../../../../components/cluster-observability-operator/resources/ui-plugins/troubleshooting
+  - ../../../../../../components/openshift-observability/resources/ui-plugins/monitoring
+  - ../../../../../../components/openshift-observability/resources/ui-plugins/logging
+  - ../../../../../../components/openshift-observability/resources/ui-plugins/troubleshooting
 

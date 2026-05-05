@@ -15,6 +15,11 @@ spec:
           # see the link below to view other options for configuring
           # cloud storage:
           # https://github.com/rhobs/observability-operator/blob/9396944589210b627697506c855a0784b33a3ebc/docs/observabilityinstaller.md#storage-configuration
-          s3CCO:
+          s3:
             bucket: replace-me
             region: replace-me
+            endpoint: replace-me
+            accessKeyID: replace-me
+            accessKeySecret:
+              name: rhobs-secret-s3
+              key: access_key_secret
