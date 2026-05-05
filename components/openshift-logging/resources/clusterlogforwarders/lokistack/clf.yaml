@@ -1,7 +1,7 @@
 apiVersion: observability.openshift.io/v1
 kind: ClusterLogForwarder
 metadata:
-  name: lokistack-only
+  name: collector-lo
   namespace: openshift-logging
 spec:
   serviceAccount:
