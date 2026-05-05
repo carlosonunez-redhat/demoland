@@ -7,14 +7,15 @@ spec:
   serviceAccount:
     name: collector
   pipelines:
-    - name: default-logstore
+    - name: all-to-lokistack
       inputRefs:
         - application
         - infrastructure
+        - audit
       outputRefs:
-        - default-lokistack
+        - default
   outputs:
-    - name: default-lokistack
+    - name: default
       type: lokiStack
       lokiStack:
         authentication:
@@ -23,20 +24,6 @@ spec:
         target:
           name: logging-loki
           namespace: openshift-logging
-      tls:
-        ca:
-          key: service-ca.crt
-          configMapName: openshift-service-ca.crt
-    - name: loki-oltp
-      type: lokiStack
-      lokiStack:
-        target:
-          name: logging-loki
-          namespace: openshift-logging
-        dataModel: Otel
-        authentication:
-          token:
-            from: serviceAccount
       tls:
         ca:
           key: service-ca.crt

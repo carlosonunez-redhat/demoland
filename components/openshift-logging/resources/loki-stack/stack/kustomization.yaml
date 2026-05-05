@@ -2,4 +2,3 @@ resources:
   - lokistack.yaml
   - crb.yaml
   - sa.yaml
-  - clf.yaml
