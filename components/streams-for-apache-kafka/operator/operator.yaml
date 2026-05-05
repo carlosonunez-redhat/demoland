@@ -8,4 +8,4 @@ spec:
   source: redhat-operators
   channel: amq-streams-3.x
   installPlanApproval: Automatic
-  name: amqstreams
+  name: amq-streams
