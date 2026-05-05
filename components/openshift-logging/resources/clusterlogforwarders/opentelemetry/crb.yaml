@@ -8,7 +8,7 @@ roleRef:
   name: collect-audit-logs
 subjects:
 - kind: ServiceAccount
-  name: collector
+  name: collector-otel
   namespace: openshift-logging
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -21,7 +21,7 @@ roleRef:
   name: collect-infrastructure-logs
 subjects:
 - kind: ServiceAccount
-  name: collector
+  name: collector-otel
   namespace: openshift-logging
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -34,18 +34,18 @@ roleRef:
   name: collect-application-logs
 subjects:
 - kind: ServiceAccount
-  name: collector
+  name: collector-otel
   namespace: openshift-logging
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: logging-collector-logs-writer
+  name: logging-collector-otel-logs-writer
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: logging-collector-logs-writer
+  name: logging-collector-otel-logs-writer
 subjects:
 - kind: ServiceAccount
-  name: collector
+  name: collector-otel
   namespace: openshift-logging

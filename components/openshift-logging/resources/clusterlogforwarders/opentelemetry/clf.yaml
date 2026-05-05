@@ -5,7 +5,7 @@ metadata:
   namespace: openshift-logging
 spec:
   serviceAccount:
-    name: collector
+    name: collector-otel
   pipelines:
     - name: all-to-otel
       inputRefs:
