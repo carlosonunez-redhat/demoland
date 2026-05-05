@@ -13,13 +13,6 @@ spec:
         - infrastructure
       outputRefs:
         - default-lokistack
-    - name: oltp-logstore
-      inputRefs:
-        - application
-        - infrastructure
-        - audit
-      outputRefs:
-        - loki-oltp
   outputs:
     - name: default-lokistack
       type: lokiStack
