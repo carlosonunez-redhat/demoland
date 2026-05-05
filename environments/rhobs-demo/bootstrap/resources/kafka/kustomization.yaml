@@ -1,5 +1,5 @@
 resources:
-  - ../../../.../../../../../components/streams-for-apache-kafka/resources/kafka-cluster
+  - ../../../../../components/streams-for-apache-kafka/resources/kafka-cluster
 patches:
   - target:
       kind: Namespace
