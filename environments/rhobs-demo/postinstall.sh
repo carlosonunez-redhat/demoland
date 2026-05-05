@@ -52,17 +52,27 @@ apply_secrets() {
 EOF
     exec_oc apply -k /tmp
   }
-  # HACK: The Observability Operator requires you to provide the AWS
-  # Access Key ID to the ObservabilityInstaller spec. This isn't compatible
-  # with GitOps without using Kustomize Generators (don't want to do this),
-  # so this creates the secret manually in hopes that the reconciler doesn't
-  # write over it.
-  #
-  # See also:
-  # - reconciler: https://github.com/rhobs/observability-operator/blob/main/pkg/controllers/observability/reconcilers.go#L73
-  # - accessKeyID requirement: https://github.com/rhobs/observability-operator/blob/9396944589210b627697506c855a0784b33a3ebc/pkg/controllers/observability/tempo_components.go#L222
-  _apply_grafana_secret coo-rhobs-tempo openshift-observability secret/s3 &&
   _apply_grafana_secret rhobs-secret-s3 openshift-observability secret/s3
+}
+
+wait_for_observability_installer_to_be_created() {
+  attempts=0
+  max_attempts=180
+  while test "$attempts" -lt "$max_attempts"
+  do
+    test -n "$(exec_oc get observabilityinstaller rhobs -n openshift-observability -o name)" && return 0
+    attempts=$((attempts+1))
+    info "Waiting for 'rhobs' ObservabilityInstaller to be created (make sure to commit and push changes first if needed) [attempt $attempts of $max_attempts]"
+    sleep 1
+  done
+  return 1
+}
+
+patch_observability_installer_with_access_key() {
+  info "Patching 'rhobs' ObservabilityInstaller with AWS access key"
+  patch=$(printf '[{"op":"replace","path":"/spec/capabilities/tracing/storage/objectStorage/s3/accessKeyID","value":"%s"}]' \
+    "$(_get_secret 'rhobs/s3_bucket_ak')")
+  exec_oc patch -n openshift-observability observabilityinstaller rhobs --type=json --patch="$patch"
 }
 
 set -e
@@ -92,3 +102,5 @@ fi
 apply_secrets
 setup_gitops rhobs-demo bootstrap/operators bootstrap-rhobs-demo-operators
 setup_gitops rhobs-demo bootstrap/resources/rhobs rh-observability
+wait_for_observability_installer_to_be_created
+patch_observability_installer_with_access_key
