@@ -3,6 +3,14 @@ resources:
   - ../../../../../../components/openshift-otel/resources/otelcollector
 patches:
   - target:
+      kind: OpenTelemetryCollector
+      name: otel
+      namespace: openshift-opentelemetry-operator
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: openshift-observability
+  - target:
       kind: ObservabilityInstaller
       name: rhobs
       namespace: openshift-observability
