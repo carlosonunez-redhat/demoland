@@ -9,4 +9,3 @@ spec:
   channel: amq-streams-3.x
   installPlanApproval: Automatic
   name: amqstreams
-  startingCSV: example-operator.v1.9.3
