@@ -7,6 +7,11 @@ patches:
       namespace: openshift-observability
     # DO NOT MODIFY THE VALUES BELOW
     # They will be overridden by 'just postinstall.'
+    # NOTE: The ObservabilityInstaller resource expects an access key for Tempo to be
+    # defined in its spec. This is a security risk.
+    # In this repo, I patch the access key into this resource after GitOps creates it.
+    # In a production scenario, I'd recommend using Kustomize Secrets
+    # Generators or something like External Secrets to generate this object.
     patch: |-
       - op: replace
         path: /spec/capabilities/tracing/storage/objectStorage/s3/bucket
