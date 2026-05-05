@@ -10,7 +10,7 @@ patches:
         value: rhobs-messaging
   - target:
       kind: KafkaNodePool
-      name: replace-me
+      name: dual-role
     patch: |-
       - op: replace
         path: /metadata/name
