@@ -9,8 +9,8 @@ patches:
     # They will be overridden by 'just postinstall.'
     patch: |-
       - op: replace
-        path: /spec/capabilities/tracing/storage/objectStorage/s3CCO/bucket
+        path: /spec/capabilities/tracing/storage/objectStorage/s3/bucket
         value: 3qqaxq4w-rhobs-s3-bucket
       - op: replace
-        path: /spec/capabilities/tracing/storage/objectStorage/s3CCO/region
+        path: /spec/capabilities/tracing/storage/objectStorage/s3/region
         value: us-east-2
