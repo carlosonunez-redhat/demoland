@@ -24,13 +24,16 @@ apply_secrets() {
   _apply_grafana_secret() {
     cat >/tmp/kustomization.yaml <<-EOF
   resources:
-  - ../components/$2/resources/$3/secret/s3
+  - ../components/$2/resources/$3
   patches:
     - target:
         kind: Secret
-        name: "$1"
+        name: rhobs-secret
         namespace: "$2"
       patch: |-
+        - op: replace
+          path: /metadata/name
+          value: "$1"
         - op: replace
           path: /stringData/bucketnames
           value: 3qqaxq4w-rhobs-s3-bucket
@@ -58,7 +61,8 @@ EOF
   # See also:
   # - reconciler: https://github.com/rhobs/observability-operator/blob/main/pkg/controllers/observability/reconcilers.go#L73
   # - accessKeyID requirement: https://github.com/rhobs/observability-operator/blob/9396944589210b627697506c855a0784b33a3ebc/pkg/controllers/observability/tempo_components.go#L222
-  _apply_grafana_secret coo-rhobs-tempo openshift-observability secret
+  _apply_grafana_secret coo-rhobs-tempo openshift-observability secret/s3 &&
+  _apply_grafana_secret rhobs-secret-s3 openshift-observability secret/s3
 }
 
 set -e
