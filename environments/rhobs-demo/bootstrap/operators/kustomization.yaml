@@ -1,3 +1,4 @@
 resources:
   - ../../../../components/openshift-observability/operator
   - ../../../../components/openshift-logging/operator
+  - ../../../../components/streams-for-apache-kafka/operator

@@ -1,0 +1,27 @@
+resources:
+  - ../../../../.../../../../../components/streams-for-apache-kafka/resources/kafka-cluster
+patches:
+  - target:
+      kind: Namespace
+      name: replace-me
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: rhobs-messaging
+  - target:
+      kind: KafkaNodePool
+      name: replace-me
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: kafka-node-pool
+      - op: replace
+        path: "/metadata/labels/strimzi.io~1cluster"
+        value: kafka-cluster
+  - target:
+      kind: Kafka
+      name: replace-me
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: kafka-cluster
