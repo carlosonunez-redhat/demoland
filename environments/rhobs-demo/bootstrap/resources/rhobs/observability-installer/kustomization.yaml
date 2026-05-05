@@ -14,3 +14,6 @@ patches:
       - op: replace
         path: /spec/capabilities/tracing/storage/objectStorage/s3/region
         value: us-east-2
+      - op: replace
+        path: /spec/capabilities/tracing/storage/objectStorage/s3/endpoint
+        value: https://s3.us-east-2.amazonaws.com

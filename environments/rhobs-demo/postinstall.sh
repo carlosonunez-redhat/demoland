@@ -62,6 +62,7 @@ modifications="$(cat <<-EOF
     region: "$(_aws_default_region)"
     bucket: "$(rhobs_s3_bucket)"
     accessKeyID: "$(_get_secret 'rhobs/s3_bucket_ak')"
+    endpoint: "https://s3.$(_aws_default_region).amazonaws.com"
 - file: bootstrap/resources/rhobs/cluster-logging/kustomization.yaml
   variables:
     storageClassName: "$default_sc"
