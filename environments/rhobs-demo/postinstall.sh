@@ -49,7 +49,16 @@ apply_secrets() {
 EOF
     exec_oc apply -k /tmp
   }
-  _apply_grafana_secret rhobs-secret openshift-observability secret
+  # HACK: The Observability Operator requires you to provide the AWS
+  # Access Key ID to the ObservabilityInstaller spec. This isn't compatible
+  # with GitOps without using Kustomize Generators (don't want to do this),
+  # so this creates the secret manually in hopes that the reconciler doesn't
+  # write over it.
+  #
+  # See also:
+  # - reconciler: https://github.com/rhobs/observability-operator/blob/main/pkg/controllers/observability/reconcilers.go#L73
+  # - accessKeyID requirement: https://github.com/rhobs/observability-operator/blob/9396944589210b627697506c855a0784b33a3ebc/pkg/controllers/observability/tempo_components.go#L222
+  _apply_grafana_secret coo-rhobs-tempo openshift-observability secret
 }
 
 set -e
@@ -61,7 +70,6 @@ modifications="$(cat <<-EOF
   variables:
     region: "$(_aws_default_region)"
     bucket: "$(rhobs_s3_bucket)"
-    accessKeyID: "$(_get_secret 'rhobs/s3_bucket_ak')"
     endpoint: "https://s3.$(_aws_default_region).amazonaws.com"
 - file: bootstrap/resources/rhobs/cluster-logging/kustomization.yaml
   variables:
