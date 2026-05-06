@@ -1,6 +1,7 @@
 resources:
   - ../../../../components/dev-spaces/resources/checluster
   - ../../../../components/openshift-gitops/resources/argocd-instance
+  - ../../../../components/console-personalization
 patches:
   - target:
       name: replace-me
