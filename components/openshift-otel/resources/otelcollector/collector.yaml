@@ -6,6 +6,11 @@ metadata:
 spec:
   serviceAccount: otel-k8s
   mode: daemonset
+  env:
+    - name: K8S_NODE_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.nodeName
   config:
     receivers:
       otlp:
@@ -46,8 +51,3 @@ spec:
           receivers: [otlp, kubeletstats, k8sobjects]
           processors: [batch]
           exporters: [debug]
-    env:
-      - name: K8S_NODE_NAME
-        valueFrom:
-          fieldRef:
-            fieldPath: spec.nodeName
