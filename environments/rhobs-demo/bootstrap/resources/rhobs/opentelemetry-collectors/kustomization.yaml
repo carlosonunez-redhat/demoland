@@ -25,3 +25,11 @@ patches:
       - op: replace
         path: /subject/0/namespace
         value: openshift-observability
+  - target:
+      kind: SecurityContextConstraints
+      name: otel-scc
+    patch: |-
+      - op: replace
+        path: /users
+        value: 
+          - system:serviceaccount:openshift-observability:otel-k8s
