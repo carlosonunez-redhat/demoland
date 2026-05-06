@@ -14,6 +14,6 @@ spec:
       thanosQuerier:
         url: "https://rbac-query-proxy.open-cluster-management-observability.svc:8443"
       # enables mapping alerts to components
-      clusterHealthAnalyzer:
-        enabled: true
+    clusterHealthAnalyzer:
+      enabled: true
 
