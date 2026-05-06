@@ -26,10 +26,10 @@ patches:
         path: /subject/0/namespace
         value: openshift-observability
   - target:
-      kind: SecurityContextConstraints
-      name: otel-scc
+      kind: ClusterRoleBinding
+      name: otel-privileged-binding
+      namespace: openshift-opentelemetry-operator
     patch: |-
       - op: replace
-        path: /users
-        value: 
-          - system:serviceaccount:openshift-observability:otel-k8s
+        path: /subject/0/namespace
+        value: openshift-observability
