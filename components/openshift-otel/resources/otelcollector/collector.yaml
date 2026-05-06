@@ -124,8 +124,6 @@ spec:
         metrics:
           exporters:
             - debug
-          processors:
-            - k8sattributes
           receivers:
             - hostmetrics
             - kubeletstats
