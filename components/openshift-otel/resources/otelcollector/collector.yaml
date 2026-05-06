@@ -2,7 +2,7 @@ apiVersion: opentelemetry.io/v1beta1
 kind: OpenTelemetryCollector
 metadata:
   name: otel
-  namespace: k8s-otel
+  namespace: openshift-opentelemetry-operator
 spec:
   serviceAccount: otel
   mode: daemonset  
