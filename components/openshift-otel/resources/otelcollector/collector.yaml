@@ -25,9 +25,6 @@ spec:
     seccompProfile:
       type: RuntimeDefault  
   volumeMounts:
-    - name: cabundle-volume
-      mountPath: /etc/pki/ca-trust/source/service-ca
-      readOnly: true
     - mountPath: /hostfs
       name: host
       readOnly: true      
@@ -35,9 +32,6 @@ spec:
       mountPath: /var/log/journal/
       readOnly: true      
   volumes:
-    - name: cabundle-volume
-      configMap:
-        name: cabundle
     - hostPath:
         path: /
       name: host     
