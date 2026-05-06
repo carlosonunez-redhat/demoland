@@ -12,3 +12,6 @@ patches:
       - op: replace
         path: /spec/storageClassName
         value: gp3-csi
+      - op: replace
+        path: /spec/size
+        value: 1x.pico
