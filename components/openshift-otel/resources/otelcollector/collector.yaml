@@ -32,3 +32,5 @@ spec:
           receivers: [otlp,jaeger,zipkin]
           processors: [memory_limiter,batch]
           exporters: [debug]
+        logs:
+          exporters: [debug]
