@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: cluster-monitoring-confing
+  name: cluster-monitoring-config
   namespace: openshift-monitoring
 data:
   config.yaml: ""
