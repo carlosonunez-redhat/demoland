@@ -24,4 +24,4 @@ spec:
           maxRetryDuration: 20
           maxWrite: 10M
           minRetryDuration: 5
-        url: http://otel-collector.openshift-observability.svc.cluster.local:4318
+        url: https://otel-collector.openshift-observability.svc.cluster.local:4318/v1/logs
