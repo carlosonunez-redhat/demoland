@@ -33,4 +33,5 @@ spec:
           processors: [memory_limiter,batch]
           exporters: [debug]
         logs:
+          receivers: [otlp]
           exporters: [debug]
