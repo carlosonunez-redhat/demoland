@@ -5,7 +5,7 @@ metadata:
   namespace: openshift-logging
 spec:
   serviceAccount:
-    name: collector-lo
+    name: collector
   pipelines:
     - name: all-to-lokistack
       inputRefs:

@@ -1,4 +1,2 @@
 resources:
   - clf.yaml
-  - sa.yaml
-  - crb.yaml
