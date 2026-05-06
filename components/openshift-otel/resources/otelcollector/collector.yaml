@@ -4,6 +4,7 @@ metadata:
   name: otel
   namespace: openshift-opentelemetry-operator
 spec:
+  serviceAccount: otel-k8s
   mode: daemonset
   config:
     receivers:
@@ -11,6 +12,19 @@ spec:
         protocols:
           grpc: {}
           http: {}
+      k8sobjects:
+        auth_type: serviceAccount
+        objects:
+          - name: pods
+            mode: pull
+            interval: 30s
+          - name: events
+            mode: watch
+      kubeletstats:
+        collection_interval: 20s
+        auth_type: serviceAccount
+        endpoint: "https://${env.K8S_NODE_NAME}:10250"
+        insecure_skip_verify: true
     processors:
       batch: {}
       memory_limiter:
@@ -29,6 +43,11 @@ spec:
           receivers: [otlp]
           exporters: [debug]
         metrics:
-          receivers: [otlp]
+          receivers: [otlp, kubeletstats, k8sobjects]
           processors: [batch]
           exporters: [debug]
+    env:
+      - name: K8S_NODE_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: spec.nodeName

@@ -1,0 +1,36 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: otel-k8s
+  namespace: openshift-opentelemetry-operator
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - events
+      - pods
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "events.k8s.io"
+    resources:
+      - events
+    verbs:
+      - watch
+      - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: otel-k8s
+  namespace: openshift-opentelemetry-operator
+subject:
+  - kind: ServiceAccount
+    name: otel-k8s
+    namespace: openshift-opentelemetry-operator
+roleRef:
+  kind: ClusterRole
+  name: otel-k8s
+  apiGroup: rbac.authorization.k8s.io
