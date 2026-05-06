@@ -1,2 +1,27 @@
 resources:
   - ../../../../../../components/openshift-otel/resources/otelcollector
+patches:
+  - target:
+      kind: OpenTelemetryCollector
+      name: otel
+      namespace: openshift-opentelemetry-operator
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: openshift-observability
+  - target:
+      kind: ServiceAccount
+      name: otel-k8s
+      namespace: openshift-opentelemetry-operator
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: openshift-observability
+  - target:
+      kind: ClusterRoleBinding
+      name: otel-k8s
+      namespace: openshift-opentelemetry-operator
+    patch: |-
+      - op: replace
+        path: /subject/0/namespace
+        value: openshift-observability

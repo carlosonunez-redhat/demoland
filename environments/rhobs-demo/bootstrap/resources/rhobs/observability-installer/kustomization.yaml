@@ -1,6 +1,5 @@
 resources:
   - ../../../../../../components/openshift-observability/resources/observability-installer
-  - ../../../../../../components/openshift-otel/resources/otelcollector
 patches:
   - target:
       kind: OpenTelemetryCollector

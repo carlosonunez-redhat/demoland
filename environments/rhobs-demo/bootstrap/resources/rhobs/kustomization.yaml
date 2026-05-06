@@ -1,4 +1,5 @@
 resources:
   - ./observability-installer
+  - ./opentelemetry-collectors
   - ./ui-plugins
   - ./cluster-logging
