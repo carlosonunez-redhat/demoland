@@ -109,7 +109,8 @@ spec:
           max_elapsed_time: 5m
       k8s_events: {}
     exporters:
-      debug: {}
+      debug:
+        verbosity: detailed
     service:
       pipelines:
         logs:
