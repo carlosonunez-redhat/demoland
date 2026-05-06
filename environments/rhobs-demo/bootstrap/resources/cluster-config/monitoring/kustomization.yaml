@@ -11,4 +11,4 @@ patches:
         value: |-
           prometheusK8s:
             remoteWrite:
-            - url: http://otel-collector.openshift-observability.svc.cluster.local:4317/v1/metrics
+            - url: http://otel-collector.openshift-observability.svc.cluster.local:4318/v1/metrics
