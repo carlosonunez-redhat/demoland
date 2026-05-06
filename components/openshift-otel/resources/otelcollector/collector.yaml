@@ -11,13 +11,6 @@ spec:
         protocols:
           grpc: {}
           http: {}
-      jaeger:
-        protocols:
-          grpc: {}
-          thrift_binary: {}
-          thrift_compact: {}
-          thrift_http: {}
-      zipkin: {}
     processors:
       batch: {}
       memory_limiter:
@@ -29,9 +22,13 @@ spec:
     service:
       pipelines:
         traces:
-          receivers: [otlp,jaeger,zipkin]
+          receivers: [otlp]
           processors: [memory_limiter,batch]
           exporters: [debug]
         logs:
           receivers: [otlp]
+          exporters: [debug]
+        metrics:
+          receivers: [otlp]
+          processors: [memory_limiter,batch]
           exporters: [debug]
