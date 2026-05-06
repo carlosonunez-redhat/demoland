@@ -4,7 +4,7 @@ metadata:
   name: otel
   namespace: openshift-opentelemetry-operator
 spec:
-  serviceAccount: otel
+  serviceAccount: otel-k8s
   mode: daemonset  
   securityContext:
     allowPrivilegeEscalation: false
