@@ -19,7 +19,7 @@ spec:
         component: load-generator
     spec:
       containers:
-        - image: curlimages/curl
+        - image: quay.io/curl/curl
           name: container
           env:
             - name: WEB_SERVER_HOST
