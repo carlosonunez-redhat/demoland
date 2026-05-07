@@ -1,6 +1,15 @@
 resources:
   - ../../../../apps/example-apps/simple-load-tester
+  - ../../../../components/k8s-namespace
 patches:
+  - target:
+      kind: Namespace
+      name: patch-me
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: example-apps
+
   - target:
       kind: Deployment
       name: web-server
