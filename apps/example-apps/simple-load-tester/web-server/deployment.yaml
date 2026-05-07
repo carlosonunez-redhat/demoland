@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: simple-load-tester
+    component: web-server
+  name: simple-load-tester-web-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: simple-load-tester
+      component: web-server
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: simple-load-tester
+        component: web-server
+    spec:
+      containers:
+      - image: nginx
+        name: nginx
+        ports:
+        - containerPort: 80
+        resources: {}
+status: {}
+

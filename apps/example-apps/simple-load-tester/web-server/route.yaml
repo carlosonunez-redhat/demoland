@@ -1,0 +1,13 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: simple-load-tester-web-server
+spec:
+  host: simple-load-tester-web-server.replace-me
+  port:
+    targetPort: 8080
+  tls:
+    termination: passthrough
+  to:
+    name: web-server
+

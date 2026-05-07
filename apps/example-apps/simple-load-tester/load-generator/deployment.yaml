@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: simple-load-tester
+    component: load-generator
+  name: simple-load-tester-load-generator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: simple-load-tester
+      component: load-generator
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: simple-load-tester
+        component: load-generator
+    spec:
+      containers:
+        - image: curlimages/curl
+          name: container
+          env:
+            - name: WEB_SERVER_HOST
+              value: web-server
+          command:
+            - bash
+            - -c
+            - |-
+              #!/usr/bin/env bash
+              >&2 echo "load-generator has started. Press CTRL-C to stop."
+              iterations=0
+              while true
+              do
+                >&2 echo "---> iteration $((attempts+1))"
+                curl -v "http://$WEB_SERVER_HOST --json '{"hello": "world"}'
+                sleep 1
+                attempts=$((attempts+1))
+              done
