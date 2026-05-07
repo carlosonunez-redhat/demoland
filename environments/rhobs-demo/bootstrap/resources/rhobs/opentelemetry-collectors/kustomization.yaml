@@ -39,6 +39,9 @@ patches:
       name: instrumentation
     patch: |-
       - op: replace
+        path: /metadata/namespace
+        value: openshift-observability
+      - op: replace
         path: /spec/exporter/endpoint
         value: http://otel-colletor.openshift-telemetry.svc.cluster.local:4318
       - op: replace

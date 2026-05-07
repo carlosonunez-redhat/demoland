@@ -2,6 +2,7 @@ apiVersion: opentelemetry.io/v1alpha1
 kind: Instrumentation
 metadata:
   name: instrumentation
+  namespace: openshift-opentelemetry-operator
 spec:
   env:
     - name: OTEL_EXPORTER_OTLP_TIMEOUT
