@@ -5,7 +5,7 @@ metadata:
   namespace: openshift-opentelemetry-operator
 spec:
   serviceAccount: otel-k8s
-  mode: daemonset  
+  mode: daemonset
   securityContext:
     allowPrivilegeEscalation: false
     capabilities:
@@ -111,8 +111,17 @@ spec:
     exporters:
       debug:
         verbosity: detailed
+      otlp_http/tempo:
+        endpoint: http://tempo.svc.cluster.local
     service:
       pipelines:
+        traces:
+          exporters:
+            - debug
+            - tempo
+          processors: []
+          receivers:
+            - otlp
         logs:
           exporters:
             - debug
