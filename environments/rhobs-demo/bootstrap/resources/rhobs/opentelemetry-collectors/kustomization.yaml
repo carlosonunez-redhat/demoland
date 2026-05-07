@@ -1,5 +1,6 @@
 resources:
   - ../../../../../../components/openshift-otel/resources/otelcollector
+  - ../../../../../../components/openshift-otel/resources/instrumentation
 patches:
   - target:
       kind: OpenTelemetryCollector
@@ -33,3 +34,16 @@ patches:
       - op: replace
         path: /subject/0/namespace
         value: openshift-observability
+  - target:
+      kind: Instrumentation
+      name: instrumentation
+    patch: |-
+      - op: replace
+        path: /spec/exporter/endpoint
+        value: http://otel-colletor.openshift-telemetry.svc.cluster.local:4318
+      - op: replace
+        path: /spec/python/env/0/endpoint
+        value: http://otel-colletor.openshift-telemetry.svc.cluster.local:4318
+      - op: replace
+        path: /spec/go/env/0/endpoint
+        value: http://otel-colletor.openshift-telemetry.svc.cluster.local:4318
