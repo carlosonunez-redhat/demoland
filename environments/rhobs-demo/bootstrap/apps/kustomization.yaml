@@ -1,3 +1,4 @@
+namespace: example-apps
 resources:
   - ../../../../apps/example-apps/simple-load-tester
   - ../../../../components/k8s-namespace
@@ -10,35 +11,15 @@ patches:
         path: /metadata/name
         value: example-apps
   - target:
-      kind: Deployment
-      name: web-server
-    patch: |-
-      - op: add
-        path: /metadata/namespace
-        value: example-apps
-  - target:
-      kind: Service
-      name: web-server
-    patch: |-
-      - op: add
-        path: /metadata/namespace
-        value: example-apps
-  - target:
       kind: Route
       name: web-server
     patch: |-
-      - op: add
-        path: /metadata/namespace
-        value: example-apps
       - op: /spec/host
         value: web-server.apps.HOSTNAME
   - target:
       kind: Deployment
       name: simple-load-tester
     patch: |-
-      - op: add
-        path: /metadata/namespace
-        value: example-apps
       - op: replace
         path: /spec/containers/0/env/0/value
         value: simple-load-tester-web-server.example-apps.apps.rhobsdemo.sandbox5544.opentlc.com
