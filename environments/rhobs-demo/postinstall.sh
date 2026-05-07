@@ -55,6 +55,17 @@ EOF
   _apply_grafana_secret rhobs-secret-s3 openshift-observability secret/s3
 }
 
+replace_route_hostnames() {
+  local replacements
+  replacements=0
+  while read -r file
+  do
+    replacements=$((replacements+1))
+    info "Replacing hostname placeholder in Kustomization: $file"
+    sed -i "s/\$HOSTNAME/$(cluster_fqdn)/g" "$file"
+  done < <(grep -lr "\$HOSTNAME" "$(_get_environment_dir)")
+}
+
 wait_for_observability_installer_to_be_created() {
   attempts=0
   max_attempts=180
@@ -93,7 +104,9 @@ modifications="$(cat <<-EOF
     endpoint: "https://s3.$(_aws_default_region).amazonaws.com"
 EOF
 )"
-replacements=$(render_kustomization_patches "$modifications")
+patches=$(render_kustomization_patches "$modifications")
+route_replacements=$(replace_route_hostnames)
+replacements="$((patches+route_replacements))"
 if test "$replacements" -gt 0
 then
   info "$replacements kustomization replacements made. Commit first then perform post-install again."
@@ -104,5 +117,6 @@ setup_gitops rhobs-demo bootstrap/operators bootstrap-rhobs-demo-operators
 setup_gitops rhobs-demo bootstrap/resources/rhobs rh-observability
 setup_gitops rhobs-demo bootstrap/resources/kafka kafka-cluster
 setup_gitops rhobs-demo bootstrap/resources/cluster-config cluster-config
+setup_gitops rhobs-demo bootstrap/apps cluster-apps
 wait_for_observability_installer_to_be_created
 patch_observability_installer_with_access_key
