@@ -19,7 +19,7 @@ spec:
         component: web-server
     spec:
       containers:
-      - image: nginx
+      - image: registry.access.redhat.com/ubi9/nginx-126
         name: nginx
         ports:
         - containerPort: 80
