@@ -33,4 +33,4 @@ patches:
         value: example-apps
       - op: replace
         path: /spec/containers/0/env/0/value
-        value: simple-load-tester-web-server.example-apps.apps.$HOSTNAME
+        value: simple-load-tester-web-server.example-apps.apps.rhobsdemo.sandbox5544.opentlc.com
