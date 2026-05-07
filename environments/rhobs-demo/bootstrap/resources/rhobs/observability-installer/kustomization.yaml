@@ -1,0 +1,32 @@
+resources:
+  - ../../../../../../components/openshift-observability/resources/observability-installer
+patches:
+  - target:
+      kind: OpenTelemetryCollector
+      name: otel
+      namespace: openshift-opentelemetry-operator
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: openshift-observability
+  - target:
+      kind: ObservabilityInstaller
+      name: rhobs
+      namespace: openshift-observability
+    # DO NOT MODIFY THE VALUES BELOW
+    # They will be overridden by 'just postinstall.'
+    # NOTE: The ObservabilityInstaller resource expects an access key for Tempo to be
+    # defined in its spec. This is a security risk.
+    # In this repo, I patch the access key into this resource after GitOps creates it.
+    # In a production scenario, I'd recommend using Kustomize Secrets
+    # Generators or something like External Secrets to generate this object.
+    patch: |-
+      - op: replace
+        path: /spec/capabilities/tracing/storage/objectStorage/s3/bucket
+        value: 3qqaxq4w-rhobs-s3-bucket
+      - op: replace
+        path: /spec/capabilities/tracing/storage/objectStorage/s3/region
+        value: us-east-2
+      - op: replace
+        path: /spec/capabilities/tracing/storage/objectStorage/s3/endpoint
+        value: https://s3.us-east-2.amazonaws.com

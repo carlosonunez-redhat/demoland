@@ -1,0 +1,2 @@
+resources:
+  - ../../../../../../components/openshift-monitoring/resources/cluster-monitoring

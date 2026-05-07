@@ -1,0 +1,5 @@
+resources:
+  - ../../../../../../components/openshift-observability/resources/ui-plugins/monitoring
+  - ../../../../../../components/openshift-observability/resources/ui-plugins/logging
+  - ../../../../../../components/openshift-observability/resources/ui-plugins/troubleshooting
+

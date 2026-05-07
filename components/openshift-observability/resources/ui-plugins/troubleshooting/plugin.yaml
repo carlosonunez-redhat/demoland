@@ -1,0 +1,7 @@
+# schema: https://github.com/rhobs/observability-operator/blob/9396944589210b627697506c855a0784b33a3ebc/pkg/apis/uiplugin/v1alpha1/types.go#L41
+apiVersion: observability.openshift.io/v1alpha1
+kind: UIPlugin
+metadata:
+  name: troubleshooting-panel
+spec:
+  type: TroubleshootingPanel

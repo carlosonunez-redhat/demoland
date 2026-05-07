@@ -1,0 +1,25 @@
+apiVersion: observability.openshift.io/v1alpha1
+kind: ObservabilityInstaller
+metadata:
+  name: rhobs
+  namespace: openshift-observability
+spec:
+  capabilities:
+    tracing:
+      enabled: true # set to 'false' to disable Tempo/Loki.
+      operators:
+        # set to 'false' to disable operators (useful if existing OTel instance installed)
+        install: true
+      storage:
+        objectStorage:
+          # see the link below to view other options for configuring
+          # cloud storage:
+          # https://github.com/rhobs/observability-operator/blob/9396944589210b627697506c855a0784b33a3ebc/docs/observabilityinstaller.md#storage-configuration
+          s3:
+            bucket: replace-me
+            region: replace-me
+            endpoint: replace-me
+            accessKeyID: replace-me
+            accessKeySecret:
+              name: rhobs-secret-s3
+              key: access_key_secret

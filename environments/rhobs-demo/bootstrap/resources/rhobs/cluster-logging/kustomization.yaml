@@ -1,0 +1,24 @@
+resources:
+- ../../../../../../components/openshift-logging/resources/loki-stack/stack
+- ../../../../../../components/openshift-logging/resources/clusterlogforwarders/combined
+# automatically updated by 'postinstall'; any changes will be overwritten!
+patches:
+  - target:
+      kind: LokiStack
+      name: logging-loki
+      namespace: openshift-logging
+    patch: |-
+      - op: replace
+        path: /spec/storageClassName
+        value: gp3-csi
+      - op: replace
+        path: /spec/size
+        value: 1x.pico
+  - target:
+      kind: ClusterLogForwarder
+      name: collector
+      namespace: openshift-logging
+    patch: |-
+      - op: replace
+        path: /spec/outputs/1/otlp/url
+        value: "http://otel-collector.openshift-observability.svc.cluster.local:4318/v1/logs"

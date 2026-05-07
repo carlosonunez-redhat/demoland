@@ -1,0 +1,55 @@
+resources:
+  - ../../../../../../components/openshift-otel/resources/otelcollector
+  - ../../../../../../components/openshift-otel/resources/instrumentation
+patches:
+  - target:
+      kind: OpenTelemetryCollector
+      name: otel
+      namespace: openshift-opentelemetry-operator
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: openshift-observability
+  - target:
+      kind: ServiceAccount
+      name: otel-k8s
+      namespace: openshift-opentelemetry-operator
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: openshift-observability
+  - target:
+      kind: ClusterRoleBinding
+      name: otel-k8s
+      namespace: openshift-opentelemetry-operator
+    patch: |-
+      - op: replace
+        path: /subject/0/namespace
+        value: openshift-observability
+  - target:
+      kind: ClusterRoleBinding
+      name: otel-privileged-binding
+      namespace: openshift-opentelemetry-operator
+    patch: |-
+      - op: replace
+        path: /subject/0/namespace
+        value: openshift-observability
+  - target:
+      kind: Instrumentation
+      name: instrumentation
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: openshift-observability
+      - op: replace
+        path: /spec/exporter/endpoint
+        value: http://otel-collector.openshift-telemetry.svc.cluster.local:4318
+      - op: replace
+        path: /spec/python/env/0/endpoint
+        value: http://otel-collector.openshift-telemetry.svc.cluster.local:4318
+      - op: replace
+        path: /spec/go/env/0/endpoint
+        value: http://otel-collector.openshift-telemetry.svc.cluster.local:4318
+      - op: replace
+        path: /spec/nginx/env/0/endpoint
+        value: http://otel-collector.openshift-telemetry.svc.cluster.local:4318

@@ -70,3 +70,7 @@ log_into_aws() {
       "AWS_STS_EXPIRES_ON=" + .Expiration' <<< "$session_creds";
   }| tee "$SESSION_FILE"
 }
+
+_aws_default_region() {
+  _exec_aws ec2 describe-availability-zones --output text --query 'AvailabilityZones[0].[RegionName]'
+}

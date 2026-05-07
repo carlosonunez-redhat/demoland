@@ -1,0 +1,27 @@
+apiVersion: observability.openshift.io/v1
+kind: ClusterLogForwarder
+metadata:
+  name: collector-otel
+  namespace: openshift-logging
+spec:
+  serviceAccount:
+    name: collector
+  pipelines:
+    - name: all-to-otel
+      inputRefs:
+        - application
+        - infrastructure
+        - audit
+      outputRefs:
+        - default
+  outputs:
+    - name: default
+      type: otlp
+      otlp:
+        tuning:
+          compression: gzip
+          deliveryMode: AtLeastOnce
+          maxRetryDuration: 20
+          maxWrite: 10M
+          minRetryDuration: 5
+        url: http://otel-collector.openshift-observability.svc.cluster.local:4318/v1/logs
