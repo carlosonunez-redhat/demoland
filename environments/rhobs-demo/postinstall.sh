@@ -14,7 +14,7 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/rhobs.sh"
 
 create_rhobs_s3_bucket() {
-  _exec_aws s3 ls | grep -q "$(rhobs_s3_bucket)" && return 0
+  test -n "$(_exec_aws s3api head-bucket --bucket "$(rhobs_s3_bucket)")" && return 0
 
   info "Creating RHOBS S3 bucket: $(rhobs_s3_bucket)"
   _exec_aws s3 mb "s3://$(rhobs_s3_bucket)"
@@ -63,7 +63,8 @@ replace_route_hostnames() {
     replacements=$((replacements+1))
     info "Replacing hostname placeholder in Kustomization: $file"
     sed -i "s/\$HOSTNAME/$(cluster_fqdn)/g" "$file"
-  done < <(grep -lr "\$HOSTNAME" "$(_get_environment_dir)")
+  done < <(grep -lr "\$HOSTNAME" "$(_get_environment_dir)/bootstrap")
+  echo "$replacements"
 }
 
 wait_for_observability_installer_to_be_created() {
@@ -109,7 +110,9 @@ route_replacements=$(replace_route_hostnames)
 replacements="$((patches+route_replacements))"
 if test "$replacements" -gt 0
 then
-  info "$replacements kustomization replacements made. Commit first then perform post-install again."
+  replacements_text=replacements
+  test "$replacements" -eq 1 && replacements_text=replacement
+  info "$replacements kustomization $replacements_text made. Commit first then perform post-install again."
   exit 0
 fi
 apply_secrets
