@@ -7,9 +7,8 @@ patches:
       name: patch-me
     patch: |-
       - op: replace
-        path: /metadata/namespace
+        path: /metadata/name
         value: example-apps
-
   - target:
       kind: Deployment
       name: web-server
