@@ -35,5 +35,5 @@ spec:
                 >&2 echo "---> iteration $((attempts+1))"
                 curl -v "http://$WEB_SERVER_HOST" --json '{"hello": "world"}'
                 sleep 1
-                attempts=$(expr "$attempts" + 1)
+                attempts=$((attempts+1))
               done
