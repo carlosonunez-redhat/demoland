@@ -118,7 +118,7 @@ spec:
         traces:
           exporters:
             - debug
-            - otlp/tempo
+            - otlp_http/tempo
           processors: []
           receivers:
             - otlp
