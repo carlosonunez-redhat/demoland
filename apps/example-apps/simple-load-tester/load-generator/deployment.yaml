@@ -25,10 +25,9 @@ spec:
             - name: WEB_SERVER_HOST
               value: web-server
           command:
-            - bash
+            - sh
             - -c
             - |-
-              #!/usr/bin/env bash
               >&2 echo "load-generator has started. Press CTRL-C to stop."
               iterations=0
               while true
@@ -36,5 +35,5 @@ spec:
                 >&2 echo "---> iteration $((attempts+1))"
                 curl -v "http://$WEB_SERVER_HOST --json '{"hello": "world"}'
                 sleep 1
-                attempts=$((attempts+1))
+                attempts=$(expr "$attempts" + 1)
               done
