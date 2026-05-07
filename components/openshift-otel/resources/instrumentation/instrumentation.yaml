@@ -23,3 +23,7 @@ spec:
     env: 
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         endpoint: http://otel-collector.openshift-opentelemetry-operator.svc.cluster.local:4318
+  nginx: 
+    env: 
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        endpoint: http://otel-collector.openshift-opentelemetry-operator.svc.cluster.local:4318
