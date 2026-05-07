@@ -60,3 +60,9 @@ expose_kubeconfig() {
   test -d "$(dirname "$kubeconfig_path")" || mkdir -p "$(dirname "$kubeconfig_path")"
   echo "$1" > "$kubeconfig_path" && echo "$kubeconfig_path" > "$kubeconfig_ref"
 }
+
+# cluster_fqdn: Gets the default FQDN of the cluster for use with other Routes.
+cluster_fqdn() {
+  exec_oc get route console -n openshift-console -o jsonpath='{.status.ingress[0].host}' |
+    sed -E 's/^console-openshift-console.//'
+}
