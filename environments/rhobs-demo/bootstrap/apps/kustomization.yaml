@@ -13,21 +13,21 @@ patches:
       kind: Deployment
       name: web-server
     patch: |-
-      - op: replace
+      - op: add
         path: /metadata/namespace
         value: example-apps
   - target:
       kind: Service
       name: web-server
     patch: |-
-      - op: replace
+      - op: add
         path: /metadata/namespace
         value: example-apps
   - target:
       kind: Route
       name: web-server
     patch: |-
-      - op: replace
+      - op: add
         path: /metadata/namespace
         value: example-apps
       - op: /spec/host
@@ -36,7 +36,7 @@ patches:
       kind: Deployment
       name: simple-load-tester
     patch: |-
-      - op: replace
+      - op: add
         path: /metadata/namespace
         value: example-apps
       - op: replace
