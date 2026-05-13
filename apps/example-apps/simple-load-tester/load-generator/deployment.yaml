@@ -23,7 +23,10 @@ spec:
           name: wait-for-web-server
           env:
             - name: WEB_SERVER_HOST
-              value: web-server
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: web_server_host
           command:
             - sh
             - -c
@@ -35,7 +38,10 @@ spec:
           name: container
           env:
             - name: WEB_SERVER_HOST
-              value: web-server
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: web_server_host
           command:
             - sh
             - -c
