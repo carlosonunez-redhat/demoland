@@ -43,7 +43,7 @@ metadata:
   name: simple-load-tester-web-server
   namespace: replace-me
   annotations:
-    image.openshift.io/triggers:
+    image.openshift.io/triggers: |-
       [
         {
           "from": {
