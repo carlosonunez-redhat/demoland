@@ -1,7 +1,7 @@
 namespace: example-apps
 resources:
-  - ../../../../apps/example-apps/simple-load-tester
   - ../../../../components/k8s-namespace
+  - ../../../../apps/example-apps/simple-load-tester
 patches:
   - target:
       kind: Namespace
@@ -15,11 +15,14 @@ patches:
       name: web-server
     patch: |-
       - op: /spec/host
-        value: web-server.apps.HOSTNAME
+        value: web-server.apps.$HOSTNAME
   - target:
-      kind: Deployment
-      name: simple-load-tester
+      kind: ConfigMap
+      name: app-config
     patch: |-
       - op: replace
-        path: /spec/containers/0/env/0/value
-        value: simple-load-tester-web-server.example-apps.apps.rhobsdemo.sandbox5544.opentlc.com
+        path: /metadata/namespace
+        value: example-apps
+      - op: replace
+        path: /data/web_server_host
+        value: simple-load-tester-web-server.example-apps
