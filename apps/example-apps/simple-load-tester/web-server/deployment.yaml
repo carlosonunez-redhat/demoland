@@ -19,14 +19,12 @@ spec:
         component: web-server
     spec:
       containers:
-      - image: registry.redhat.io/rhel9/nginx-124
-        name: nginx
-        ports:
-        - containerPort: 80
-        resources: {}
-        command:
-          - nginx
-          - -g
-          - "daemon off;"
+        - image: image-registry.openshift-image-registry.svc:5000/simple-load-tester-web-server-image:latest
+          name: app
+          ports:
+          - containerPort: 8081
+          resources: {}
+          command:
+            - ./bin/web-server
 status: {}
 

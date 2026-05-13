@@ -10,7 +10,7 @@ spec:
   - name: 8080-80
     port: 8080
     protocol: TCP
-    targetPort: 80
+    targetPort: 8081
   selector:
     app: simple-load-tester
     component: web-server

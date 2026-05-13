@@ -1,0 +1,21 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: simple-load-tester-web-server
+  namespace: replace-me
+spec:
+  source:
+    git:
+      uri: https://github.com/jlhidalgo/golang-web-server
+      ref: main
+  strategy:
+    from:
+      kind: ImageStreamTag
+      name: golang:1.18-ubi9
+      namespace: openshift
+  output:
+    to:
+      kind: ImageStreamTag
+      name: simple-load-tester-web-server-image:latest
+  triggers:
+    - type: ConfigChange
