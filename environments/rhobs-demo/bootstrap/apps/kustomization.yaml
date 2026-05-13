@@ -11,11 +11,18 @@ patches:
         path: /metadata/name
         value: example-apps
   - target:
+      kind: BuildConfig
+      name: simple-load-tester-web-server
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: example-apps
+  - target:
       kind: Route
-      name: web-server
+      name: simple-load-tester-web-server
     patch: |-
       - op: /spec/host
-        value: web-server.apps.rhobsdemo.sandbox5544.opentlc.com
+        value: web-server.$HOSTNAME
   - target:
       kind: ConfigMap
       name: app-config
