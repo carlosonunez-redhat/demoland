@@ -7,8 +7,9 @@ metadata:
   labels:
     app: simple-load-tester
     component: web-server
-lookupPolicy:
-  local: true
+spec:
+  lookupPolicy:
+    local: true
 ---
 apiVersion: build.openshift.io/v1
 kind: BuildConfig
