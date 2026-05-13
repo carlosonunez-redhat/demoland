@@ -21,7 +21,8 @@ patches:
       kind: Route
       name: simple-load-tester-web-server
     patch: |-
-      - op: /spec/host
+      - op: replace
+        path: /spec/host
         value: web-server.$HOSTNAME
   - target:
       kind: ConfigMap
