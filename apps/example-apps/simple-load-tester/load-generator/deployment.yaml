@@ -18,6 +18,18 @@ spec:
         app: simple-load-tester
         component: load-generator
     spec:
+      initContainers:
+        - image: quay.io/fedora/fedora:43
+          name: wait-for-web-server
+          env:
+            - name: WEB_SERVER_HOST
+              value: web-server
+          command:
+            - sh
+            - -c
+            - |-
+              >&2 echo "Waiting 180s for web server to become availableat http://$WEB_SERVER_HOST"
+              timeout 180s sh -c 'while true; do curl -sS http://$WEB_SERVER_HOST && exit 0; sleep 1'
       containers:
         - image: quay.io/curl/curl
           name: container
