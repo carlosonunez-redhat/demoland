@@ -115,11 +115,11 @@ then
   info "$replacements kustomization $replacements_text made. Commit first then perform post-install again."
   exit 0
 fi
-apply_secrets
 setup_gitops rhobs-demo bootstrap/operators bootstrap-rhobs-demo-operators
 setup_gitops rhobs-demo bootstrap/resources/rhobs rh-observability
 setup_gitops rhobs-demo bootstrap/resources/kafka kafka-cluster
 setup_gitops rhobs-demo bootstrap/resources/cluster-config cluster-config
 setup_gitops rhobs-demo bootstrap/apps cluster-apps
+apply_secrets
 wait_for_observability_installer_to_be_created
 patch_observability_installer_with_access_key
