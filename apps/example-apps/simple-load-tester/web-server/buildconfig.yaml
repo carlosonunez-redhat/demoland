@@ -17,6 +17,6 @@ spec:
   output:
     to:
       kind: ImageStreamTag
-      name: simple-load-tester-web-server-image:latest
+      name: app-image:latest
   triggers:
     - type: ConfigChange

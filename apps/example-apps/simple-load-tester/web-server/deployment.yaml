@@ -19,7 +19,7 @@ spec:
         component: web-server
     spec:
       containers:
-        - image: image-registry.openshift-image-registry.svc:5000/simple-load-tester-web-server-image:latest
+        - image: image-registry.openshift-image-registry.svc:5000/app-image:latest
           name: app
           ports:
           - containerPort: 8081
