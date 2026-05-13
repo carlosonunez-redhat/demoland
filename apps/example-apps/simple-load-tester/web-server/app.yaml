@@ -67,7 +67,7 @@ spec:
         component: web-server
     spec:
       containers:
-        - image: ''
+        - image: ' '
           name: app
           ports:
           - containerPort: 8081
