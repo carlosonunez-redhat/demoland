@@ -87,6 +87,14 @@ patch_observability_installer_with_access_key() {
   exec_oc patch -n openshift-observability observabilityinstaller rhobs --type=json --patch="$patch"
 }
 
+wait_for_ns() {
+  info "Waiting 180s for openshift-observability namespace to be created"
+  exec_oc wait \
+    --timeout=180s \
+    --for=jsonpath='{.status.phase}'=Active \
+    ns openshift-observability
+}
+
 set -e
 create_rhobs_s3_bucket
 default_sc="$(exec_oc get sc -o yaml |
@@ -120,6 +128,7 @@ setup_gitops rhobs-demo bootstrap/resources/rhobs rh-observability
 setup_gitops rhobs-demo bootstrap/resources/kafka kafka-cluster
 setup_gitops rhobs-demo bootstrap/resources/cluster-config cluster-config
 setup_gitops rhobs-demo bootstrap/apps cluster-apps
+wait_for_ns
 apply_secrets
 wait_for_observability_installer_to_be_created
 patch_observability_installer_with_access_key
