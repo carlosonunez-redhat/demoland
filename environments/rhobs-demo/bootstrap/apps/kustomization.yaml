@@ -23,7 +23,7 @@ patches:
     patch: |-
       - op: replace
         path: /spec/host
-        value: web-server.$HOSTNAME
+        value: web-server.apps.rhobsdemo.sandbox5544.opentlc.com
   - target:
       kind: ConfigMap
       name: app-config
