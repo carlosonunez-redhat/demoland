@@ -1,5 +1,4 @@
 resources:
-  - buildconfig.yaml
-  - deployment.yaml
+  - app.yaml
   - service.yaml
   - route.yaml

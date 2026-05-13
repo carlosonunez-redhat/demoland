@@ -18,6 +18,20 @@ patches:
         path: /metadata/namespace
         value: example-apps
   - target:
+      kind: ImageStream
+      name: simple-load-tester-web-server
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: example-apps
+  - target:
+      kind: Deployment
+      name: simple-load-tester-web-server
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: example-apps
+  - target:
       kind: Route
       name: simple-load-tester-web-server
     patch: |-
