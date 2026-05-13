@@ -31,8 +31,8 @@ spec:
             - sh
             - -c
             - |-
-              >&2 echo "Waiting 180s for web server to become available at http://$WEB_SERVER_HOST";
-              timeout 180s sh -c 'while true; do curl -sS http://$WEB_SERVER_HOST:8000 && exit 0; sleep 1; done'
+              >&2 echo "Waiting 180s for web server to become available at http://$WEB_SERVER_HOST:8080";
+              timeout 180s sh -c 'while true; do curl -sS http://$WEB_SERVER_HOST:8080 && exit 0; sleep 1; done'
       containers:
         - image: quay.io/curl/curl
           name: container
