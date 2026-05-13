@@ -20,7 +20,7 @@ spec:
   source:
     git:
       uri: https://github.com/codeskyblue/gohttpserver
-      ref: main
+      ref: master
   strategy:
     sourceStrategy:
       from:
