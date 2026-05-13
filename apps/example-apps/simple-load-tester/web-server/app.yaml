@@ -19,7 +19,7 @@ metadata:
 spec:
   source:
     git:
-      uri: https://github.com/jlhidalgo/golang-web-server
+      uri: https://github.com/codeskyblue/gohttpserver
       ref: main
   strategy:
     sourceStrategy:
@@ -72,7 +72,5 @@ spec:
           ports:
           - containerPort: 8081
           resources: {}
-          command:
-            - ./bin/web-server
 status: {}
 
