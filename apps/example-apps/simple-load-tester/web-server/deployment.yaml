@@ -19,10 +19,14 @@ spec:
         component: web-server
     spec:
       containers:
-      - image: public.ecr.aws/nginx/nginx:1.25.2-alpine-slim
+      - image: registry.redhat.io/rhel9/nginx-124
         name: nginx
         ports:
         - containerPort: 80
         resources: {}
+        command:
+          - nginx
+          - -g
+          - "daemon off;"
 status: {}
 
