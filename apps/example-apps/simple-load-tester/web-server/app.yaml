@@ -7,6 +7,8 @@ metadata:
   labels:
     app: simple-load-tester
     component: web-server
+lookupPolicy:
+  local: true
 ---
 apiVersion: build.openshift.io/v1
 kind: BuildConfig
@@ -67,7 +69,7 @@ spec:
         component: web-server
     spec:
       containers:
-        - image: ' '
+        - image: simple-load-tester-web-server
           name: app
           ports:
           - containerPort: 8081
