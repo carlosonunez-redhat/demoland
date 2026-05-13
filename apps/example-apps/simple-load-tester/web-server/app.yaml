@@ -46,6 +46,7 @@ metadata:
   name: simple-load-tester-web-server
   namespace: replace-me
   annotations:
+    alpha.image.policy.openshift.io/resolve-names: '*'
     image.openshift.io/triggers: |-
       [
         {
@@ -73,7 +74,7 @@ spec:
         - image: simple-load-tester-web-server
           name: app
           ports:
-          - containerPort: 8081
+          - containerPort: 8000
           resources: {}
 status: {}
 
