@@ -15,7 +15,7 @@ patches:
       name: simple-load-tester-web-server
     patch: |-
       - op: replace
-        path: /metadata/name
+        path: /metadata/namespace
         value: example-apps
   - target:
       kind: Route
