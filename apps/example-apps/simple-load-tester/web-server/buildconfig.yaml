@@ -9,10 +9,11 @@ spec:
       uri: https://github.com/jlhidalgo/golang-web-server
       ref: main
   strategy:
-    from:
-      kind: ImageStreamTag
-      name: golang:1.18-ubi9
-      namespace: openshift
+    sourceStrategy:
+      from:
+        kind: ImageStreamTag
+        name: golang:1.18-ubi9
+        namespace: openshift
   output:
     to:
       kind: ImageStreamTag
