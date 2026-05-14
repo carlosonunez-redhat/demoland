@@ -47,11 +47,15 @@ spec:
             - -c
             - |-
               >&2 echo "load-generator has started. Press CTRL-C to stop."
+              attempts=0
               iterations=0
               while true
               do
                 >&2 echo "---> iteration $((attempts+1))"
-                curl -v "http://$WEB_SERVER_HOST:8080" --json '{"hello": "world"}'
-                sleep 1
+                nonce=$((RANDOM % 100))
+                test "$(( nonce % 3 ))" -eq 0 && curl -sS "http://$WEB_SERVER_HOST:8080" && return 0
+                payload=$((tr -dc 'A-Za-z0-9' | head -c "$RANDOM"))
+                curl -sS "http://$WEB_SERVER_HOST:8080" --json $(printf '{"payload": "%s"}' "$payload")
+                sleep $((RANDOM % 3))
                 attempts=$((attempts+1))
               done
