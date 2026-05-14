@@ -33,7 +33,7 @@ patches:
         path: /metadata/namespace
         value: example-apps
       - op: add
-        path: /metadata/annotations
+        path: /spec/template/metadata/annotations
         value:
           instrumentation.opentelemetry.io/inject-go: "openshift-observability/instrumentation"
       - op: add
