@@ -11,10 +11,6 @@ patches:
       - op: replace
         path: /metadata/name
         value: example-apps
-      - op: add
-        path: /metadata/annotations
-        value:
-          instrumentation.opentelemetry.io/inject-go: "openshift-observability/instrumentation"
   - target:
       kind: BuildConfig
       name: simple-load-tester-web-server
@@ -36,6 +32,10 @@ patches:
       - op: replace
         path: /metadata/namespace
         value: example-apps
+      - op: add
+        path: /metadata/annotations
+        value:
+          instrumentation.opentelemetry.io/inject-go: "openshift-observability/instrumentation"
       - op: add
         path: /spec/template/spec/serviceAccount
         value: simple-load-tester-sa
