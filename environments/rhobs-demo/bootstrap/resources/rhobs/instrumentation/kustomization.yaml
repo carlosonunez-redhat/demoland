@@ -10,4 +10,4 @@ patches:
         value: openshift-observability
       - op: replace
         path: /spec/exporter/endpoint
-      value: http://otel-collector.openshift-observability.svc.cluster.local:4318
+        value: http://otel-collector.openshift-observability.svc.cluster.local:4318
