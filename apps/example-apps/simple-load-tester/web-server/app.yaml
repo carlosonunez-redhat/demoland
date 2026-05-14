@@ -22,13 +22,14 @@ metadata:
 spec:
   source:
     git:
-      uri: https://github.com/iam-veeramalla/go-web-app
-      ref: main
+      uri: git@github.redhat:carlosonunez-redhat/demoland
+      ref: demo/rhobs
+    contextDir: apps/example-apps/simple-load-tester/web-server/src
   strategy:
     sourceStrategy:
       from:
         kind: DockerImage
-        name: registry.access.redhat.com/ubi9/go-toolset:1.22
+        name: registry.access.redhat.com/ubi9/go-toolset:1.25
   output:
     to:
       kind: ImageStreamTag
