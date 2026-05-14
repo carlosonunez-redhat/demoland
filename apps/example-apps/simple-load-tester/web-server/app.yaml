@@ -27,8 +27,8 @@ spec:
   strategy:
     sourceStrategy:
       from:
-        kind: ImageStreamTag
-        name: golang:1.18-ubi9
+        kind: DockerImage
+        name: registry.access.redhat.com/ubi9/go-toolset:1.25-1778675823
         namespace: openshift
   output:
     to:
