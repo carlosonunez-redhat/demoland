@@ -54,7 +54,6 @@ spec:
                 >&2 echo "---> iteration $((attempts+1))"
                 nonce=$((RANDOM % 100))
                 test "$(( nonce % 3 ))" -eq 0 && curl -o /dev/null -sS -v "http://$WEB_SERVER_HOST:8080" && continue
-                payload="$(printf '{"payload":"%s"}' $(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c "$RANDOM"))"
                 >&2 echo "DEBUG: Payload: $payload"
                 curl -v -sS "http://$WEB_SERVER_HOST:8080" --json "$payload"
                 sleep $((RANDOM % 3))
