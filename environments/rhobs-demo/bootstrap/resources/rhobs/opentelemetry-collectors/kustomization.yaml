@@ -23,7 +23,7 @@ patches:
       namespace: openshift-opentelemetry-operator
     patch: |-
       - op: replace
-        path: /subject/0/namespace
+        path: /subjects/0/namespace
         value: openshift-observability
   - target:
       kind: ClusterRoleBinding
