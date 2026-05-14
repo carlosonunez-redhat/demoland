@@ -9,5 +9,5 @@ spec:
   tls:
     termination: passthrough
   to:
-    name: web-server
+    name: simple-load-tester-web-server
 
