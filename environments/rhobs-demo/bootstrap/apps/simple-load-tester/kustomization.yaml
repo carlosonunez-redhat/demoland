@@ -1,5 +1,6 @@
 namespace: example-apps
 resources:
+  - ../../../../../components/service-accounts/privileged
   - ../../../../../components/k8s-namespace
   - ../../../../../apps/example-apps/simple-load-tester
 patches:
@@ -35,6 +36,9 @@ patches:
       - op: replace
         path: /metadata/namespace
         value: example-apps
+      - op: add
+        path: /spec/template/spec/serviceAccount
+        value: simple-load-tester-sa
   - target:
       kind: Route
       name: simple-load-tester-web-server
@@ -52,3 +56,27 @@ patches:
       - op: replace
         path: /data/web_server_host
         value: simple-load-tester-web-server.example-apps
+  - target:
+      kind: ServiceAccount
+      name: replace-me
+      namespace: replace-me
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: simple-load-tester-sa
+      - op: replace
+        path: /metadata/namespace
+        value: example-apps
+  - target:
+      kind: ClusterRoleBinding
+      name: replace-me
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: simple-load-tester-sa-binding
+      - op: replace
+        path: /subjects/0/name
+        value: simple-load-tester-sa
+      - op: replace
+        path: /subjects/0/namespace
+        value: example-apps
