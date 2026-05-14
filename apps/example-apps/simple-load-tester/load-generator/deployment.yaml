@@ -34,7 +34,7 @@ spec:
               >&2 echo "Waiting 180s for web server to become available at http://$WEB_SERVER_HOST:8080";
               timeout 180s sh -c 'while true; do curl -sS http://$WEB_SERVER_HOST:8080 && exit 0; sleep 1; done'
       containers:
-        - image: quay.io/curl/curl
+        - image: quay.io/fedora/fedora:43
           name: container
           env:
             - name: WEB_SERVER_HOST
@@ -43,7 +43,7 @@ spec:
                   name: app-config
                   key: web_server_host
           command:
-            - sh
+            - bash
             - -c
             - |-
               >&2 echo "load-generator has started. Press CTRL-C to stop."
