@@ -6,8 +6,5 @@ patches:
       name: instrumentation
     patch: |-
       - op: replace
-        path: /metadata/namespace
-        value: example-apps
-      - op: replace
         path: /spec/exporter/endpoint
         value: http://otel-collector.openshift-observability.svc.cluster.local:4318
