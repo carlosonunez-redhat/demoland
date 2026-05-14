@@ -6,8 +6,6 @@ spec:
   host: simple-load-tester-web-server.replace-me
   port:
     targetPort: 8080
-  tls:
-    termination: passthrough
   to:
     name: simple-load-tester-web-server
 
