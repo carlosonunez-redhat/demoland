@@ -23,7 +23,7 @@ spec:
   source:
     git:
       uri: https://github.com/iam-veeramalla/go-web-app
-      ref: master
+      ref: main
   strategy:
     sourceStrategy:
       from:
