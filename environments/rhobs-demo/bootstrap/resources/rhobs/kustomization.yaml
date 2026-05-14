@@ -1,4 +1,5 @@
 resources:
+  - ./observability-ns
   - ./observability-installer
   - ./opentelemetry-collectors
   - ./ui-plugins
