@@ -1,0 +1,61 @@
+namespace: example-apps
+resources:
+  - ../../../../components/k8s-namespace
+  - ../../../../components/openshift-otel/resources/instrumentation
+  - ../../../../apps/example-apps/simple-load-tester
+patches:
+  - target:
+      kind: Instrumentation
+      name: instrumentation
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: example-apps
+      - op: replace
+        path: /spec/exporter/endpoint
+        value: http://otel-collector.openshift-observability.svc.cluster.local:4318
+  - target:
+      kind: Namespace
+      name: patch-me
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: example-apps
+  - target:
+      kind: BuildConfig
+      name: simple-load-tester-web-server
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: example-apps
+  - target:
+      kind: ImageStream
+      name: simple-load-tester-web-server
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: example-apps
+  - target:
+      kind: Deployment
+      name: simple-load-tester-web-server
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: example-apps
+  - target:
+      kind: Route
+      name: simple-load-tester-web-server
+    patch: |-
+      - op: replace
+        path: /spec/host
+        value: web-server.apps.rhobsdemo.sandbox5544.opentlc.com
+  - target:
+      kind: ConfigMap
+      name: app-config
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: example-apps
+      - op: replace
+        path: /data/web_server_host
+        value: simple-load-tester-web-server.example-apps
