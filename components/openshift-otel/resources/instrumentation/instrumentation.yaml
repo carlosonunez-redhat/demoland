@@ -4,26 +4,14 @@ metadata:
   name: instrumentation
   namespace: openshift-opentelemetry-operator
 spec:
+  exporter:
+    endpoint: http://otel-collector.openshift-opentelemetry-operator.svc.cluster.local:4318
   env:
     - name: OTEL_EXPORTER_OTLP_TIMEOUT
       value: "20"
-  exporter:
-    endpoint: http://otel-collector.openshift-opentelemetry-operator.svc.cluster.local:4318
   propagators:
     - tracecontext
     - baggage
   sampler:
     type: parentbased_traceidratio
     argument: "1"
-  python: 
-    env: 
-      - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        endpoint: http://otel-collector.openshift-opentelemetry-operator.svc.cluster.local:4318
-  go: 
-    env: 
-      - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        endpoint: http://otel-collector.openshift-opentelemetry-operator.svc.cluster.local:4318
-  nginx: 
-    env: 
-      - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        endpoint: http://otel-collector.openshift-opentelemetry-operator.svc.cluster.local:4318
