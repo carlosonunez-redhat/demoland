@@ -1,5 +1,5 @@
 resources:
-  - ../../../../../components/openshift-otel/resources/instrumentation
+  - ../../../../../../components/openshift-otel/resources/instrumentation
 patches:
   - target:
       kind: Instrumentation
