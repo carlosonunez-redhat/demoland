@@ -5,7 +5,8 @@ metadata:
 spec:
   host: simple-load-tester-web-server.replace-me
   port:
-    targetPort: 8080
+    targetPort: 8000
   to:
+    kind: Service
     name: simple-load-tester-web-server
 
