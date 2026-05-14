@@ -1,8 +1,8 @@
 namespace: example-apps
 resources:
-  - ../../../../components/k8s-namespace
-  - ../../../../components/openshift-otel/resources/instrumentation
-  - ../../../../apps/example-apps/simple-load-tester
+  - ../../../../../components/k8s-namespace
+  - ../../../../../components/openshift-otel/resources/instrumentation
+  - ../../../../../apps/example-apps/simple-load-tester
 patches:
   - target:
       kind: Instrumentation
