@@ -3,6 +3,8 @@ kind: Instrumentation
 metadata:
   name: instrumentation
   namespace: openshift-opentelemetry-operator
+  annotations:
+      instrumentation.opentelemetry.io/otel-go-auto-target-exe: '/opt/app-root/gobinary'
 spec:
   exporter:
     endpoint: http://otel-collector.openshift-opentelemetry-operator.svc.cluster.local:4318
