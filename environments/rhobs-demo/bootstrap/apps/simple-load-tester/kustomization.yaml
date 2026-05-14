@@ -14,7 +14,6 @@ patches:
         path: /metadata/annotations
         value:
           instrumentation.opentelemetry.io/inject-go: "openshift-observability/instrumentation"
-          instrumentation.opentelemetry.io/otel-go-auto-target-exe: '/opt/app-root/gobinary'
   - target:
       kind: BuildConfig
       name: simple-load-tester-web-server
@@ -36,6 +35,10 @@ patches:
       - op: replace
         path: /metadata/namespace
         value: example-apps
+      - op: add
+        path: /metadata/annotations
+        value:
+          instrumentation.opentelemetry.io/otel-go-auto-target-exe: '/opt/app-root/gobinary'
   - target:
       kind: Route
       name: simple-load-tester-web-server
