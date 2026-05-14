@@ -3,3 +3,4 @@ resources:
   - ./opentelemetry-collectors
   - ./ui-plugins
   - ./cluster-logging
+  - ./instrumentation
