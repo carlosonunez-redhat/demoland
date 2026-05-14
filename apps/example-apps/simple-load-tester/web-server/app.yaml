@@ -22,7 +22,7 @@ metadata:
 spec:
   source:
     git:
-      uri: git@github.redhat:carlosonunez-redhat/demoland
+      uri: https://github.com/carlosonunez-redhat/demoland
       ref: demo/rhobs
     contextDir: apps/example-apps/simple-load-tester/web-server/src
   strategy:
