@@ -1,19 +1,8 @@
 namespace: example-apps
 resources:
   - ../../../../../components/k8s-namespace
-  - ../../../../../components/openshift-otel/resources/instrumentation
   - ../../../../../apps/example-apps/simple-load-tester
 patches:
-  - target:
-      kind: Instrumentation
-      name: instrumentation
-    patch: |-
-      - op: replace
-        path: /metadata/namespace
-        value: example-apps
-      - op: replace
-        path: /spec/exporter/endpoint
-        value: http://otel-collector.openshift-observability.svc.cluster.local:4318
   - target:
       kind: Namespace
       name: patch-me
@@ -21,6 +10,11 @@ patches:
       - op: replace
         path: /metadata/name
         value: example-apps
+      - op: add
+        path: /metadata/annotations
+        value:
+          instrumentation.opentelemetry.io/inject-go: "openshift-observability/instrumentation"
+          instrumentation.opentelemetry.io/otel-go-auto-target-exe: '/opt/app-root/gobinary'
   - target:
       kind: BuildConfig
       name: simple-load-tester-web-server
