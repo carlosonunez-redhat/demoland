@@ -108,36 +108,60 @@ spec:
           max_interval: 60s
           max_elapsed_time: 5m
       k8s_events: {}
+    processors:
+      k8sattributes:
+        auth_type: serviceAccount
+        extract:
+          metadata:
+            - k8s.pod.name
+            - k8s.pod.uid
+            - k8s.deployment.name
+            - k8s.namespace.name
+            - k8s.node.name
+            - k8s.pod.start_time
+        pod_association:
+          - sources:
+              - from: resource_attribute
+                name: k8s.pod.ip
+          - sources:
+              - from: resource_attribute
+                name: k8s.pod.uid
+          - sources:
+              - from: connection  
     exporters:
       debug:
         verbosity: detailed
       otlp_http/tempo:
-        endpoint: http://tempo.svc.cluster.local
+        endpoint: https://tempo-gateway.openshift-observability.svc.cluster.local:8090
+        tls:
+          insecure: true
     service:
       pipelines:
         traces:
-          exporters:
-            - debug
-            - otlp_http/tempo
-          processors: []
           receivers:
             - otlp
-        logs:
+          processors: []
           exporters:
             - debug
-          processors: []
+        logs:
           receivers:
             - k8sobjects
             - journald
             - k8s_events
             - k8s_cluster
-        metrics:
+          processors:
+            - k8sattributes
           exporters:
             - debug
+        metrics:
           receivers:
             - hostmetrics
             - kubeletstats
             - k8s_cluster
+          processors:
+            - k8sattributes
+          exporters:
+            - debug
   env:
     - name: K8S_NODE_NAME
       valueFrom:
