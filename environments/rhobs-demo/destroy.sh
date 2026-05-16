@@ -13,7 +13,7 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/rhobs.sh"
 
 destroy_rhobs_s3_bucket() {
-  exec aws s3 ls | grep -q "$(rhobs_s3_bucket)" && return 0
+  _exec_aws s3 ls | grep -q "$(rhobs_s3_bucket)" && return 0
 
   info "Deleting RHOBS S3 bucket: $(rhobs_s3_bucket)"
   _exec_aws s3 rm --quiet --recursive "s3://$(rhobs_s3_bucket)" || return
@@ -28,4 +28,4 @@ destroy_rhobs_s3_bucket() {
   done
 }
 
-destroy_rhobs_s3_bucket
+destroy_rhobs_s3_bucket || true
