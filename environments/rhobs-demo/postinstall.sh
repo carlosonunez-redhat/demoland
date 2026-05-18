@@ -89,10 +89,15 @@ patch_observability_installer_with_access_key() {
 
 wait_for_ns() {
   info "Waiting 180s for openshift-observability namespace to be created"
-  exec_oc wait \
-    --timeout=180s \
-    --for=jsonpath='{.status.phase}'=Active \
-    ns openshift-observability
+  attempts=0
+  max_attempts=180
+  while test "$attempts" -lt "$max_attempts"
+  do
+      exec_oc get ns -o name | grep -q openshift-observability && return 0
+      attempts=$((attempts+1))
+      sleep 1
+  done
+  return 1
 }
 
 set -e
