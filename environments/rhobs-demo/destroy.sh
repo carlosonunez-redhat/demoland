@@ -13,19 +13,8 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/rhobs.sh"
 
 destroy_rhobs_s3_bucket() {
-  _exec_aws s3 ls | grep -q "$(rhobs_s3_bucket)" && return 0
-
-  info "Deleting RHOBS S3 bucket: $(rhobs_s3_bucket)"
-  _exec_aws s3 rm --quiet --recursive "s3://$(rhobs_s3_bucket)" || return
-  attempts=0
-  max_attempts=120
-  while test "$attempts" -lt "$max_attempts"
-  do
-    _exec_aws s3 rb "s3://$(rhobs_s3_bucket)" && return 0
-    info "Still trying to delete AWS S3 bucket [attempt $attempts of $max_attempts]"
-    attempts=$((attempts+1))
-    sleep 1
-  done
+  _delete_aws_resources_from_cfn_stack loki_s3_bucket \
+    "Deleting the S3 Bucket for Loki and OTel"
 }
 
 destroy_rhobs_s3_bucket || true

@@ -14,45 +14,54 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/rhobs.sh"
 
 create_rhobs_s3_bucket() {
-  test -n "$(_exec_aws s3api head-bucket --bucket "$(rhobs_s3_bucket)")" && return 0
-
-  info "Creating RHOBS S3 bucket: $(rhobs_s3_bucket)"
-  _exec_aws s3 mb "s3://$(rhobs_s3_bucket)"
+  params=(
+    ClusterId "$(_cluster_infra_name)"
+    BucketName "$(rhobs_s3_bucket)"
+  )
+  params_json="$(_create_aws_cf_params_json "${params[@]}")"
+  _create_aws_resources_from_cfn_stack_with_caps loki_s3_bucket \
+    "$params_json" \
+    "CAPABILITY_NAMED_IAM" \
+    "Creating Loki S3 bucket"
 }
 
 apply_secrets() {
   _apply_grafana_secret() {
     cat >/tmp/kustomization.yaml <<-EOF
-  resources:
-  - ../components/$2/resources/$3
-  patches:
-    - target:
-        kind: Secret
-        name: rhobs-secret
-        namespace: "$2"
-      patch: |-
-        - op: replace
-          path: /metadata/name
-          value: "$1"
-        - op: replace
-          path: /stringData/bucketnames
-          value: 3qqaxq4w-rhobs-s3-bucket
-        - op: replace
-          path: /stringData/region
-          value: us-east-2
-        - op: replace
-          path: /stringData/endpoint
-          value: https://s3.us-east-2.amazonaws.com
-        - op: replace
-          path: /stringData/access_key_id
-          value: "$(_get_secret 'rhobs/s3_bucket_ak')"
-        - op: replace
-          path: /stringData/access_key_secret
-          value: "$(_get_secret "rhobs/s3_bucket_sk")"
+resources:
+- ../components/secret-templates/resources/grafana-secret/s3
+patches:
+  - target:
+      kind: Secret
+      name: replace-me
+      namespace: replace-me
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: "$1"
+      - op: replace
+        path: /metadata/namespace
+        value: "$2"
+      - op: replace
+        path: /stringData/bucketnames
+        value: "$(_get_param_from_aws_cfn_stack loki_s3_bucket 'BucketName')"
+      - op: replace
+        path: /stringData/region
+        value: us-east-2
+      - op: replace
+        path: /stringData/endpoint
+        value: https://s3.us-east-2.amazonaws.com
+      - op: replace
+        path: /stringData/access_key_id
+        value: "$(_get_param_from_aws_cfn_stack loki_s3_bucket 'AccessKey')"
+      - op: replace
+        path: /stringData/access_key_secret
+        value: "$(_get_param_from_aws_cfn_stack loki_s3_bucket 'SecretAccessKey')"
 EOF
     exec_oc apply -k /tmp
   }
-  _apply_grafana_secret rhobs-secret-s3 openshift-observability secret/s3
+  _apply_grafana_secret rhobs-secret-s3 openshift-observability
+  _apply_grafana_secret logging-loki-s3 openshift-logging
 }
 
 replace_route_hostnames() {
@@ -83,7 +92,8 @@ wait_for_observability_installer_to_be_created() {
 patch_observability_installer_with_access_key() {
   info "Patching 'rhobs' ObservabilityInstaller with AWS access key"
   patch=$(printf '[{"op":"replace","path":"/spec/capabilities/tracing/storage/objectStorage/s3/accessKeyID","value":"%s"}]' \
-    "$(_get_secret 'rhobs/s3_bucket_ak')")
+    "$(_get_param_from_aws_cfn_stack loki_s3_bucket 'BucketName')" \
+    "$(_get_param_from_aws_cfn_stack loki_s3_bucket 'AccessKey')")
   exec_oc patch -n openshift-observability observabilityinstaller rhobs --type=json --patch="$patch"
 }
 
