@@ -22,3 +22,6 @@ patches:
       - op: replace
         path: /spec/capabilities/tracing/storage/objectStorage/s3/endpoint
         value: https://s3.us-east-2.amazonaws.com
+      - op: replace
+        path: /spec/capabilities/tracing/storage/objectStorage/s3/accessKeySecret/name
+        value: rhobs-secret-s3
