@@ -1,0 +1,57 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Creates a bucket for Loki to store logs into
+Parameters:
+  ClusterId:
+    Description: ID of the cluster.
+    Type: String
+  BucketName:
+    Description: Name of the bucket
+    Type: String
+Resources:
+  Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketName
+  Policy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Join
+        - "-"
+        - - !Ref ClusterId
+          - GrafanaS3BucketPolicy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:ListBucket
+              - s3:GetBucket
+              - s3:PutObject
+              - s3:DeleteObject
+            Resource: !GetAtt Bucket.Arn
+      Users:
+        - !Ref User
+  User:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: !Join
+        - "-"
+        - - !Ref ClusterId
+          - "GrafanaS3BucketUser" 
+  Credentials:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      Status: Active
+      UserName: !Ref User
+Outputs:
+  BucketName:
+    Value: !Ref Bucket
+  BucketArn:
+    Value: !GetAtt Bucket.Arn
+  UserName:
+    Value: !Ref User
+  AccessKey:
+    Value: !Ref Credentials
+  SecretAccessKey:
+    Value: !GetAtt Credentials.SecretAccessKey
+

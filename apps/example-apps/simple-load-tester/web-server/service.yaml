@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: simple-load-tester
+    component: web-server
+  name: simple-load-tester-web-server
+spec:
+  ports:
+  - name: 8080-80
+    port: 8080
+    protocol: TCP
+    targetPort: 8000
+  selector:
+    app: simple-load-tester
+    component: web-server
+  type: ClusterIP

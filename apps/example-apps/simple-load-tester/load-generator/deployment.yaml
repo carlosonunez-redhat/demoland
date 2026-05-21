@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: simple-load-tester
+    component: load-generator
+  name: simple-load-tester-load-generator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: simple-load-tester
+      component: load-generator
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: simple-load-tester
+        component: load-generator
+    spec:
+      initContainers:
+        - image: quay.io/fedora/fedora:43
+          name: wait-for-web-server
+          env:
+            - name: WEB_SERVER_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: web_server_host
+          command:
+            - sh
+            - -c
+            - |-
+              >&2 echo "Waiting 180s for web server to become available at http://$WEB_SERVER_HOST:8080";
+              timeout 180s sh -c 'while true; do curl -sS http://$WEB_SERVER_HOST:8080 && exit 0; sleep 1; done'
+      containers:
+        - image: quay.io/fedora/fedora:43
+          name: container
+          env:
+            - name: WEB_SERVER_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: web_server_host
+          command:
+            - bash
+            - -c
+            - |-
+              >&2 echo "load-generator has started. Press CTRL-C to stop."
+              attempts=0
+              iterations=0
+              while true
+              do
+                >&2 echo "---> iteration $((attempts+1))"
+                nonce=$((RANDOM % 100))
+                test "$(( nonce % 3 ))" -eq 0 && curl -o /dev/null -sS -v "http://$WEB_SERVER_HOST:8080" && continue
+                >&2 echo "DEBUG: Payload: $payload"
+                curl -v -sS "http://$WEB_SERVER_HOST:8080" --json "$payload"
+                sleep $((RANDOM % 3))
+                attempts=$((attempts+1))
+              done

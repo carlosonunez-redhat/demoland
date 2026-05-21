@@ -1,0 +1,5 @@
+resources:
+  - ../../../../components/openshift-observability/operator
+  - ../../../../components/openshift-logging/operator
+  - ../../../../components/openshift-otel/operator
+  - ../../../../components/streams-for-apache-kafka/operator

@@ -1,0 +1,4 @@
+FROM demoland-base
+RUN curl -L "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" | bsdtar -C /tmp -xf - && \
+    chmod -R +x /tmp/aws && \
+    /tmp/aws/install

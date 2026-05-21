@@ -1,0 +1,47 @@
+apiVersion: observability.openshift.io/v1
+kind: ClusterLogForwarder
+metadata:
+  name: collector
+  namespace: openshift-logging
+spec:
+  serviceAccount:
+    name: collector
+  pipelines:
+    - name: all-to-lokistack
+      inputRefs:
+        - application
+        - infrastructure
+        - audit
+      outputRefs:
+        - lokistack
+    - name: all-to-otel
+      inputRefs:
+        - application
+        - infrastructure
+        - audit
+      outputRefs:
+        - otel
+  outputs:
+    - name: lokistack
+      type: lokiStack
+      lokiStack:
+        authentication:
+          token:
+            from: serviceAccount
+        target:
+          name: logging-loki
+          namespace: openshift-logging
+      tls:
+        ca:
+          key: service-ca.crt
+          configMapName: openshift-service-ca.crt
+    - name: otel
+      type: otlp
+      otlp:
+        tuning:
+          compression: gzip
+          deliveryMode: AtLeastOnce
+          maxRetryDuration: 20
+          maxWrite: 10M
+          minRetryDuration: 5
+        url: replace-me
