@@ -21,5 +21,5 @@ spec:
             endpoint: replace-me
             accessKeyID: replace-me
             accessKeySecret:
-              name: rhobs-secret-s3
+              name: replace-me
               key: access_key_secret
