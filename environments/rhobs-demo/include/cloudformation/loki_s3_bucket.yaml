@@ -29,6 +29,13 @@ Resources:
               - s3:PutObject
               - s3:DeleteObject
             Resource: !GetAtt Bucket.Arn
+          - Effect: Allow
+            Action:
+              - s3:ListBucket
+              - s3:GetBucket
+              - s3:PutObject
+              - s3:DeleteObject
+            Resource: !Sub "${Bucket.Arn}/*"
       Users:
         - !Ref User
   User:
