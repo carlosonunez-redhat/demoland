@@ -22,7 +22,7 @@ your own observability stack.
 
 ### Express
 
-Install the OpenShift GitOps operator from the **Ecosystem > Catalog** pane
+Install the OpenShift GitOps operator from the **Ecosystem > Software Catalog** pane
 using the defaults.
 
 ![](../../assets/img/ecosystem-gitops.png)
@@ -30,6 +30,8 @@ using the defaults.
 
 Once the installation is complete, run the commands below to create an
 application that installs the operators and components used by this demo:
+
+#### Red Hat Observability Operators
 
 ```sh
 # Remember to run `oc login` first before running the command(s) below
@@ -56,30 +58,7 @@ spec:
 EOF
 ```
 
-```sh
-# Remember to run `oc login` first before running the command(s) below
-cat <<-EOF | oc apply -f -
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: rhobs-demo-apps
-  namespace: openshift-gitops
-spec:
-  project: default
-  destination:
-    namespace: openshift-gitops
-    server: https://kubernetes.default.svc
-  source:
-    repoURL: https://github.com/carlosonunez-redhat/demoland
-    targetRevision: main
-    path: ./environments/rhobs-demo/bootstrap/apps
-  syncPolicy:
-    automated:
-      enabled: true
-    syncOptions:
-      - SkipDryRunOnMissingResources=true
-EOF
-```
+#### Red Hat Observability Resources
 
 ```sh
 # Remember to run `oc login` first before running the command(s) below
@@ -98,6 +77,33 @@ spec:
     repoURL: https://github.com/carlosonunez-redhat/demoland
     targetRevision: main
     path: ./environments/rhobs-demo/bootstrap/resources
+  syncPolicy:
+    automated:
+      enabled: true
+    syncOptions:
+      - SkipDryRunOnMissingResources=true
+EOF
+```
+
+#### Sample Applications
+
+```sh
+# Remember to run `oc login` first before running the command(s) below
+cat <<-EOF | oc apply -f -
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rhobs-demo-apps
+  namespace: openshift-gitops
+spec:
+  project: default
+  destination:
+    namespace: openshift-gitops
+    server: https://kubernetes.default.svc
+  source:
+    repoURL: https://github.com/carlosonunez-redhat/demoland
+    targetRevision: main
+    path: ./environments/rhobs-demo/bootstrap/apps
   syncPolicy:
     automated:
       enabled: true
@@ -141,17 +147,14 @@ for each of the operators on this list.
 
 ![](./assets/img/ecosystem.png)
 
-2. Search for the operator to install, then click on "Install."
+2. Search for the operator to install, then click on "Install." Review the
+   defaults presented, then click on "Install" to complete the installation.
 
-![](./assets/img/ecosystem-install.png)
-
-3. Review the defaults, then click on "Install" to begin the installation.
-
-![](./assets/img/ecosystem-review.png)
-
-4. The OpenShift Console will notify you when the operator has been installed.
+3. The OpenShift Console will notify you when the operator has been installed.
 
 ![](./assets/img/ecosystem-complete.png)
+
+#### Setting up Red Hat Observability
 
 
 ## Demos
