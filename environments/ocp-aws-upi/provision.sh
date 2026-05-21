@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -e
 source "$INCLUDE_DIR/helpers/aws.sh"
 source "$INCLUDE_DIR/helpers/gcp.sh"
 source "$INCLUDE_DIR/helpers/config.sh"
@@ -90,7 +89,13 @@ worker_nodes_exist() {
   test "$num_worker_nodes_got" == "$num_worker_nodes_want"
 }
 
-create_installconfig_data() {
+create_openshift_cluster() {
+  _cluster_kubeconfig_exists_and_belongs_to_this_cluster() {
+    f=$(_get_file_from_openshift_install_dir 'auth/kubeconfig')
+    test -e "$f" || return 1
+    exec_oc_postinstall get infrastructures.config.openshift.io  cluster \
+      -o jsonpath='{.status.infrastructureName}' | grep -q "$(_cluster_name)"
+  }
   _ignition_files_present() {
     for t in master worker bootstrap
     do
@@ -105,6 +110,7 @@ create_installconfig_data() {
 }
 
 create_ssh_key() {
+  create_openshift_cluster || return 0
   f="$(_get_file_from_data_dir 'id_rsa')"
   test -f "$f" && test "$(stat -c %a "$f")" -eq 600 && return 0
 
@@ -114,12 +120,14 @@ create_ssh_key() {
 }
 
 load_keys_into_ssh_agent() {
+  create_openshift_cluster || return 0
   info "Starting SSH agent and loading keys"
   eval "$(ssh-agent -s)" &>/dev/null
   >&2 ssh-add -q "$(_get_file_from_data_dir 'id_rsa')"
 }
 
 upload_key_into_ec2() {
+  create_openshift_cluster || return 0
   info "Creating AWS EC2 key pair from SSH private key"
   key_name=$(_get_from_config '.deploy.secrets.ssh_key.name')
   test -n "$(_exec_aws ec2 describe-key-pairs --key-name "$key_name" 2>/dev/null)" && return 0
@@ -130,7 +138,7 @@ upload_key_into_ec2() {
 }
 
 create_installation_manifests() {
-  if ! create_installconfig_data
+  if ! create_openshift_cluster
   then
     info "Skipping creating installation manifests"
     return 0
@@ -140,7 +148,7 @@ create_installation_manifests() {
 }
 
 remove_default_machinesets_from_installation_manifests() {
-  if ! create_installconfig_data
+  if ! create_openshift_cluster
   then
     info "Skipping openshift install manifest modification"
     return 0
@@ -168,7 +176,7 @@ configure_control_plane_scheduling() {
 }
 
 create_ignition_files() {
-  if ! create_installconfig_data
+  if ! create_openshift_cluster
   then
     info "Skipping creating Red Hat CoreOS ignition files"
     return 0
@@ -257,6 +265,7 @@ create_security_group_rules() {
 }
 
 create_bootstrap_machine() {
+  create_openshift_cluster || return 0
   test -f "$(_get_file_from_openshift_install_dir '.bootstrap_complete')" && return 0
 
   set -e
@@ -306,6 +315,13 @@ create_ignition_bucket_in_s3() {
   _exec_aws s3 mb "s3://$(_cluster_ignition_files_bucket)"
 }
 
+cluster_created_and_kubeconfig_in_ignition_files_bucket() {
+  create_openshift_cluster && return 0
+  &>/dev/null _exec_aws s3api head-object \
+    --bucket "$(_cluster_ignition_files_bucket)" \
+    --key kubeconfig
+}
+
 sync_bootstrap_ignition_files_with_s3_bucket() {
   info "Syncing ignition files with ignition S3 bucket"
   _exec_aws s3 sync \
@@ -313,6 +329,20 @@ sync_bootstrap_ignition_files_with_s3_bucket() {
     --include '*.ign' \
     "$(_openshift_install_dir)" \
     "s3://$(_cluster_ignition_files_bucket)"
+}
+
+sync_kubeconfig_with_s3_bucket() {
+  f=$(_get_file_from_openshift_install_dir 'auth/kubeconfig')
+  info "Syncing kubeconfig with ignition S3 bucket"
+  _exec_aws s3 cp "$f" "s3://$(_cluster_ignition_files_bucket)/kubeconfig"
+}
+
+retrieve_kubeconfig_from_s3_if_cluster_already_created() {
+  create_openshift_cluster && return 0
+
+  info "Retrieving kubeconfig for existing cluster"
+  f=$(_get_file_from_openshift_install_dir 'auth/kubeconfig')
+  _exec_aws s3 cp "s3://$(_cluster_ignition_files_bucket)/kubeconfig" "$f"
 }
 
 create_openshift_install_config_file() {
@@ -440,6 +470,7 @@ create_cluster_iam_user() {
 
 create_control_plane_machines() {
   set -e
+  create_openshift_cluster || return 0
   sg_id=$(fail_if_nil "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId')" \
     "Master security group ID not found")
   private_subnets=$(fail_if_nil "$(_get_param_from_aws_cfn_stack vpc 'PrivateSubnetIds')" \
@@ -492,6 +523,8 @@ create_control_plane_machines() {
 
 create_worker_machines() {
   set -e
+  create_openshift_cluster || return 0
+  { control_plane_nodes_exist && worker_nodes_exist; } && return 1
   num_workers="$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"
   if test -z "$num_workers" || test "$num_workers" -eq 0
   then
@@ -536,15 +569,19 @@ create_worker_machines() {
 }
 
 wait_for_bootstrap_complete() {
+  create_openshift_cluster || return 0
+
   test -f "$(_get_file_from_openshift_install_dir '.bootstrap_complete')" && return 0
   _exec_openshift_install_aws wait-for bootstrap-complete --log-level debug
 }
 
 wait_for_install_to_complete() {
+  create_openshift_cluster || return 0
   _exec_openshift_install_aws wait-for install-complete --log-level debug
 }
 
 wait_for_first_worker_csr() {
+  create_openshift_cluster || return 0
   done_file="$(_get_file_from_openshift_install_dir '.first_worker_joined')"
   test -f "$done_file" && return 0
 
@@ -595,6 +632,7 @@ wait_for_and_register_worker_node_csrs() {
         exec_oc_postinstall adm certificate approve "$csr"
       done
   }
+  create_openshift_cluster || return 0
   test -f "$(_get_file_from_openshift_install_dir '.csrs_accepted')" && return 0
   num_workers="$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"
   test "$num_workers" -eq 0 && return 0
@@ -638,6 +676,7 @@ wait_for_and_register_worker_node_csrs() {
 }
 
 wait_for_workers_to_become_ready() {
+  create_openshift_cluster || return 0
   num_workers="$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"
   test "$num_workers" -eq 0 && return 0
   local num_worker_nodes max_attempts
@@ -657,6 +696,7 @@ wait_for_workers_to_become_ready() {
 }
 
 create_ingress_dns_records() {
+  create_openshift_cluster || return 0
   local router_elb_hosted_zone_id private_hosted_zone_id private_hosted_zone_name
   private_hosted_zone_id=$(fail_if_nil \
     "$(_get_param_from_aws_cfn_stack networking 'PrivateHostedZoneId')" \
@@ -692,6 +732,7 @@ delete_bootstrap_machine() {
 }
 
 wait_for_ingress_load_balancer_to_be_created() {
+  create_openshift_cluster || return 0
   local attempts max_attempts router_elb_hosted_zone_id
   attempts=0
   max_attempts=180
@@ -962,21 +1003,30 @@ map_cluster_admin_to_cluster_admins() {
   exec_oc_postinstall adm policy add-cluster-role-to-group cluster-admin 'system:cluster-admins'
 }
 
+set -e
 create_ssh_key
 load_keys_into_ssh_agent
 upload_key_into_ec2
 create_ignition_bucket_in_s3
+if ! cluster_created_and_kubeconfig_in_ignition_files_bucket
+then
+  error "Cluster [$(_cluster_name)] already exists but its kubeconfig doesn't exist in S3. \
+Log into the cluster as kubeadmin and upload your ~/.kube/config to the '$(_cluster_ignition_files_bucket)' bucket."
+  exit 1
+fi
 create_cluster_iam_user_policies
 create_cluster_iam_user
 create_vpc
 create_networking_resources
 create_security_group_rules
 create_openshift_install_config_file
+retrieve_kubeconfig_from_s3_if_cluster_already_created
 create_installation_manifests
 remove_default_machinesets_from_installation_manifests
 configure_control_plane_scheduling
 create_ignition_files
 sync_bootstrap_ignition_files_with_s3_bucket
+sync_kubeconfig_with_s3_bucket
 create_bootstrap_machine
 create_control_plane_machines
 create_worker_machines
