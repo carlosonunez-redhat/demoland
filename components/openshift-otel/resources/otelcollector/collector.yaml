@@ -112,9 +112,9 @@ spec:
       debug:
         verbosity: detailed
       otlp_http/tempo:
-        endpoint: https://tempo-gateway.openshift-observability.svc.cluster.local:8090
+        endpoint: https://tempo-rhobs-gateway.openshift-observability.svc.cluster.local:8090/api/traces/v1/application
         tls:
-          insecure: true
+          insecure_skip_verify: true
     service:
       pipelines:
         traces:
@@ -123,6 +123,7 @@ spec:
           processors: []
           exporters:
             - debug
+            - otlp_http/tempo
         logs:
           receivers:
             - k8sobjects
