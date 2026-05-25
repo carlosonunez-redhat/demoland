@@ -92,7 +92,6 @@ wait_for_observability_installer_to_be_created() {
 patch_observability_installer_with_access_key() {
   info "Patching 'rhobs' ObservabilityInstaller with AWS access key"
   patch=$(printf '[{"op":"replace","path":"/spec/capabilities/tracing/storage/objectStorage/s3/accessKeyID","value":"%s"}]' \
-    "$(_get_param_from_aws_cfn_stack loki_s3_bucket 'BucketName')" \
     "$(_get_param_from_aws_cfn_stack loki_s3_bucket 'AccessKey')")
   exec_oc patch -n openshift-observability observabilityinstaller rhobs --type=json --patch="$patch"
 }
