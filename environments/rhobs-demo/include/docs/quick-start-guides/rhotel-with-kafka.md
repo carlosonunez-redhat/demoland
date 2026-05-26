@@ -2,7 +2,7 @@
 
 ## Scenario
 
-![](./assets/img/kafka.png)
+![](../../assets/img/kafka.png)
 
 Your observability stack uses Kafka to route metrics, logs and traces to
 external observability systems. Each signal is sent to its respective Kafka
