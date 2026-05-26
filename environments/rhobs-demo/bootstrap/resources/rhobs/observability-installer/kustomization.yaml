@@ -13,6 +13,11 @@ patches:
     # In a production scenario, I'd recommend using Kustomize Secrets
     # Generators or something like External Secrets to generate this object.
     patch: |-
+      - op: add
+        path: /metadata/annotations
+        value:
+           argocd.argoproj.io/compare-options: IgnoreExtraneous
+           argocd.argoproj.io/sync-options: Prune=false
       - op: replace
         path: /spec/capabilities/tracing/storage/objectStorage/s3/bucket
         value: 3qqaxq4w-rhobs-s3-bucket
