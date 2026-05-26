@@ -69,6 +69,9 @@ _ensure_valid_cluster_role() {
 
 _openshift_install_files_still_current() {
   local f now then diff twelve_hours
+  for t in master bootstrap worker
+  do test -e "$(_get_file_from_openshift_install_dir "${t}.ign")" || return 1
+  done
   f=$(_get_file_from_openshift_install_dir created_on)
   test -e "$f" || return 1
   now=$(date +%s)
@@ -110,15 +113,15 @@ create_openshift_cluster() {
     f=$(_get_file_from_openshift_install_dir 'auth/kubeconfig')
     cacert="$(yq -r .clusters[0].cluster.certificate-authority-data "$f" | base64 -d)"
     cert="$(yq -r .users[0].user.client-certificate-data "$f" | base64 -d)"
-    key="$(yq -r .users[1].user.client-key-data "$f" | base64 -d)"
+    key="$(yq -r .users[0].user.client-key-data "$f" | base64 -d)"
     url=$(yq -r .clusters[0].cluster.server "$f")
     want="$(_cluster_name)"
     got=$(2>/dev/null curl -sS --connect-timeout 1 \
       --cacert <(echo "$cacert") \
       --cert <(echo "$cert") \
       --key <(echo "$key") \
-      "${url}/api/v1/infrastructures.config.openshift.io/cluster" |
-      jq -r '.status.InfrastructureName')
+      "${url}/apis/config.openshift.io/v1/infrastructures/cluster" |
+      jq -r '.status.infrastructureName')
     debug "Cluster kubeconfig check: want: $want, got: $got"
     echo "$got" | grep -q "$want"
   }
@@ -1067,6 +1070,7 @@ map_cluster_admin_to_cluster_admins() {
   exec_oc_postinstall adm policy add-cluster-role-to-group cluster-admin 'system:cluster-admins'
 }
 
+
 create_ssh_key
 load_keys_into_ssh_agent
 upload_key_into_ec2
@@ -1085,10 +1089,10 @@ create_security_group_rules
 create_openshift_install_config_file
 retrieve_kubeconfig_from_s3_if_cluster_already_created
 create_installation_manifests
-mark_openshift_install_creation_time
 remove_default_machinesets_from_installation_manifests
 configure_control_plane_scheduling
 create_ignition_files
+mark_openshift_install_creation_time
 sync_bootstrap_ignition_files_with_s3_bucket
 sync_kubeconfig_with_s3_bucket
 create_bootstrap_machine
