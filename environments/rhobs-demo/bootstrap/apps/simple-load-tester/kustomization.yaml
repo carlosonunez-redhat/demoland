@@ -39,6 +39,9 @@ patches:
       - op: add
         path: /spec/template/spec/serviceAccount
         value: simple-load-tester-sa
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: image-registry.openshift-image-registry.svc:5000/example-apps/simple-load-tester-web-server:latest
   - target:
       kind: Route
       name: simple-load-tester-web-server
