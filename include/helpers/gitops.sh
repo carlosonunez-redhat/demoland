@@ -147,8 +147,20 @@ render_kustomization_patches() {
       do
         got_json=$(jq -r '.[] | select(.path | test(".*/'"$var"'$")) | .' <<< "$patch_json" | grep -Ev '^null$' | cat)
         test -z "$got_json" && continue
-        got=$(jq -r '.value' <<< "$got_json")
-        want=$(yq -r '.variables | to_entries[] | select(.key == "'"$var"'") | .value' <<< "$curr_mods")
+        got=$(jq -r '.value' <<< "$got_json" | grep -Ev '^null$' | cat)
+        want=$(yq -r '.variables | to_entries[] | select(.key == "'"$var"'") | .value' <<< "$curr_mods" |
+          grep -Ev '^null$' |
+          cat)
+        if test -z "$want"
+        then
+          error "Value for '$var' is empty; cannot continue patching Kustomization"
+          return 1
+        fi
+        if test -z "$got"
+        then
+          warning "Value for '$var' in Kustomization '$file' not set; setting to '$want'"
+          got="$want"
+        fi
         test "$want" == "$got" && continue
         replacements_made=$((replacements_made+1))
         info "===> Modifying kustomization '$file' (key: '$var', want: '$want', got: '$got')"
