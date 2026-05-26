@@ -24,6 +24,7 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
+              - s3:GetObject
               - s3:ListBucket
               - s3:GetBucket
               - s3:PutObject
@@ -31,6 +32,7 @@ Resources:
             Resource: !GetAtt Bucket.Arn
           - Effect: Allow
             Action:
+              - s3:GetObject
               - s3:ListBucket
               - s3:GetBucket
               - s3:PutObject
