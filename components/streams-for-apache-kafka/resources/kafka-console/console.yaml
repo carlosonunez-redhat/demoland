@@ -2,6 +2,7 @@ apiVersion: console.streamshub.github.com/v1alpha1
 kind: Console
 metadata:
   name: rhobs-console
+  namespace: replace-me
 spec:
   hostname: replace-me
   kafkaClusters:

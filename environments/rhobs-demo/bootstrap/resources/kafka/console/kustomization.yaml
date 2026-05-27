@@ -4,7 +4,11 @@ patches:
   - target:
       kind: Console
       name: rhobs-console
+      namespace: replace-me
     patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: rhobs-messaging
       - op: replace
         path: /spec/hostname
         value: kafka-console.apps.rhobsdemo.sandbox3657.opentlc.com
