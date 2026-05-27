@@ -17,7 +17,7 @@ patches:
         value: kafka-cluster
       - op: replace
         path: /spec/kafkaClusters/0/namespace
-        value: kafka-cluster
+        value: rhobs-messaging
       - op: replace
         path: /spec/kafkaClusters/0/listener
         value: plain
