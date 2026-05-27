@@ -1,6 +1,8 @@
 resources:
   - ./observability-ns
   - ./serviceaccount
+  - ./cluster-roles
+  - ./cluster-role-bindings
   - ./opentelemetry-collectors
   - ./ui-plugins
   - ./cluster-logging
