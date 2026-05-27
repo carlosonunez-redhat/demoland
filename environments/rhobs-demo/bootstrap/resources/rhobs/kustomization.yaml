@@ -4,6 +4,7 @@ resources:
   - ./cluster-roles
   - ./cluster-role-bindings
   - ./opentelemetry-collectors
+  - ./observability-installer
   - ./ui-plugins
   - ./cluster-logging
   - ./cluster-tracing
