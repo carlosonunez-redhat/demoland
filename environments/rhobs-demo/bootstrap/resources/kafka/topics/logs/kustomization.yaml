@@ -1,0 +1,20 @@
+resources:
+  - ../../../../../../../components/streams-for-apache-kafka/resources/kafka-topic
+patches:
+  - target:
+      kind: KafkaTopic
+      name: replace-me
+      namespace: replace-me
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: logs-topic
+      - op: replace
+        path: /metadata/namespace
+        value: rhobs-messaging
+      - op: replace
+        path: /metadata/labels/strimzi.io~1cluster
+        value: kafka-cluster
+      - op: replace
+        path: /spec/topicName
+        value: logs-topic
