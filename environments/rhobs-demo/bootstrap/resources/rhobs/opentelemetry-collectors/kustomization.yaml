@@ -2,6 +2,13 @@ resources:
   - ../../../../../../components/openshift-otel/resources/otelcollector
 patches:
   - target:
+      kind: ClusterRoleBinding
+      name: otel-k8s
+    patch: |-
+      - op: replace
+        path: /roleRef/name
+        value: rhobs-sa
+  - target:
       kind: OpenTelemetryCollector
       name: otel
       namespace: openshift-opentelemetry-operator

@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: replace-me
+subjects:
+  - kind: ServiceAccount
+    name: replace-me
+    namespace: replace-me
+roleRef:
+  kind: ClusterRole
+  name: replace-me
+  apiGroup: rbac.authorization.k8s.io
+

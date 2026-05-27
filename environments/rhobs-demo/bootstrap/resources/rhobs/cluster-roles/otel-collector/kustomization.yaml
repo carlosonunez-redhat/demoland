@@ -1,0 +1,21 @@
+resources:
+  - ../../../../../../../../components/rbac/cluster-role/generic
+patches:
+  - target:
+      kind: ClusterRole
+      name: replace-me
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: otel-collector
+      - op: replace
+        path: /rules
+        value:
+          - apiGroups:
+            - "*"
+          - resources:
+            - "*"
+          - verbs:
+            - get
+            - list
+            - watch

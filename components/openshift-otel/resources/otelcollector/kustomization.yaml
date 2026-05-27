@@ -1,4 +1,2 @@
 resources:
   - collector.yaml
-  - sa.yaml
-  - crb.yaml

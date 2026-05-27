@@ -1,5 +1,5 @@
 resources:
-  - ../../../../../../components/service-accounts/privileged
+  - ../../../../../../components/rbac/service-accounts/privileged
 patches:
   - target:
       kind: ServiceAccount

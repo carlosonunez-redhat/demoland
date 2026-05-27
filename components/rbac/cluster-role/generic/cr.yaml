@@ -1,0 +1,8 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: replace-me
+rules:
+- apiGroups: []
+  resources: []
+  verbs: []
