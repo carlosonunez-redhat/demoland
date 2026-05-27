@@ -1,5 +1,5 @@
 resources:
-- ../../../../../../components/openshift-tracing/resources/tempo-stack
+- ../../../../../../components/openshift-tracing/resources/tempo-stack/stack
 patches:
   - target:
       kind: TempoStack
