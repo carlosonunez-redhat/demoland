@@ -17,7 +17,7 @@ patches:
         value: rhobs-secret-s3
       - op: replace
         path: /spec/serviceAccount
-        value: rhobs
+        value: rhobs-sa
       - op: replace
         path: /spec/tenants/authentication
         value:
