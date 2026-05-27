@@ -1,6 +1,7 @@
 resources:
   - ../../../../components/openshift-observability/operator
   - ../../../../components/openshift-logging/operator
+  - ../../../../components/openshift-tracing/operator
   - ../../../../components/openshift-otel/operator
   - ../../../../components/streams-for-apache-kafka/operators/amq-streams
   - ../../../../components/streams-for-apache-kafka/operators/amq-streams-console
