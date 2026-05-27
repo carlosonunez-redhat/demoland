@@ -15,11 +15,7 @@ patches:
       - op: replace
         path: /spec/capabilities/tracing/storage
         value:
-          s3:
+          s3STS:
             bucket: not-used
-            region: not-used
-            endpoint: https://not.used
-            accessKeyId: not-used
-            accessKeySecret:
-              name: rhobs-secret-s3
-              namespace: openshift-observability
+            region: us-east-2
+            roleARN: not-used
