@@ -30,6 +30,33 @@ patches:
             insecure: false
             reload_interval: 5s
       - op: add
+        path: /spec/config/exporters
+        value:
+          kafka/metrics:
+            brokers: [ "kafka-cluster-kafka-brokers.rhobs-messaging.svc.cluster-local:9092" ]
+            protocol_version: 2.0.0
+            topic: metrics-topic
+            logs:
+              encoding: raw
+            metrics:
+              encoding: otlp_proto
+          kafka/logs:
+            brokers: [ "kafka-cluster-kafka-brokers.rhobs-messaging.svc.cluster-local:9092" ]
+            protocol_version: 2.0.0
+            topic: logs-topic
+            logs:
+              encoding: raw
+            metrics:
+              encoding: otlp_proto
+          kafka/traces:
+            brokers: [ "kafka-cluster-kafka-brokers.rhobs-messaging.svc.cluster-local:9092" ]
+            protocol_version: 2.0.0
+            topic: traces-topic
+            logs:
+              encoding: raw
+            metrics:
+              encoding: otlp_proto
+      - op: add
         path: /spec/config/extensions
         value:
           bearertokenauth:
@@ -38,3 +65,19 @@ patches:
         path: /spec/config/service/extensions
         value:
           - bearertokenauth
+      - op: replace
+        path: /spec/config/service/pipelines/traces/exporters
+        value:
+          - debug
+          - otlp_http/tempo
+          - kafka/traces
+      - op: replace
+        path: /spec/config/service/pipelines/logs/exporters
+        value:
+          - debug
+          - kafka/logs
+      - op: replace
+        path: /spec/config/service/pipelines/metrics/exporters
+        value:
+          - debug
+          - kafka/metrics
