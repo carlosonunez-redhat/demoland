@@ -46,8 +46,8 @@ patches:
         path: /stringData/bucketnames
         value: "$(_get_param_from_aws_cfn_stack loki_s3_bucket 'BucketName')"
       - op: replace
-        path: /stringData/region
-        value: us-east-2
+        path: /stringData/bucket
+        value: "$(_get_param_from_aws_cfn_stack loki_s3_bucket 'BucketName')"
       - op: replace
         path: /stringData/endpoint
         value: https://s3.us-east-2.amazonaws.com

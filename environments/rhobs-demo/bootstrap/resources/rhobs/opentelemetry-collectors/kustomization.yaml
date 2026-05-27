@@ -27,3 +27,7 @@ patches:
         value:
           bearertokenauth:
             filename: /var/run/secrets/kubernetes.io/serviceaccount/token
+      - op: add
+        path: /spec/config/service/extensions
+        value:
+          - bearertokenauth
