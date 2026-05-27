@@ -1,0 +1,25 @@
+resources:
+  - ../../../../../../components/openshift-observability/resources/observability-installer
+patches:
+  - target:
+      kind: ObservabilityInstaller
+      name: rhobs
+      namespace: openshift-observability
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: openshift-observability
+      - op: replace
+        path: /spec/capabilities/tracing/operators/install
+        value: false
+      - op: replace
+        path: /spec/capabilities/tracing/storage
+        value:
+          s3:
+            bucket: not-used
+            region: not-used
+            endpoint: https://not.used
+            accessKeyId: not-used
+            accessKeySecret:
+              name: rhobs-secret-s3
+              namespace: openshift-observability
