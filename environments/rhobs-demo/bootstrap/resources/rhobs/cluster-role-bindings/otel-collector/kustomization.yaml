@@ -1,5 +1,5 @@
 resources:
-  - ../../../../../../../../components/rbac/cluster-role/generic
+  - ../../../../../../../components/rbac/cluster-role/generi
 patches:
   - target:
       kind: ClusterRoleBinding
