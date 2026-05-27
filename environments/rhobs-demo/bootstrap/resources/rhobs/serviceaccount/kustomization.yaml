@@ -1,0 +1,27 @@
+resources:
+  - ../../../../../../components/service-accounts/privileged
+patches:
+  - target:
+      kind: ServiceAccount
+      name: replace-me
+      namespace: replace-me
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: rhobs-sa
+      - op: replace
+        path: /metadata/namespace
+        value: openshift-observability
+  - target:
+      kind: ClusterRoleBinding
+      name: replace-me
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: rhobs-sa-binding
+      - op: replace
+        path: /subjects/0/name
+        value: rhobs-sa
+      - op: replace
+        path: /subjects/0/namespace
+        value: openshift-observability

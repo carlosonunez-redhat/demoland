@@ -1,7 +1,9 @@
 resources:
   - ./observability-ns
+  - ./serviceaccount
   - ./observability-installer
   - ./opentelemetry-collectors
   - ./ui-plugins
   - ./cluster-logging
+  - ./cluster-tracing
   - ./instrumentation

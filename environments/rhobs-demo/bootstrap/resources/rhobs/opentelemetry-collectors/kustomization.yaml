@@ -9,27 +9,21 @@ patches:
       - op: replace
         path: /metadata/namespace
         value: openshift-observability
-  - target:
-      kind: ServiceAccount
-      name: otel-k8s
-      namespace: openshift-opentelemetry-operator
-    patch: |-
       - op: replace
-        path: /metadata/namespace
-        value: openshift-observability
-  - target:
-      kind: ClusterRoleBinding
-      name: otel-k8s
-      namespace: openshift-opentelemetry-operator
-    patch: |-
+        path: /spec/serviceAccount
+        value: rhobs-sa
       - op: replace
-        path: /subjects/0/namespace
-        value: openshift-observability
-  - target:
-      kind: ClusterRoleBinding
-      name: otel-privileged-binding
-      namespace: openshift-opentelemetry-operator
-    patch: |-
-      - op: replace
-        path: /subject/0/namespace
-        value: openshift-observability
+        path: /spec/config/exporters/otlp_http~1tempo
+        value:
+          auth:
+            authenticator: bearertokenauth
+          endpoint: https://tempo-cluster-gateway.openshift-observability.svc.cluster.local:8080/api/traces/v1/cluster
+          tls:
+            ca_file: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
+            insecure: false
+            reload_interval: 5s
+      - op: add
+        path: /spec/config/extensions
+        value:
+          bearertokenauth:
+            filename: /var/run/secrets/kubernetes.io/serviceaccount/token

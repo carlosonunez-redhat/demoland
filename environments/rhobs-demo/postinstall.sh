@@ -144,5 +144,3 @@ setup_gitops rhobs-demo bootstrap/resources/cluster-config cluster-config
 setup_gitops rhobs-demo bootstrap/apps cluster-apps
 wait_for_ns
 apply_secrets
-wait_for_observability_installer_to_be_created
-patch_observability_installer_with_access_key

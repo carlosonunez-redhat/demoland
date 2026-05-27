@@ -112,7 +112,7 @@ spec:
       debug:
         verbosity: detailed
       otlp_http/tempo:
-        endpoint: https://tempo-rhobs-gateway.openshift-observability.svc.cluster.local:8090/api/traces/v1/application
+        endpoint: https://tempo-rhobs-distributor.openshift-observability.svc.cluster.local:4317/api/traces/v1/application
         tls:
           insecure_skip_verify: true
     service:

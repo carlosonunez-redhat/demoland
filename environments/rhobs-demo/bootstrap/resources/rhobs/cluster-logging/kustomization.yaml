@@ -1,7 +1,6 @@
 resources:
 - ../../../../../../components/openshift-logging/resources/loki-stack/stack
 - ../../../../../../components/openshift-logging/resources/clusterlogforwarders/lokistack
-# automatically updated by 'postinstall'; any changes will be overwritten!
 patches:
   - target:
       kind: LokiStack
