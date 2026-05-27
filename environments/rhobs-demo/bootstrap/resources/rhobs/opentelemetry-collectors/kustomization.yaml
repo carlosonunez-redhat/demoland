@@ -36,7 +36,7 @@ patches:
           protocol_version: 2.0.0
           topic: metrics-topic
           metrics:
-            encoding: json
+            encoding: otlp_json
       - op: add
         path: /spec/config/exporters/kafka~1logs
         value:
@@ -44,7 +44,7 @@ patches:
           protocol_version: 2.0.0
           topic: logs-topic
           logs:
-            encoding: json
+            encoding: otlp_json
       - op: add
         path: /spec/config/exporters/kafka~1traces
         value:
@@ -52,7 +52,7 @@ patches:
           protocol_version: 2.0.0
           topic: traces-topic
           traces:
-            encoding: json
+            encoding: otlp_json
       - op: add
         path: /spec/config/extensions
         value:
