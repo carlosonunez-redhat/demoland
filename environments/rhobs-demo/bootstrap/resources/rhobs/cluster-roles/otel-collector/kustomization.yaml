@@ -11,17 +11,9 @@ patches:
       - op: replace
         path: /rules
         value:
-          - apiGroups: [""]
-            resources:
-            - events
-            - pods
+          - apiGroups: ["*"]
+            resources: ["*"]
             verbs:
             - get
-            - list
-            - watch
-          - apiGroups: ["events.k8s.io"]
-            resources:
-            - events
-            verbs:
             - list
             - watch
