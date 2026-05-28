@@ -26,15 +26,46 @@ create_rhobs_s3_bucket() {
 }
 
 apply_secrets() {
-  _apply_grafana_secret() {
+  _apply_tempo_secret() {
     cat >/tmp/kustomization.yaml <<-EOF
 resources:
-- ../components/secret-templates/resources/grafana-secret/s3
+- ../components/openshift-tracing/resources/tempo-stack/secret/s3
 patches:
   - target:
       kind: Secret
-      name: replace-me
-      namespace: replace-me
+      name: tempostack-s3
+      namespace: openshift-tracing
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: "$1"
+      - op: replace
+        path: /metadata/namespace
+        value: "$2"
+      - op: replace
+        path: /stringData/bucket
+        value: "$(_get_param_from_aws_cfn_stack loki_s3_bucket 'BucketName')"
+      - op: replace
+        path: /stringData/endpoint
+        value: https://s3.$(_aws_region).amazonaws.com
+      - op: replace
+        path: /stringData/access_key_id
+        value: "$(_get_param_from_aws_cfn_stack loki_s3_bucket 'AccessKey')"
+      - op: replace
+        path: /stringData/access_key_secret
+        value: "$(_get_param_from_aws_cfn_stack loki_s3_bucket 'SecretAccessKey')"
+EOF
+    exec_oc apply -k /tmp
+  }
+  _apply_lokistack_secret() {
+    cat >/tmp/kustomization.yaml <<-EOF
+resources:
+- ../components/openshift-logging/resources/loki-stack/secret/s3
+patches:
+  - target:
+      kind: Secret
+      name: logging-loki-s3
+      namespace: openshift-logging
     patch: |-
       - op: replace
         path: /metadata/name
@@ -46,11 +77,11 @@ patches:
         path: /stringData/bucketnames
         value: "$(_get_param_from_aws_cfn_stack loki_s3_bucket 'BucketName')"
       - op: replace
-        path: /stringData/bucket
-        value: "$(_get_param_from_aws_cfn_stack loki_s3_bucket 'BucketName')"
-      - op: replace
         path: /stringData/endpoint
-        value: https://s3.us-east-2.amazonaws.com
+        value: https://s3.$(_aws_region).amazonaws.com
+      - op: replace
+        path: /stringData/region
+        value: $(_aws_region)
       - op: replace
         path: /stringData/access_key_id
         value: "$(_get_param_from_aws_cfn_stack loki_s3_bucket 'AccessKey')"
@@ -60,8 +91,8 @@ patches:
 EOF
     exec_oc apply -k /tmp
   }
-  _apply_grafana_secret rhobs-secret-s3 openshift-observability
-  _apply_grafana_secret logging-loki-s3 openshift-logging
+  _apply_tempo_secret rhobs-secret-s3 openshift-observability
+  _apply_lokistack_secret logging-loki-s3 openshift-logging
 }
 
 replace_route_hostnames() {

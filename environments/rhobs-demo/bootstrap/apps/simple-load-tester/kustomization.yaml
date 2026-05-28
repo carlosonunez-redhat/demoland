@@ -1,6 +1,6 @@
 namespace: example-apps
 resources:
-  - ../../../../../components/service-accounts/privileged
+  - ../../../../../components/rbac/service-accounts/privileged
   - ../../../../../components/k8s-namespace
   - ../../../../../apps/example-apps/simple-load-tester
 patches:
