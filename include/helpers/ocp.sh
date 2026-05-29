@@ -10,6 +10,13 @@ _cluster_infra_name() {
 }
 
 _cluster_ignition_files_bucket() {
+  local from_secret
+  from_secret=$(_get_secret_quiet ocp/ignition_files_bucket)
+  if test -n "$from_secret"
+  then
+    echo "$from_secret"
+    return 0
+  fi
   printf "%s-ocp-ignition-files" "$(_cluster_name |
     base64 -w 0 |
     tr -d '=' |
