@@ -19,7 +19,7 @@ your external tooling.
         * [Create GitOps Applications](#create-gitops-applications)
             * [Demo Operators](#demo-operators)
             * [Demo Resources](#demo-resources)
-        * [Sample Applications](#sample-applications)
+            * [Sample Applications](#sample-applications)
     * [The Scenic Route](#the-scenic-route)
         * [Install Operators](#install-operators)
         * [Enable Cluster Platform Monitoring](#enable-cluster-platform-monitoring)
@@ -284,7 +284,7 @@ spec:
 EOF
 ```
 
-#### Sample Applications
+##### Sample Applications
 
 ```sh
 # Remember to run `oc login` first before running the command(s) below
