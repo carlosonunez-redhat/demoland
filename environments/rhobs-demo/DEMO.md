@@ -1,14 +1,11 @@
-## Three Key Points
+# Red Hat Observability Demo
 
-- Observe cluster and workload behavior with minimal configuration with the
-  **Red Hat Cluster Observability Operator (COO)**
-- Aggregate and forward logs to your corporate log aggregators or SIEMs with the
-  **Red Hat Cluster Logging Operator (CLO)**
-- Send workload and cluster signals to your existing observability stack with
-  the **Red Hat Build of OpenTelemetry**
+Easily observe your cluster and its workloads within the OpenShift Console and
+your external tooling.
 
 <!-- vim-markdown-toc GFM -->
 
+* [Three Key Points](#three-key-points)
 * [Architecture](#architecture)
     * [Metrics](#metrics)
     * [Logs](#logs)
@@ -44,6 +41,15 @@
     * [Quickly observe cluster behavior with OpenShift Monitoring](#quickly-observe-cluster-behavior-with-openshift-monitoring)
 
 <!-- vim-markdown-toc -->
+## Three Key Points
+
+- Observe cluster and workload behavior with minimal configuration with the
+  **Red Hat Cluster Observability Operator (COO)**
+- Aggregate and forward logs to your corporate log aggregators or SIEMs with the
+  **Red Hat Cluster Logging Operator (CLO)**
+- Send workload and cluster signals to your existing observability stack with
+  the **Red Hat Build of OpenTelemetry**
+
 ## Architecture
 
 ![](./include/assets/img/architecture.png)
