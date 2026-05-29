@@ -1,23 +1,19 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: Creates a bucket for Loki to store logs into
-Parameters:
-  ClusterId:
-    Description: ID of the cluster.
-    Type: String
-  BucketName:
-    Description: Name of the bucket
-    Type: String
 Resources:
   Bucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Ref BucketName
+      BucketName: !Join
+        - "-"
+        - - !Select [2, !Split ['/', !Ref AWS::StackId]]
+          - "rhobs-s3-bucket"
   Policy:
     Type: AWS::IAM::Policy
     Properties:
       PolicyName: !Join
         - "-"
-        - - !Ref ClusterId
+        - - !Select [2, !Split ['/', !Ref AWS::StackId]]
           - GrafanaS3BucketPolicy
       PolicyDocument:
         Version: "2012-10-17"
@@ -39,14 +35,17 @@ Resources:
               - s3:DeleteObject
             Resource: !Sub "${Bucket.Arn}/*"
       Users:
-        - !Ref User
+        - !Join
+          - "-"
+          - - !Select [2, !Split ['/', !Ref AWS::StackId]]
+            - GrafanaS3BucketUser
   User:
     Type: AWS::IAM::User
     Properties:
       UserName: !Join
         - "-"
-        - - !Ref ClusterId
-          - "GrafanaS3BucketUser" 
+        - - !Select [2, !Split ['/', !Ref AWS::StackId]]
+          - GrafanaS3BucketUser
   Credentials:
     Type: AWS::IAM::AccessKey
     Properties:
