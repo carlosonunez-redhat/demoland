@@ -14,13 +14,8 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/rhobs.sh"
 
 create_rhobs_s3_bucket() {
-  params=(
-    ClusterId "$(_cluster_infra_name)"
-    BucketName "$(rhobs_s3_bucket)"
-  )
-  params_json="$(_create_aws_cf_params_json "${params[@]}")"
   _create_aws_resources_from_cfn_stack_with_caps loki_s3_bucket \
-    "$params_json" \
+    "{}" \
     "CAPABILITY_NAMED_IAM" \
     "Creating Loki S3 bucket"
 }
