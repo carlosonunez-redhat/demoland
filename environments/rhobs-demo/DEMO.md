@@ -1,11 +1,14 @@
-# Red Hat Observability Demo
+## Three Key Points
 
-Easily observe your cluster and its workloads within the cluster and from within
-your own observability stack.
+- Observe cluster and workload behavior with minimal configuration with the
+  **Red Hat Cluster Observability Operator (COO)**
+- Aggregate and forward logs to your corporate log aggregators or SIEMs with the
+  **Red Hat Cluster Logging Operator (CLO)**
+- Send workload and cluster signals to your existing observability stack with
+  the **Red Hat Build of OpenTelemetry**
 
 <!-- vim-markdown-toc GFM -->
 
-* [Three Key Points](#three-key-points)
 * [Architecture](#architecture)
     * [Metrics](#metrics)
     * [Logs](#logs)
@@ -41,16 +44,6 @@ your own observability stack.
     * [Quickly observe cluster behavior with OpenShift Monitoring](#quickly-observe-cluster-behavior-with-openshift-monitoring)
 
 <!-- vim-markdown-toc -->
-
-## Three Key Points
-
-- Observe cluster and workload behavior with minimal configuration with the
-  **Red Hat Cluster Observability Operator (COO)**
-- Aggregate and forward logs to your corporate log aggregators or SIEMs with the
-  **Red Hat Cluster Logging Operator (CLO)**
-- Send workload and cluster signals to your existing observability stack with
-  the **Red Hat Build of OpenTelemetry**
-
 ## Architecture
 
 ![](./include/assets/img/architecture.png)
@@ -821,7 +814,7 @@ This will create a cluster-wide collector with the following pipelines:
 After applying this resource, run `oc logs -n openshift-observability
 daemonset/collector` to see the collector receive, enrich and route signals.
 
-![](./assets/gif/collector.gif)
+![](./assets/img/collector.gif)
 
 You'll also see errors from the collector trying to export signals to Tempo and
 Kafka. This is expected, as we haven't set those up yet!
