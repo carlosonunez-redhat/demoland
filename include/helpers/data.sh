@@ -14,9 +14,9 @@ _do_get_secret() {
   local f quiet
   f=$(_get_file_from_secrets_dir "$1")
   quiet="${2:-false}"
-  test -n "$f" && cat "$f" && return 0
+  test -n "$f" && 2>/dev/null cat "$f" && return 0
 
-  test "${quiet,,}" == true &&
+  test "${quiet,,}" == false &&
     error "Secret '$1' is not defined in '.deploy.secrets' section of this environment's config."
   return 1
 }
