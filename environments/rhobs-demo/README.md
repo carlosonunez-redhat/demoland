@@ -319,6 +319,17 @@ console of some kind.
 Let's see what the observability flow with OpenShift looks like for a single
 cluster in this demo.
 
+
+<!-- vim-markdown-toc GFM -->
+
+* [Step Zero Monitoring with OpenShift Monitoring](#step-zero-monitoring-with-openshift-monitoring)
+* [Zooming in with Signal Correlation and the Cluster Logging Operator](#zooming-in-with-signal-correlation-and-the-cluster-logging-operator)
+* [Analyzing application behavior with OpenShift Tracing and OpenTelemetry](#analyzing-application-behavior-with-openshift-tracing-and-opentelemetry)
+* [Export into existing observability platforms](#export-into-existing-observability-platforms)
+* [Next Steps](#next-steps)
+
+<!-- vim-markdown-toc -->
+
 ### Step Zero Monitoring with OpenShift Monitoring
 
 Platform operators can quickly see how their clusters are doing by navigating to
