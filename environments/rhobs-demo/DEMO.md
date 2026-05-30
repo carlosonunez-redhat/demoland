@@ -1474,7 +1474,7 @@ EOF
 > The Cluster Observabilty Operator is capable of provisioning Tempo and
 > OpenTelemetry together. We are not taking advantage of this feature in our
 > demo since our OpenTelemetry instance is using more advanced configuration to
-> enable signals to be exported to multiple external systemms. Instead, we're
+> enable signals to be exported to multiple external systems. Instead, we're
 > purely using the `ObservabilityInstaller` resource above to enable the
 > **Traces** view in the **Observe** section of the OpenShift Console.
 
@@ -1532,7 +1532,7 @@ Click on **Observe**. You should now see **Traces** and **Logs** in the sidebar.
 Click on the tiles to the left of the bell. You should see a "Signal
 Correlation" tile in the dropdown.
 
-![](./include/assets/img/signal_dropdown.png)
+![](./include/assets/img/signals_dropdown.png)
 
 🎉 Congratulations! You've configured the demo environment and are ready to
 explore the demo provided in the [Demo](#demo) section!
