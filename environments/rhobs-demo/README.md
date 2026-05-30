@@ -25,6 +25,7 @@ your external tooling.
     * [Zooming in with Signal Correlation and the Cluster Logging Operator](#zooming-in-with-signal-correlation-and-the-cluster-logging-operator)
     * [Analyzing application behavior with OpenShift Tracing and OpenTelemetry](#analyzing-application-behavior-with-openshift-tracing-and-opentelemetry)
     * [Export into existing observability platforms](#export-into-existing-observability-platforms)
+    * [Next Steps](#next-steps)
 
 <!-- vim-markdown-toc -->
 ## Three Key Points
@@ -444,6 +445,41 @@ simply pull data from these topics like any other application. However,
 OpenTelemetry can export data to anything that speaks the OpenTelemetry
 Protocol, or OTLP, like Grafana, Perses or traditional ELK stacks.
 
-Let's have a look at these Kafka topics to see what that data looks like. In
-this demo, I'm using **Streams for Apache Kafka**, an operator that simplifies
-creating Kafka clusters and topics within them. 
+In this demo, I'm using **Streams for Apache Kafka**, an operator that
+simplifies creating Kafka clusters and topics within them. Let's visit the
+Kafka Console from the tiles in the OpenShift Console to have a look at these
+Kafka topics to see what that data looks like.
+
+
+![](./include/assets/demo/12-streams-console.png)
+
+![](./include/assets/demo/13-kafka-console-topic.png)
+
+Upon clicking on Topics, we can see that we have a topic for each of the
+observability pillars. If we click on any of them, we'll see lots of messages in
+the topic containing OTLP-formatted JSON with information about the signal.
+Since OTLP is a protocol, any software that speaks it can take this and use it
+to enable you to perform further analysis, like dashboards and queries.
+
+This is one way to enable multi-cluster observability as well. As long as every
+cluster is configured with the exporter configuration we saw earlier, you'll be
+able to use your existing tooling to slice and dice information from your
+clusters during troubleshooting events.
+
+### Next Steps
+
+- **Multicluster Observability with ACM**: We saw how to use OpenShift cluster
+  observability operators to surface and analyze traditional observability
+  signals within the OpenShift Console as well as from external systems like
+  Kafka. **Advanced Cluster Management for OpenShift (ACM)** is another great
+  way to obtain multicluster observability as well as manage all of your
+  OpenShift or Kubernetes clusters.
+
+  See the demo [here](../rhacm-observability/README.md)
+
+- **Observability at the speed of thought with OpenShift Lightspeed**: OpenShift
+  Lightspeed is a great way to "chat with your cluster" to do almost anything,
+  including understanding underlying behavior and probe into its workloads.
+
+  See the demo [here](../rhocp-lightspeed-observability/README.md).
+  natural language. Chat with your cluster 
