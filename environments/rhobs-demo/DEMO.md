@@ -116,7 +116,9 @@ random HTTP methods against the web server every second.
 - An OpenShift Cluster (tested with v4.20)
 - Access to a shell, like `bash`, `zsh` or `fish`
 
-> 📝 You have several options if you don't have an OpenShift cluster handy:
+> 📝 **NOTE**
+>
+> You have several options if you don't have an OpenShift cluster handy:
 >
 > - [OpenShift Local](https://developers.redhat.com/products/openshift-local) or
 > - Stand up a Single-Node OpenShift cluster in about 45 minutes
@@ -381,7 +383,9 @@ appear along with a tabular outline of this data.
 
 ![](./include/assets/img/metrics-view.png)
 
-> 📝  The **Cluster Observability Operator** provides the
+> 📝 **NOTE**
+>
+> The **Cluster Observability Operator** provides the
 > **MonitoringStack** resource to configuring separate Prometheus instances to
 > better isolate metrics by workload or application domain. This is out of scope
 > for this demo, but you can learn more about this custom resource
@@ -865,7 +869,9 @@ spec:
 EOF
 ```
 
-> 📝 Change `1x.small` to `1x.pico` if you are deploying the LokiStack into an
+> 📝 **NOTE**
+>
+> Change `1x.small` to `1x.pico` if you are deploying the LokiStack into an
 > OpenShift cluster with less than 12 CPUs/vCPUs and 32GB RAM.
 
 Run `oc describe lokistack logging-loki -n openshift-logging` to monitor the
@@ -1159,7 +1165,9 @@ spec:
 EOF
 ```
 
-> 📝 This is also an example of how to run applications on OpenShift directly
+> 📝 **NOTE**
+>
+> This is also an example of how to run applications on OpenShift directly
 > from source code! Learn more about this capability
 > [here](https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html/builds_using_buildconfig/understanding-image-builds).
 
@@ -1461,7 +1469,9 @@ spec:
 EOF
 ```
 
-> 📝 The Cluster Observabilty Operator is capable of provisioning Tempo and
+> 📝 **NOTE**
+>
+> The Cluster Observabilty Operator is capable of provisioning Tempo and
 > OpenTelemetry together. We are not taking advantage of this feature in our
 > demo since our OpenTelemetry instance is using more advanced configuration to
 > enable signals to be exported to multiple external systemms. Instead, we're
