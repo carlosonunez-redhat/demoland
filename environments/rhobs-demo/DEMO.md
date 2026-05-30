@@ -1439,7 +1439,7 @@ You should see three topics in the console. Click on any of them. You should see
 messages appear in the topic momentarily. Keep refreshing to see them pile up!
 
 
-![](./include/assets/img/kafka_console_topic_example.png)
+![](./include/assets/img/kafka_console_topics_example.png)
 
 #### Install Cluster Observability UI Plugins
 
