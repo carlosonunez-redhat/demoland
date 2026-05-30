@@ -162,8 +162,8 @@ sk=$(echo "$data" | grep -E '^SecretAccessKey' | awk '{print $NF}')
 Install the OpenShift GitOps operator from the **Ecosystem > Software Catalog** pane
 using the defaults.
 
-![](../../assets/img/ecosystem-gitops.png)
-![](../../assets/img/ecosystem-gitops-confirm.png)
+![](./include/assets/img/ecosystem-gitops.png)
+![](./include/assets/img/ecosystem-gitops-confirm.png)
 
 Once the installation is complete, run the commands below to create an
 application that installs the operators and components used by this demo:
@@ -343,14 +343,14 @@ steps below for each of the operators on this list.
 1. From the OpenShift console, click on **Ecosystem**, then on **Software
    Catalog** to view the list of operators available in your cluster.
 
-![](./assets/img/ecosystem.png)
+![](./include/assets/img/ecosystem.png)
 
 2. Search for the operator to install, then click on "Install." Review the
    defaults presented, then click on "Install" to complete the installation.
 
 3. The OpenShift Console will notify you when the operator has been installed.
 
-![](./assets/img/ecosystem-complete.png)
+![](./include/assets/img/ecosystem-complete.png)
 
 #### Enable Cluster Platform Monitoring
 
@@ -379,7 +379,7 @@ changes. Afterwards, visit the OpenShift console and click on **Observe** >
 Usage**. A line graph of CPU usage for all workloads in the cluster should
 appear along with a tabular outline of this data.
 
-![](./assets/img/metrics-view.png)
+![](./include/assets/img/metrics-view.png)
 
 > 📝  The **Cluster Observability Operator** provides the
 > **MonitoringStack** resource to configuring separate Prometheus instances to
@@ -820,7 +820,7 @@ This will create a cluster-wide collector with the following pipelines:
 After applying this resource, run `oc logs -n openshift-observability
 daemonset/collector` to see the collector receive, enrich and route signals.
 
-![](./assets/img/collector.gif)
+![](./include/assets/img/collector.gif)
 
 You'll also see errors from the collector trying to export signals to Tempo and
 Kafka. This is expected, as we haven't set those up yet!
