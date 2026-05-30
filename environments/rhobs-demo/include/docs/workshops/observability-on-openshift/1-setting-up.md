@@ -1,115 +1,33 @@
-# Red Hat Observability Demo
+# Manual Demo Setup
 
-Easily observe your cluster and its workloads within the OpenShift Console and
-your external tooling.
+This guide walks through the resources deployed by the GitOps Kustomizations
+accompanying this demo. Useful for workshops on observability.
+
 
 <!-- vim-markdown-toc GFM -->
 
-* [Three Key Points](#three-key-points)
-* [Architecture](#architecture)
-    * [Metrics](#metrics)
-    * [Logs](#logs)
-    * [Traces](#traces)
-* [Setting Up](#setting-up)
-    * [What You'll Need](#what-youll-need)
-    * [The Express Lane](#the-express-lane)
-        * [Create AWS Resources](#create-aws-resources)
-        * [Install the OpenShift GitOps operator](#install-the-openshift-gitops-operator)
-        * [Create secrets](#create-secrets)
-        * [Create GitOps Applications](#create-gitops-applications)
-            * [Demo Operators](#demo-operators)
-            * [Demo Resources](#demo-resources)
-            * [Sample Applications](#sample-applications)
-    * [The Scenic Route](#the-scenic-route)
-        * [Install Operators](#install-operators)
-        * [Enable Cluster Platform Monitoring](#enable-cluster-platform-monitoring)
-        * [Create namespaces](#create-namespaces)
-        * [Create service accounts](#create-service-accounts)
-            * [OpenTelemetry Collector and Tempo](#opentelemetry-collector-and-tempo)
-            * [LokiStack and Cluster Log Forwarder](#lokistack-and-cluster-log-forwarder)
-        * [Install the OpenTelemetry Collector](#install-the-opentelemetry-collector)
-        * [Install and Configure Vector and Loki](#install-and-configure-vector-and-loki)
-        * [Install and configure cluster tracing](#install-and-configure-cluster-tracing)
-        * [Deploy the sample app and enable auto instrumentation](#deploy-the-sample-app-and-enable-auto-instrumentation)
-        * [Enable the load generator](#enable-the-load-generator)
-        * [Install Streams for Apache Kafka and the Kafka Console](#install-streams-for-apache-kafka-and-the-kafka-console)
-            * [Install the Kafka Cluster](#install-the-kafka-cluster)
-            * [Install the Kafka Console](#install-the-kafka-console)
-            * [Create the observability signal topics](#create-the-observability-signal-topics)
-        * [Install Cluster Observability UI Plugins](#install-cluster-observability-ui-plugins)
-* [Demo](#demo)
-    * [Quickly observe cluster behavior with OpenShift Monitoring](#quickly-observe-cluster-behavior-with-openshift-monitoring)
+* [Prerequisites](#prerequisites)
+* [Instructions](#instructions)
+    * [Install Operators](#install-operators)
+    * [Enable Cluster Platform Monitoring](#enable-cluster-platform-monitoring)
+    * [Create namespaces](#create-namespaces)
+    * [Create service accounts](#create-service-accounts)
+        * [OpenTelemetry Collector and Tempo](#opentelemetry-collector-and-tempo)
+        * [LokiStack and Cluster Log Forwarder](#lokistack-and-cluster-log-forwarder)
+    * [Install the OpenTelemetry Collector](#install-the-opentelemetry-collector)
+    * [Install and Configure Vector and Loki](#install-and-configure-vector-and-loki)
+    * [Install and configure cluster tracing](#install-and-configure-cluster-tracing)
+    * [Deploy the sample app and enable auto instrumentation](#deploy-the-sample-app-and-enable-auto-instrumentation)
+    * [Enable the load generator](#enable-the-load-generator)
+    * [Install Streams for Apache Kafka and the Kafka Console](#install-streams-for-apache-kafka-and-the-kafka-console)
+        * [Install the Kafka Cluster](#install-the-kafka-cluster)
+        * [Install the Kafka Console](#install-the-kafka-console)
+        * [Create the observability signal topics](#create-the-observability-signal-topics)
+    * [Install Cluster Observability UI Plugins](#install-cluster-observability-ui-plugins)
 
 <!-- vim-markdown-toc -->
-## Three Key Points
 
-- Observe cluster and workload behavior with minimal configuration with the
-  **Red Hat Cluster Observability Operator (COO)**
-- Aggregate and forward logs to your corporate log aggregators or SIEMs with the
-  **Red Hat Cluster Logging Operator (CLO)**
-- Send workload and cluster signals to your existing observability stack with
-  the **Red Hat Build of OpenTelemetry**
-
-## Architecture
-
-![](./include/assets/img/architecture.png)
-
-The resources provided in this demo create an end-to-end observability stack for
-metrics, logs and traces on any OpenShift cluster.
-
-### Metrics
-
-![](./include/assets/img/metrics.png)
-
-Metrics are captured for all workloads in the cluster and the OpenShift control
-plane and worker nodes that host them. They are surfaced in two ways: by a
-Prometheus instance managed by the built-in OpenShift Monitoring operator, and
-by an OpenTelemetry collector managed by the operator for the Red Hat Build of
-OpenTelemetry. The collector forwards metrics to a Kafka topic and to Perses for
-external visualization.
-
-This implementation makes it possible for cluster operators to quickly observe
-cluster health in the **Observe** > **Metrics** pane within the OpenShift
-Console, and for other engineers to query and dashboard the signals they care
-about from a central observability platform, like Datadog, Grafana or Perses.
-
-### Logs
-
-![](./include/assets/img/logs.png)
-
-Like our metrics architecture, workload and cluster node logs are aggregated in
-two ways: by a Vector instance managed by the **Cluster Logging Operator**
-through a `ClusterLogForwarder` resource, and by the same OpenTelemetry
-collector that collects metrics, as described in the previous section. The
-OpenTelemetry collector forwards log entries to a Kafka tapic and to Perses.
-
-Unlike the metrics design, the redundancy implemented here is only for
-demonstration purposes. We recommend choosing only one of these options to
-reduce CPU and network pressure on your cluster.
-
-The **Red Hat Build of OpenTelemetry** is a good choice for those seeking to
-centralize signal aggregation and forwarding, whereas the **Cluster Logging
-Operator** is ideal for those who desire having dedicated collectors for
-metrics, logs and traces.
-
-### Traces
-
-![](./include/assets/img/traces.png)
-
-Traces are collected by OpenTelemetry and forwarded to a Tempo instance managed
-by the **Cluster Observability Operator (COO)** and to Kafka as well as Perses.
-
-Like metrics, Tempo and the OpenShift Console UI Plugin provided by COO provide
-cluster operators with a quick glance at application behavior in the **Observe** > 
-**Traces** pane.
-
-This demo also provides an AI-generated Golang web server to show how tracing works
-within OpenShift. Spans are generated by a human-generated script performing
-random HTTP methods against the web server every second.
-
-## Setting Up
-
-### What You'll Need
+## Prerequisites
 
 - An AWS Account with an Access and Secret Key Pair
 - The AWS CLI
@@ -124,200 +42,9 @@ random HTTP methods against the web server every second.
 > - Stand up a Single-Node OpenShift cluster in about 45 minutes
 >   with [Carlos's Demoland](https://github.com/carlosonunez-redhat/demoland).
 
-### The Express Lane
+## Instructions
 
-#### Create AWS Resources
-
-Run the CloudFormation script supplied this with this demo:
-
-```sh
-aws cloudformation create-stack \
-  --capabilities CAPABILITY_NAMED_IAM \
-  --stack-name rhobs-s3-demo \
-  --template-body file:///./include/cloudformation/loki_s3_bucket.yaml 
-```
-
-This will:
-
-- Create a bucket that Loki and Tempo will store logs and traces into,
-  respectively, and
-- Create an IAM user that is only allowed to read from and write into this
-  bucket.
-
-Run `aws cloudformation describe-stacks --stack-name rhobs-s3-demo` and wait for
-it to achieve a `CREATE_COMPLETE` state.
-
-Once it does, run the command below to get the name of the bucket and the user's
-access and secret key pair:
-
-```sh
-data=$(aws cloudformation describe-stack-events --stack-name rhobs-s3-demo \
-  --query 'Stacks[0].Outputs' \
-  --output text)
-bucket_name=$(echo "$data" | grep -E '^BucketName' | awk '{print $NF}')
-ak=$(echo "$data" | grep -E '^AccessKey' | awk '{print $NF}')
-sk=$(echo "$data" | grep -E '^SecretAccessKey' | awk '{print $NF}')
-```
-
-#### Install the OpenShift GitOps operator
-
-Install the OpenShift GitOps operator from the **Ecosystem > Software Catalog** pane
-using the defaults.
-
-![](./include/assets/img/ecosystem-gitops.png)
-![](./include/assets/img/ecosystem-gitops-confirm.png)
-
-Once the installation is complete, run the commands below to create an
-application that installs the operators and components used by this demo:
-
-#### Create secrets
-
-```sh
-region=$(aws configure get region)
-cat >/tmp/kustomization.yaml <<-EOF
-resources:
-- ../components/openshift-tracing/resources/tempo-stack/secret/s3
-- ../components/openshift-logging/resources/loki-stack/secret/s3
-patches:
-  - target:
-      kind: Secret
-      name: tempostack-s3
-      namespace: openshift-tracing
-    patch: |-
-      - op: replace
-        path: /metadata/name
-        value: rhobs-secret-s3
-      - op: replace
-        path: /metadata/namespace
-        value: openshift-observability
-      - op: replace
-        path: /stringData/bucket
-        value: rhobs-demo-bucket
-      - op: replace
-        path: /stringData/endpoint
-        value: https://s3.$region.amazonaws.com
-      - op: replace
-        path: /stringData/access_key_id
-        value: "$ak"
-      - op: replace
-        path: /stringData/access_key_secret
-        value: "$sk"
-  - target:
-      kind: Secret
-      name: logging-loki-s3
-      namespace: openshift-logging
-    patch: |-
-      - op: replace
-        path: /metadata/namespace
-        value: openshift-logging
-      - op: replace
-        path: /stringData/bucketnames
-        value: "$bucket_name"
-      - op: replace
-        path: /stringData/endpoint
-        value: https://s3.$region.amazonaws.com
-      - op: replace
-        path: /stringData/access_key_id
-        value: "$ak"
-      - op: replace
-        path: /stringData/access_key_secret
-        value: "$sk"
-EOF
-oc apply -k /tmp
-rm -r /tmp/kustomization.yaml
-```
-
-#### Create GitOps Applications
-
-Next you'll create three GitOps Applications that will sync the demo resources in this
-codebase with your cluster.
-
-##### Demo Operators
-
-```sh
-# Remember to run `oc login` first before running the command(s) below
-cat <<-EOF | oc apply -f -
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: rhobs-demo-operators
-  namespace: openshift-gitops
-spec:
-  project: default
-  destination:
-    namespace: openshift-gitops
-    server: https://kubernetes.default.svc
-  source:
-    repoURL: https://github.com/carlosonunez-redhat/demoland
-    targetRevision: main
-    path: ./environments/rhobs-demo/bootstrap/operators
-  syncPolicy:
-    automated:
-      enabled: true
-    syncOptions:
-      - SkipDryRunOnMissingResources=true
-EOF
-```
-
-##### Demo Resources
-
-```sh
-# Remember to run `oc login` first before running the command(s) below
-cat <<-EOF | oc apply -f -
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: rhobs-demo-resources
-  namespace: openshift-gitops
-spec:
-  project: default
-  destination:
-    namespace: openshift-gitops
-    server: https://kubernetes.default.svc
-  source:
-    repoURL: https://github.com/carlosonunez-redhat/demoland
-    targetRevision: main
-    path: ./environments/rhobs-demo/bootstrap/resources
-  syncPolicy:
-    automated:
-      enabled: true
-    syncOptions:
-      - SkipDryRunOnMissingResources=true
-EOF
-```
-
-##### Sample Applications
-
-```sh
-# Remember to run `oc login` first before running the command(s) below
-cat <<-EOF | oc apply -f -
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: rhobs-demo-apps
-  namespace: openshift-gitops
-spec:
-  project: default
-  destination:
-    namespace: openshift-gitops
-    server: https://kubernetes.default.svc
-  source:
-    repoURL: https://github.com/carlosonunez-redhat/demoland
-    targetRevision: main
-    path: ./environments/rhobs-demo/bootstrap/apps
-  syncPolicy:
-    automated:
-      enabled: true
-    syncOptions:
-      - SkipDryRunOnMissingResources=true
-EOF
-```
-
-The environment will be ready in about 15 minutes.
-
-### The Scenic Route
-
-#### Install Operators
+### Install Operators
 
 The observability stack in this demo will take advantage of these operators:
 
@@ -354,7 +81,7 @@ steps below for each of the operators on this list.
 
 ![](./include/assets/img/ecosystem-complete.png)
 
-#### Enable Cluster Platform Monitoring
+### Enable Cluster Platform Monitoring
 
 Every OpenShift cluster ships with the **OpenShift Monitoring operator**. This
 operator installs cluster-wide Prometheus, Thanos and Alertmanager as well, a
@@ -391,7 +118,7 @@ appear along with a tabular outline of this data.
 > for this demo, but you can learn more about this custom resource
 > [here](https://docs.redhat.com/en/documentation/red_hat_openshift_cluster_observability_operator/1-latest/pdf/installing_red_hat_openshift_cluster_observability_operator/configuring-the-cluster-observability-operator-to-monitor-a-service#creating-a-monitoringstack-object-for-cluster-observability-operator_configuring_the_cluster_observability_operator_to_monitor_a_service).
 
-#### Create namespaces
+### Create namespaces
 
 This environment uses three namespaces:
 
@@ -420,7 +147,7 @@ oc annotate ns openshift-observability  \
   pod-security.kubernetes.io/warn="privileged"
 ```
 
-#### Create service accounts
+### Create service accounts
 
 Next, we will create two service accounts:
 
@@ -430,7 +157,7 @@ Next, we will create two service accounts:
 - A service account that enables Vector to retrieve cluster and workload logs
   through the ClusterLogForwarder.
 
-##### OpenTelemetry Collector and Tempo
+#### OpenTelemetry Collector and Tempo
 
 Create a `ServiceAccount` called `rhobs-sa`:
 
@@ -532,7 +259,7 @@ subjects:
 EOF
 ```
 
-##### LokiStack and Cluster Log Forwarder
+#### LokiStack and Cluster Log Forwarder
 
 Like we did for Tempo and OTel, start by creating a `ServiceAccount` for the Loki
 instance that will hold our logs internally:
@@ -610,7 +337,7 @@ subjects:
 EOF
 ```
 
-#### Install the OpenTelemetry Collector
+### Install the OpenTelemetry Collector
 
 We're now ready to create the OpenTelemetry collector for our cluster. Execute
 the `oc` command below to create it:
@@ -829,7 +556,7 @@ daemonset/collector` to see the collector receive, enrich and route signals.
 You'll also see errors from the collector trying to export signals to Tempo and
 Kafka. This is expected, as we haven't set those up yet!
 
-#### Install and Configure Vector and Loki
+### Install and Configure Vector and Loki
 
 We're now going to install the OpenShift Cluster Logging Operator and configure
 Vector to send cluster and workload logs to Loki and S3.
@@ -924,7 +651,7 @@ Confirm that Vector is sending logs to Loki by running `oc logs -n
 openshift-logging statefulset/logging-loki-ingester`. You should see several
 entries containing "flushing stream" if all is working properly.
 
-#### Install and configure cluster tracing
+### Install and configure cluster tracing
 
 Our cluster is now collecting metrics and logs, so it's time to enable cluster
 tracing.
@@ -973,7 +700,7 @@ Run `oc describe tempostack cluster  -n openshift-observability` to monitor the
 installation. Cluster tracing is ready when the `Ready` status becomes
 `True`.
 
-#### Deploy the sample app and enable auto instrumentation
+### Deploy the sample app and enable auto instrumentation
 
 First, use the `oc` command below to configure OpenShift tracing to
 automatically instrument Golang applications:
@@ -1189,7 +916,7 @@ automatically wired with the application:
 {"time":"2026-05-29T21:34:47.627206268Z","level":"INFO","source":{"function":"go.opentelemetry.io/auto/internal/pkg/instrumentation.NewManager","file":"/usr/src/go.opentelemetry.io/auto/internal/pkg/instrumentation/manager.go","line":91},"msg":"loaded process info","process":{"ID":2,"Functions":[{"Name":"net/textproto.(*Reader).readContinuedLineSlice","Offset":2753632,"ReturnOffsets":[2753931,2753952,2753975,2754028,2754812,2755084]},{"Name":"net/http.Header.writeSubset","Offset":3027104,"ReturnOffsets":[3027392,3028724]},{"Name":"net/http.serverHandler.ServeHTTP","Offset":3100928,"ReturnOffsets":[3101753,3101794]}],"GoVersion":"1.19.13","Modules":{"github.com/sirupsen/logrus":"1.9.3","golang.org/x/sys":"0.0.0-20220715151400-c0bba94af5f8","std":"1.19.13"}}}
 ```
 
-#### Enable the load generator
+### Enable the load generator
 
 Use the `oc` command below to add a load generator component to the example web
 server. This will issue random `GET` or `POST` HTTP methods to the web server
@@ -1311,13 +1038,13 @@ Trace ID       : a12bc3baf87e5d30ee3c8ddaf03c05f5
 Trace ID       : d755bf6719fc88b0017195ea320d2ebe
 ```
 
-#### Install Streams for Apache Kafka and the Kafka Console
+### Install Streams for Apache Kafka and the Kafka Console
 
 Now that our cluster is collecting all of the key observability signals we'll
 need, let's install and configure a Kafka cluster with the topics that
 OpenTelemetry is attempting to send data to.
 
-##### Install the Kafka Cluster
+#### Install the Kafka Cluster
 
 First, install the Kafka cluster:
 
@@ -1380,7 +1107,7 @@ Run `oc describe kafka kafka-cluster  -n rhobs-messaging` to monitor the
 installation. Log forwarding is ready when the `Ready` status becomes
 `True`.
 
-##### Install the Kafka Console
+#### Install the Kafka Console
 
 Next, provision a simple console that we'll use to see messages being sent to
 our signal topics.
@@ -1388,6 +1115,7 @@ our signal topics.
 ```sh
 cluster_domain=$(oc get route -n openshift-console console -o jsonpath='{.status.ingress[0].host}' |
     sed 's;console-openshift-console.;;')
+oc apply -f - <<-EOF
 apiVersion: console.streamshub.github.com/v1alpha1
 kind: Console
 metadata:
@@ -1399,17 +1127,40 @@ spec:
     - name: kafka-cluster
       namespace: rhobs-messaging
       listener: plain
+EOF
 ```
 
-Visit https://kafka-console.$YOUR_CLUSTER_DOMAIN in a web browser to open the
-console. Click the "Log in anonymously" button to log in.
+For convenience, run the `oc` command below to add a tile to the OpenShift
+console that takes you to the Kafka Console in one click:
+
+```sh
+cluster_domain=$(oc get route -n openshift-console console -o jsonpath='{.status.ingress[0].host}' |
+    sed 's;console-openshift-console.;;')
+oc apply -f - <<-EOF
+apiVersion: console.openshift.io/v1
+kind: ConsoleLink
+metadata:
+  name: kafka-console
+spec:
+  applicationMenu:
+    imageURL: /static/assets/public/imgs/logos/amq.svg
+    section: Consoles
+  href: https://kafka-console.$cluster_domain
+  location: ApplicationMenu
+  text: Streams for Apache Kafka Console
+EOF
+```
+
+After a minute or so, go back to the OpenShift console. You'll be asked to log
+in again. After doing so, click on the Tiles and select "Streams for Apache
+Kafka Console" to be taken to the console. Click the "Log in anonymously" button to log in.
 
 ![](./include/assets/img/kafka_console_login.png)
 
 You'll be presented with an overview of the Kafka cluster that you created. Keep
 this tab or window open, as we will return to it momentarily.
 
-##### Create the observability signal topics
+#### Create the observability signal topics
 
 Finally, use the command below to create Kafka topics for our metrics, logs and
 traces:
@@ -1441,7 +1192,7 @@ messages appear in the topic momentarily. Keep refreshing to see them pile up!
 
 ![](./include/assets/img/kafka_console_topics_example.png)
 
-#### Install Cluster Observability UI Plugins
+### Install Cluster Observability UI Plugins
 
 Finally, we are going to use the Cluster Observability Operator to enable the
 Signal Correlation feature as well as the "Traces" Observe tab in the Console.
@@ -1536,42 +1287,3 @@ Correlation" tile in the dropdown.
 
 🎉 Congratulations! You've configured the demo environment and are ready to
 explore the demo provided in the [Demo](#demo) section!
-
-## Demo
-
-### Quickly observe cluster behavior with OpenShift Monitoring
-
-OpenShift Monitoring is a built-in operator that accelerates MTTR and improves
-platform reliability by automating monitoring cluster configuration using
-opinionated defaults and providing visibility into cluster health right from the
-OpenShift console.
-
-Platform operators can quickly see how their clusters are doing by navigating to
-the OpenShift Console and clicking on **Observe**, then **Metrics**.
-
-After selecting any of the built-in queries, like _CPU Usage_, the Console
-provides the traditional line graph you'd expect to see here.
-
-![](./include/assets/demo/1-monitoring.png)
-
-The built-in monitoring stack is based on Prometheus, so you can create custom
-queries with PromQL. Let's say we wanted to see how much memory the ArgoCD
-instance that the OpenShift GitOps operator deployed is consuming. We can do
-this by changing the query shown here to
-`sum(container_memory_working_set_bytes{pod=~".*gitops.*"}) by (pod)`.
-
-![](./include/assets/demo/2-monitoring-gitops.png)
-
-As we can see, our graph now changes to display memory consumption for our
-ArgoCD application server instance.
-
-That the `application-server` Pod is consuming much more memory than the others
-is interesting. Let's copy the Pod name, visit the **Pods** view and search for
-it.
-
-![](./include/assets/demo/3-gitops-pod-search.png)
-
-Let's visit the "Signal Correlation" view in the Console tiles to see who and
-what's related to this Pod.
-
-
