@@ -423,7 +423,7 @@ application running inside of the Pod and generate traces like the request time
 we saw before. All I had to do to enable this was annotate the app, like we'll
 see here.
 
-![](./include/assets/img/8-pod-annotations.png)
+![](./include/assets/img/8-annotations.png)
 
 Here, we can see that there's an annotation called `inject-go` that's set to a
 resource in the `openshift-observability` namespace. This is an
