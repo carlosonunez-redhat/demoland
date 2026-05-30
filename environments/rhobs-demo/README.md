@@ -327,7 +327,7 @@ the OpenShift Console and clicking on **Observe**, then **Metrics**.
 After selecting any of the built-in queries, like _CPU Usage_, the Console
 provides the traditional line graph you'd expect to see here.
 
-![](./include/assets/demo/1-monitoring.png)
+![](./include/assets/img/1-monitoring.png)
 
 The built-in monitoring stack is based on Prometheus, so you can create custom
 queries with PromQL. Let's say we wanted to see how much memory the ArgoCD
@@ -335,7 +335,7 @@ instance that the OpenShift GitOps operator deployed is consuming. We can do
 this by changing the query shown here to
 `sum(container_memory_working_set_bytes{pod=~".*gitops.*"}) by (pod)`.
 
-![](./include/assets/demo/2-monitoring-gitops.png)
+![](./include/assets/img/2-monitoring-gitops.png)
 
 As we can see, our graph now changes to display memory consumption for our
 ArgoCD application server instance.
@@ -346,12 +346,12 @@ That the `application-server` Pod is consuming much more memory than the others
 is interesting. Let's copy the Pod name, visit the **Pods** view and search for
 it.
 
-![](./include/assets/demo/3-gitops-pod-search.png)
+![](./include/assets/img/3-gitops-pod-search.png)
 
 Let's visit the "Signal Correlation" view in the Console tiles to see who and
 what's related to this Pod.
 
-![](./include/assets/demo/4-signal-correlation.png)
+![](./include/assets/img/4-signal-correlation.png)
 
 What we're looking at here is a map of all of the resources in our cluster that
 are related to our GitOps Application Server. This is calculated by Korrel8r, an
@@ -363,7 +363,7 @@ logs related to it. When we click on that node, we're taken straight to the Logs
 in the OpenShift console to see all of the logs that pertain to this Pod. These
 also include the logs that you'd see in the Pod view that we were in earlier.
 
-![](./include/assets/demo/5-logs.png)
+![](./include/assets/img/5-logs.png)
 
 These logs are collected by an installation of Loki that's provided by the
 **Cluster Logging Operator**. Very little configuration is needed to enable it.
@@ -379,7 +379,7 @@ application-level platform from within the OpenShift console.
 
 Let's have a look.
 
-![](./include/assets/demo/6-traces.png)
+![](./include/assets/img/6-traces.png)
 
 The Traces view gives us a dashboard of spans collected from applications in our
 cluster. These are obtained by a collector process created by the **Red Hat
@@ -394,7 +394,7 @@ OpenTelemetry can also automatically inject instrumentation to applications that
 have not added it themselves, like the "simple-web-server" traces here
 demonstrate.
 
-![](./include/assets/demo/7-trace-details.png)
+![](./include/assets/img/7-trace-details.png)
 
 Let's see this span in more detail. Scrolling down on the left gives us the Pod
 from which it originated. Let's take a look at it.
@@ -405,14 +405,14 @@ from it. The source for the application does not have tracing instrumentation
 built into it, but, as you saw, OpenTelemetry was still able to surface traces
 from it.
 
-![](./include/assets/demo/9-sidecar.png)
+![](./include/assets/img/9-sidecar.png)
 
 We can see a sidecar from OpenTelemetry here. This is using eBPF to analyze the
 application running inside of the Pod and generate traces like the request time
 we saw before. All I had to do to enable this was annotate the app, like we'll
 see here.
 
-![](./include/assets/demo/8-pod-annotations.png)
+![](./include/assets/img/8-pod-annotations.png)
 
 Here, we can see that there's an annotation called `inject-go` that's set to a
 resource in the `openshift-observability` namespace. This is an
@@ -431,13 +431,13 @@ wlil more than likely use those for their alerts, triage and troubleshooting.
 It is very easy to forward these signals to your existing tools. Let's go to our
 Installed Operators to have a look.
 
-![](./include/assets/demo/10-otel-collector.png)
+![](./include/assets/img/10-otel-collector.png)
 
 Narrowing this list down to our OpenTelemetry operator, we can find our
 collectors by clicking on it then on the "OpenTelemetry Collector" tab in the
 following page and clicking "YAML" to get more details about it.
 
-![](./include/assets/demo/11-otel-exporters.png)
+![](./include/assets/img/11-otel-exporters.png)
 
 We can see that our OpenTelemetry Collector is sending metrics, logs and traces
 to Kafka. Sending signals to Kafka is useful, as your downstream systems can
@@ -451,9 +451,9 @@ Kafka Console from the tiles in the OpenShift Console to have a look at these
 Kafka topics to see what that data looks like.
 
 
-![](./include/assets/demo/12-streams-console.png)
+![](./include/assets/img/12-streams-console.png)
 
-![](./include/assets/demo/13-kafka-console-topic.png)
+![](./include/assets/img/13-kafka-console-topic.png)
 
 Upon clicking on Topics, we can see that we have a topic for each of the
 observability pillars. If we click on any of them, we'll see lots of messages in
