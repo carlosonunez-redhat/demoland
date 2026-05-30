@@ -430,6 +430,8 @@ resource in the `openshift-observability` namespace. This is an
 `Instrumentation` resource that handles automatically wiring up applications to
 the OpenTelemetry collector we saw earlier.
 
+![](./include/assets/img/15-instrumentation.png)
+
 These `Instrumentation` resources and policies that automatically add these
 annotations can be automatically provisioned by GitOps or ACM.
 
