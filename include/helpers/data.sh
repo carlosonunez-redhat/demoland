@@ -10,12 +10,23 @@ _get_file_from_secrets_dir() {
   echo "/secrets/${1}-$(_get_top_level_environment_id)"
 }
 
-_get_secret() {
+_do_get_secret() {
+  local f quiet
   f=$(_get_file_from_secrets_dir "$1")
-  test -n "$f" && cat "$f" && return 0
+  quiet="${2:-false}"
+  test -n "$f" && 2>/dev/null cat "$f" && return 0
 
-  error "Secret '$1' is not defined in '.deploy.secrets' section of this environment's config."
+  test "${quiet,,}" == false &&
+    error "Secret '$1' is not defined in '.deploy.secrets' section of this environment's config."
   return 1
+}
+
+_get_secret() {
+  _do_get_secret "$1"
+}
+
+_get_secret_quiet() {
+  _do_get_secret "$1" true
 }
 
 _get_file_from_shared_data_dir() {
