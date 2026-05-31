@@ -1,0 +1,11 @@
+apiVersion: console.openshift.io/v1
+kind: ConsoleLink
+metadata:
+  name: kafka-console
+spec:
+  applicationMenu:
+    imageURL: /static/assets/public/imgs/logos/amq.svg
+    section: Consoles
+  href: replace-me
+  location: ApplicationMenu
+  text: Streams for Apache Kafka Console

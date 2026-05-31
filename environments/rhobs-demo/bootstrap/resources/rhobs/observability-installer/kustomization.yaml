@@ -1,0 +1,21 @@
+resources:
+  - ../../../../../../components/openshift-observability/resources/observability-installer
+patches:
+  - target:
+      kind: ObservabilityInstaller
+      name: rhobs
+      namespace: openshift-observability
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: openshift-observability
+      - op: replace
+        path: /spec/capabilities/tracing/operators/install
+        value: false
+      - op: replace
+        path: /spec/capabilities/tracing/storage
+        value:
+          objectStorage:
+            s3CCO:
+              bucket: not-used
+              region: us-east-2

@@ -1,0 +1,25 @@
+resources:
+- ../../../../../../components/openshift-tracing/resources/tempo-stack/stack
+patches:
+  - target:
+      kind: TempoStack
+      name: tempostack
+      namespace: openshift-tracing
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: cluster
+      - op: replace
+        path: /metadata/namespace
+        value: openshift-observability
+      - op: replace
+        path: /spec/storage/secret/name
+        value: rhobs-secret-s3
+      - op: replace
+        path: /spec/serviceAccount
+        value: rhobs-sa
+      - op: replace
+        path: /spec/tenants/authentication
+        value:
+          - tenantName: cluster
+            tenantId: "1610b0c3-c509-4592-a256-a1871353dbfa"

@@ -1,0 +1,3 @@
+resources:
+  - ./tempo-allow-trace-write
+  - ./otel-collector

@@ -1,0 +1,3 @@
+resources:
+  - ./web-server
+  - ./load-generator

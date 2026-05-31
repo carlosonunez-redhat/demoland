@@ -1,0 +1,65 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Creates a bucket for Loki to store logs into
+Resources:
+  Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Join
+        - "-"
+        - - !Select [2, !Split ['/', !Ref AWS::StackId]]
+          - "rhobs-s3-bucket"
+  Policy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Join
+        - "-"
+        - - !Select [2, !Split ['/', !Ref AWS::StackId]]
+          - GrafanaS3BucketPolicy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:ListBucket
+              - s3:GetBucket
+              - s3:PutObject
+              - s3:DeleteObject
+            Resource: !GetAtt Bucket.Arn
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:ListBucket
+              - s3:GetBucket
+              - s3:PutObject
+              - s3:DeleteObject
+            Resource: !Sub "${Bucket.Arn}/*"
+      Users:
+        - !Join
+          - "-"
+          - - !Select [2, !Split ['/', !Ref AWS::StackId]]
+            - GrafanaS3BucketUser
+  User:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: !Join
+        - "-"
+        - - !Select [2, !Split ['/', !Ref AWS::StackId]]
+          - GrafanaS3BucketUser
+  Credentials:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      Status: Active
+      UserName: !Ref User
+Outputs:
+  BucketName:
+    Value: !Ref Bucket
+  BucketArn:
+    Value: !GetAtt Bucket.Arn
+  UserName:
+    Value: !Ref User
+  AccessKey:
+    Value: !Ref Credentials
+  SecretAccessKey:
+    Value: !GetAtt Credentials.SecretAccessKey
+

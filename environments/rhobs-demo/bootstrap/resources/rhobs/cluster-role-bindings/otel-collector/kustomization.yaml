@@ -1,0 +1,19 @@
+resources:
+  - ../../../../../../../components/rbac/cluster-role-binding/generic
+patches:
+  - target:
+      kind: ClusterRoleBinding
+      name: replace-me
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: otel-collector
+      - op: replace
+        path: /subjects
+        value:
+          - kind: ServiceAccount
+            name: rhobs-sa
+            namespace: openshift-observability
+      - op: replace
+        path: /roleRef/name
+        value: otel-collector

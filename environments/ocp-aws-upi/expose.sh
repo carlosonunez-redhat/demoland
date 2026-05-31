@@ -15,7 +15,9 @@ login_details() {
   users_from_config=$(_get_from_config '.deploy.cluster_config.cluster_auth.basic.auths[] | select(.role == "cluster-admin") | .users[].name')
   if test -z "$users_from_config"
   then
-    kubeadmin_password=$(cat "$(_get_file_from_openshift_install_dir 'auth/kubeadmin-password')")
+    kubeadmin_password="Not found (patch the 'kubeadmin' secret in the 'kube-system' namespace to reset)"
+    test -f "$(_get_file_from_openshift_install_dir 'auth/kubeadmin-password')" &&
+      kubeadmin_password=$(cat "$(_get_file_from_openshift_install_dir 'auth/kubeadmin-password')")
     printf "Username: %s\nPassword: %s\n" kubeadmin "$kubeadmin_password"
     return 0
   fi
@@ -37,7 +39,6 @@ yay_success() {
 $(print_oc_command get console cluster -o jsonpath='{.status.consoleURL}')"
     return 0
   fi
-  kubeadmin_password=$(cat "$(_get_file_from_openshift_install_dir 'auth/kubeadmin-password')")
   info "Your OpenShift cluster is ready! Here are your login details:
 
 URL: $console_url
