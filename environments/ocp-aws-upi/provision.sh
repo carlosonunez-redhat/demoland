@@ -589,7 +589,6 @@ create_control_plane_machines() {
 }
 
 create_worker_machines() {
-  
   create_openshift_cluster || return 0
   { control_plane_nodes_exist && worker_nodes_exist; } && return 1
   num_workers="$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"

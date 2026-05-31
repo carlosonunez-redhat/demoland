@@ -256,3 +256,7 @@ Go [here](./components/example) to view an example of a Demoland component.
 | `openshift-observability`     | Red Hat Cluster Observabiilty Operator (COO). Includes useful UI plugins, Korrel8r for cluster correlation and Tempo for distributed tracing. | [link](./components/openshift-observability)          |
 | `openshift-otel`              | Red Hat Build of OpenTelemetry. Open-source OpenTelemetry operator with some security improvements.                                           | [link](./compnents/openshift-otel)                    |
 | `streams-for-apache-kafka`    | Red Hat AMQ Streams for Apache Kafka.                                                                                                         | [link](./components/streams-for-apache-kafka)         |
+| `k8s-namespace`               | Creates a Kubernetes namespace/OpenShift Project.                                 | [link](./components/k8s-namespace)                    |
+| `cluster-role-binding`        | Binds a user, group or Service Account to a cluster role.                         | [link](./components/rbac/cluster-role-binding)        |
+| `cluster-role`                | Creates a cluster role.                                                           | [link](./components/rbac/cluster-role)                |
+| `service-accounts/privileged` | Creates a service account with the ability to execute privileged-mode containers. | [link](./components/rbac/service-accounts/privileged) |
