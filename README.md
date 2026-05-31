@@ -4,6 +4,30 @@
 
 Create end-to-end OpenShift demos on fresh OpenShift clusters that you own.
 
+
+<!-- vim-markdown-toc GFM -->
+
+* [Why](#why)
+    * [TLDR](#tldr)
+    * [Longform](#longform)
+* [How it works](#how-it-works)
+    * [Demo Environments](#demo-environments)
+    * [Base Infrastructure](#base-infrastructure)
+    * [Directory Structure](#directory-structure)
+* [Quick Start](#quick-start)
+    * [Install prerequisites](#install-prerequisites)
+    * [Clone Demoland](#clone-demoland)
+    * [Creating an encrypted config file](#creating-an-encrypted-config-file)
+    * [Deploy the demo environment](#deploy-the-demo-environment)
+    * [Use the demo environment](#use-the-demo-environment)
+    * [Destroy the demo environment](#destroy-the-demo-environment)
+* [Demolands](#demolands)
+    * [Base Environments](#base-environments)
+        * [`ocp-aws-upi`](#ocp-aws-upi)
+* [Components](#components)
+
+<!-- vim-markdown-toc -->
+
 ## Why
 
 ### TLDR
@@ -200,3 +224,19 @@ When you're done exploring/showing off the environment.
 | **Aliases** | **ocp-aws-sno**: Creates a single-node OpenShift cluster.                                                           |
 |             | **ocp-aws-sno-metal**: Same as `ocp-aws-sno`, but deploys on a metal instance that's compatible with OpenShift Virt |
 
+## Components
+
+These are addons rendered by
+[Kustomize](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/)
+that you can install into Demoland Environments by either adding them to the
+`components` section for your environment in `config.yaml` or with GitOps
+through an ArgoCD `Application` or Flux `Kustomization`.
+
+Go [here](./components/example) to view an example of a Demoland component.
+
+| Name                          | Description                                                                       | Location                                              |
+| :----                         | :-----                                                                            | :---                                                  |
+| `k8s-namespace`               | Creates a Kubernetes namespace/OpenShift Project.                                 | [link](./components/k8s-namespace)                    |
+| `cluster-role-binding`        | Binds a user, group or Service Account to a cluster role.                         | [link](./components/rbac/cluster-role-binding)        |
+| `cluster-role`                | Creates a cluster role.                                                           | [link](./components/rbac/cluster-role)                |
+| `service-accounts/privileged` | Creates a service account with the ability to execute privileged-mode containers. | [link](./components/rbac/service-accounts/privileged) |
