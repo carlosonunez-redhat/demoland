@@ -1,0 +1,9 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: replace-me
+  namespace: replace-me
+  labels:
+    strimzi.io/cluster: replace-me
+spec:
+  topicName: replace-me

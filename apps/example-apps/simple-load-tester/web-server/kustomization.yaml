@@ -1,0 +1,4 @@
+resources:
+  - app.yaml
+  - service.yaml
+  - route.yaml

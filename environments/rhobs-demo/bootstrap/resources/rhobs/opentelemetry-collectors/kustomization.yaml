@@ -1,0 +1,80 @@
+resources:
+  - ../../../../../../components/openshift-otel/resources/otelcollector
+patches:
+  - target:
+      kind: ClusterRoleBinding
+      name: otel-k8s
+    patch: |-
+      - op: replace
+        path: /roleRef/name
+        value: rhobs-sa
+  - target:
+      kind: OpenTelemetryCollector
+      name: otel
+      namespace: openshift-opentelemetry-operator
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: openshift-observability
+      - op: replace
+        path: /spec/serviceAccount
+        value: rhobs-sa
+      - op: replace
+        path: /spec/config/exporters/otlp_http~1tempo
+        value:
+          auth:
+            authenticator: bearertokenauth
+          endpoint: https://tempo-cluster-gateway.openshift-observability.svc.cluster.local:8080/api/traces/v1/cluster
+          tls:
+            ca_file: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
+            insecure: false
+            reload_interval: 5s
+      - op: add
+        path: /spec/config/exporters/kafka~1metrics
+        value:
+          brokers: [ "kafka-cluster-kafka-brokers.rhobs-messaging.svc.cluster.local:9092" ]
+          protocol_version: 2.0.0
+          topic: metrics-topic
+          metrics:
+            encoding: otlp_json
+      - op: add
+        path: /spec/config/exporters/kafka~1logs
+        value:
+          brokers: [ "kafka-cluster-kafka-brokers.rhobs-messaging.svc.cluster.local:9092" ]
+          protocol_version: 2.0.0
+          topic: logs-topic
+          logs:
+            encoding: otlp_json
+      - op: add
+        path: /spec/config/exporters/kafka~1traces
+        value:
+          brokers: [ "kafka-cluster-kafka-brokers.rhobs-messaging.svc.cluster.local:9092" ]
+          protocol_version: 2.0.0
+          topic: traces-topic
+          traces:
+            encoding: otlp_json
+      - op: add
+        path: /spec/config/extensions
+        value:
+          bearertokenauth:
+            filename: /var/run/secrets/kubernetes.io/serviceaccount/token
+      - op: add
+        path: /spec/config/service/extensions
+        value:
+          - bearertokenauth
+      - op: replace
+        path: /spec/config/service/pipelines/traces/exporters
+        value:
+          - debug
+          - otlp_http/tempo
+          - kafka/traces
+      - op: replace
+        path: /spec/config/service/pipelines/logs/exporters
+        value:
+          - debug
+          - kafka/logs
+      - op: replace
+        path: /spec/config/service/pipelines/metrics/exporters
+        value:
+          - debug
+          - kafka/metrics

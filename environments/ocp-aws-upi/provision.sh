@@ -589,7 +589,6 @@ create_control_plane_machines() {
 }
 
 create_worker_machines() {
-
   create_openshift_cluster || return 0
   { control_plane_nodes_exist && worker_nodes_exist; } && return 1
   num_workers="$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"
@@ -660,13 +659,13 @@ wait_for_first_worker_csr() {
   while test "$attempts" -lt "$max_attempts"
   do
     info "[Attempt $attempts/$max_attempts] Waiting for the first worker node bootstrapper CSR to appear"
-    set +e
+    
     results=$(exec_oc_postinstall get csr 2>&1 |
       grep -v "No resources found" |
       grep -E "node-bootstrapper.*Pending" |
       cut -f1 -d ' ')
     num_results=$(grep -Evc '^$' <<< "$results")
-    set -e
+    
     if test "$num_results" -gt 0
     then
       touch "$done_file"

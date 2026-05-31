@@ -1,0 +1,19 @@
+apiVersion: opentelemetry.io/v1alpha1
+kind: Instrumentation
+metadata:
+  name: instrumentation
+  namespace: openshift-opentelemetry-operator
+spec:
+  exporter:
+    endpoint: http://otel-collector.openshift-opentelemetry-operator.svc.cluster.local:4318
+  env:
+    - name: OTEL_EXPORTER_OTLP_TIMEOUT
+      value: "20"
+    - name: OTEL_GO_AUTO_TARGET_EXE
+      value: /opt/app-root/gobinary
+  propagators:
+    - tracecontext
+    - baggage
+  sampler:
+    type: parentbased_traceidratio
+    argument: "1"

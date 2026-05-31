@@ -1,0 +1,30 @@
+resources:
+  - ../../../../../../components/streams-for-apache-kafka/resources/kafka-console
+patches:
+  - target:
+      kind: ConsoleLink
+      name: kafka-console
+    patch: |-
+      - op: replace
+        path: /spec/href
+        value: https://kafka-console.apps.rhobsdemo.sandbox5159.opentlc.com
+  - target:
+      kind: Console
+      name: rhobs-console
+      namespace: replace-me
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: rhobs-messaging
+      - op: replace
+        path: /spec/hostname
+        value: kafka-console.apps.rhobsdemo.sandbox5159.opentlc.com
+      - op: replace
+        path: /spec/kafkaClusters/0/name
+        value: kafka-cluster
+      - op: replace
+        path: /spec/kafkaClusters/0/namespace
+        value: rhobs-messaging
+      - op: replace
+        path: /spec/kafkaClusters/0/listener
+        value: plain

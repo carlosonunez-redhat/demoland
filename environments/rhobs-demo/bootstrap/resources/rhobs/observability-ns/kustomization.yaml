@@ -1,0 +1,17 @@
+resources:
+  - ../../../../../../components/k8s-namespace
+patches:
+  - target:
+      kind: Namespace
+      name: patch-me
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: openshift-observability
+      - op: add
+        path: /metadata/annotations
+        value:
+          security.openshift.io/scc.podSecurityLabelSync: "false"
+          pod-security.kubernetes.io/enforce: "privileged"
+          pod-security.kubernetes.io/audit: "privileged"
+          pod-security.kubernetes.io/warn: "privileged"

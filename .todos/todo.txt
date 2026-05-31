@@ -1,1 +1,2 @@
-bookmark: openshift-install config
+observability: create ACM demo at 'rhacm-observability'
+observability: create Lightspeed demo at 'rhocp-lightspeed-observability'

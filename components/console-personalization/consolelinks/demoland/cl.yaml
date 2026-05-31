@@ -1,0 +1,11 @@
+apiVersion: console.openshift.io/v1
+kind: ConsoleLink
+metadata:
+  name: github-demoland
+spec:
+  applicationMenu:
+    imageURL: /static/assets/public/imgs/logos/github.svg
+    section: Git Repos
+  href: https://github.com/carlosonunez/demoland
+  location: ApplicationMenu
+  text: Demoland

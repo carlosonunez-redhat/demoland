@@ -24,6 +24,8 @@ Create end-to-end OpenShift demos on fresh OpenShift clusters that you own.
 * [Demolands](#demolands)
     * [Base Environments](#base-environments)
         * [`ocp-aws-upi`](#ocp-aws-upi)
+    * [Demos](#demos)
+        * [Local cluster observability with the Red Hat Observability Stack](#local-cluster-observability-with-the-red-hat-observability-stack)
 * [Components](#components)
 
 <!-- vim-markdown-toc -->
@@ -224,6 +226,15 @@ When you're done exploring/showing off the environment.
 | **Aliases** | **ocp-aws-sno**: Creates a single-node OpenShift cluster.                                                           |
 |             | **ocp-aws-sno-metal**: Same as `ocp-aws-sno`, but deploys on a metal instance that's compatible with OpenShift Virt |
 
+### Demos
+
+#### Local cluster observability with the Red Hat Observability Stack
+
+|             |                                                                                                                     |
+| :-----      | :-----                                                                                                              |
+| **README**  | [link](./environments/rhobs-demo/README.md)                                                                         |
+| **Purpose** | Demonstrates how platform engineers can observe cluster and application behavior within and outside of OpenShift.   |
+
 ## Components
 
 These are addons rendered by
@@ -234,8 +245,17 @@ through an ArgoCD `Application` or Flux `Kustomization`.
 
 Go [here](./components/example) to view an example of a Demoland component.
 
-| Name                          | Description                                                                       | Location                                              |
-| :----                         | :-----                                                                            | :---                                                  |
+| Name                          | Description                                                                                                                                   | Location                                              |
+| :----                         | :-----                                                                                                                                        | :---                                                  |
+| `k8s-namespace`               | Creates a Kubernetes namespace/OpenShift Project.                                                                                             | [link](./components/k8s-namespace)                    |
+| `cluster-role-binding`        | Binds a user, group or Service Account to a cluster role.                                                                                     | [link](./components/rbac/cluster-role-binding)        |
+| `cluster-role`                | Creates a cluster role.                                                                                                                       | [link](./components/rbac/cluster-role)                |
+| `service-accounts/privileged` | Creates a service account with the ability to execute privileged-mode containers.                                                             | [link](./components/rbac/service-accounts/privileged) |
+| `openshift-monitoring`        | Enables cluster monitoring by the Prometheus instance included with the OpenShift Monitoring cluster operator.                                | [link](./components/openshift-monitoring)             |
+| `openshift-logging`           | Red Hat Cluster Logging Operator (CLO). Includes Loki and Vector with a CR for simplifying configuration.                                     | [link](./components/openshift-logging)                |
+| `openshift-observability`     | Red Hat Cluster Observabiilty Operator (COO). Includes useful UI plugins, Korrel8r for cluster correlation and Tempo for distributed tracing. | [link](./components/openshift-observability)          |
+| `openshift-otel`              | Red Hat Build of OpenTelemetry. Open-source OpenTelemetry operator with some security improvements.                                           | [link](./compnents/openshift-otel)                    |
+| `streams-for-apache-kafka`    | Red Hat AMQ Streams for Apache Kafka.                                                                                                         | [link](./components/streams-for-apache-kafka)         |
 | `k8s-namespace`               | Creates a Kubernetes namespace/OpenShift Project.                                 | [link](./components/k8s-namespace)                    |
 | `cluster-role-binding`        | Binds a user, group or Service Account to a cluster role.                         | [link](./components/rbac/cluster-role-binding)        |
 | `cluster-role`                | Creates a cluster role.                                                           | [link](./components/rbac/cluster-role)                |

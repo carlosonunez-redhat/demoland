@@ -1,0 +1,80 @@
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: simple-load-tester-web-server
+  namespace: replace-me
+  labels:
+    app: simple-load-tester
+    component: web-server
+spec:
+  lookupPolicy:
+    local: true
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: simple-load-tester-web-server
+  namespace: replace-me
+  labels:
+    app: simple-load-tester
+    component: web-server
+spec:
+  source:
+    git:
+      uri: https://github.com/carlosonunez-redhat/demoland
+      ref: demo/rhobs
+    contextDir: apps/example-apps/simple-load-tester/web-server/src
+  strategy:
+    sourceStrategy:
+      from:
+        kind: DockerImage
+        name: registry.access.redhat.com/ubi9/go-toolset:1.19
+  output:
+    to:
+      kind: ImageStreamTag
+      name: simple-load-tester-web-server:latest
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: simple-load-tester
+    component: web-server
+  name: simple-load-tester-web-server
+  namespace: replace-me
+  annotations:
+    alpha.image.policy.openshift.io/resolve-names: '*'
+    image.openshift.io/triggers: |-
+      [
+        {
+          "from": {
+            "kind": "ImageStreamTag",
+            "name": "simple-load-tester-web-server"
+          },
+          "fieldPath": "spec.template.spec.containers[?(@.name==\"app\")].image"
+        }
+      ]
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: simple-load-tester
+      component: web-server
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: simple-load-tester
+        component: web-server
+    spec:
+      containers:
+        - image: simple-load-tester-web-server
+          name: app
+          ports:
+          - containerPort: 8000
+          resources: {}
+status: {}
+
