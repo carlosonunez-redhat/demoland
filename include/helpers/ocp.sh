@@ -10,13 +10,6 @@ _cluster_infra_name() {
 }
 
 _cluster_ignition_files_bucket() {
-  local from_secret
-  from_secret=$(_get_secret_quiet ocp/ignition_files_bucket)
-  if test -n "$from_secret"
-  then
-    echo "$from_secret"
-    return 0
-  fi
   printf "%s-ocp-ignition-files" "$(_cluster_name |
     base64 -w 0 |
     tr -d '=' |
@@ -41,7 +34,7 @@ exec_oc() {
 
 exec_oc_postinstall() {
   config=$(_get_file_from_openshift_install_dir 'auth/kubeconfig')
-  ctx=$(_exec_oc "$config" config get-contexts -o name | grep -E '^(system:admin|admin|kube:admin)$')
+  ctx=$(_exec_oc "$config" config get-contexts -o name | grep -E '(^admin$|kube:admin)')
   if test -z "$ctx"
   then
     error "Couldn't find 'kube:admin' context from openshift-install generated Kubeconfig"
@@ -66,10 +59,4 @@ expose_kubeconfig() {
   info "Saving cluster kubeconfig to '$kubeconfig_path'"
   test -d "$(dirname "$kubeconfig_path")" || mkdir -p "$(dirname "$kubeconfig_path")"
   echo "$1" > "$kubeconfig_path" && echo "$kubeconfig_path" > "$kubeconfig_ref"
-}
-
-# cluster_fqdn: Gets the default FQDN of the cluster for use with other Routes.
-cluster_fqdn() {
-  exec_oc get route console -n openshift-console -o jsonpath='{.status.ingress[0].host}' |
-    sed -E 's/^console-openshift-console.//'
 }
