@@ -37,7 +37,7 @@ _cluster_router_fqdn() {
     exec_oc_postinstall get service -n openshift-ingress router-default \
       -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' && return 0
     attempts=$((attempts+1))
-    info "Trying to get OpenShift router load balancer (Attempt $attempt/$max_attempts)"
+    info "Trying to get OpenShift router load balancer (Attempt $attempts/$max_attempts)"
     sleep 1
   done
   return 1

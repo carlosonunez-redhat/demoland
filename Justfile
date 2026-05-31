@@ -314,6 +314,7 @@ _execute_containerized environment file ignore_not_found='false' custom_message=
     -v "$(just _container_secrets_vol_shared):/shared/secrets" \
     -v $PWD/include:/app/include \
     -v "$(just _get_environment_directory {{ environment }}):/app/environment" \
+    -v "{{ source_dir() }}/components:/components" \
     -e INCLUDE_DIR=/app/include \
     -e ENVIRONMENT_INCLUDE_DIR=/app/environment/include \
     -w /app); \
