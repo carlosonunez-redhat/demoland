@@ -20,9 +20,58 @@ Developer Hub.
 
 ![](./include/assets/img/architecture.png)
 
+This demo can be broken up into three phases:
+
+- Current vSphere environment
+- Migration from vSphere to OpenShift Virt
+- Up and running in OpenShift
+
+### Current vSphere Environment
+
+In the vSphere environment, VMs are created with a two-step process:
+
+1. Execute a Aria Workflow through the Aria Ops Catalog that creates a VM from
+   an existing clone, and
+2. Make the VM available to the developer.
+
+### Migrating from vSphere to OpenShift Virt
+
+Being able to move existing VMs and replicate existing automation with minimal
+effort is important. This is accomplished by this demo by doing the following:
+
+3. Use the **Migration Toolkit for VMware** to quickly migrate VMs in vSphere into
+   OpenShift Virt.
+4. Use **Ansible Lightspeed** and **OpenShift AI** to analyze workflows in Aria
+   Automation, convert them into Ansible playbooks and publish them into
+   **Ansible Automation Platform**.
+
+### Up and Running in OpenShift
+
+Providing a self-service portal for developers to request VMs alongside their
+containerized applications is possible with OpenShift Virt. Here is how that's
+done:
+
+5. Use **Developer Hub** to host catalog entries that execute the playbooks
+   created above through templates.
+6. Developers request VMs for their applications through **Developer Hub**.
+   Ansible creates and publishes the VMs.
+
 ## Setting Up
 
 ### What You'll Need
+
+- An AWS Account with an Access and Secret Key Pair
+- The AWS CLI
+- An OpenShift Cluster (tested with v4.20)
+- Access to a shell, like `bash`, `zsh` or `fish`
+
+> 📝 **NOTE**
+>
+> You have several options if you don't have an OpenShift cluster handy:
+>
+> - [OpenShift Local](https://developers.redhat.com/products/openshift-local) or
+> - Stand up a Single-Node OpenShift cluster in about 45 minutes
+>   with [Carlos's Demoland](https://github.com/carlosonunez-redhat/demoland).
 
 ### Instructions
 
