@@ -25,6 +25,7 @@ Create end-to-end OpenShift demos on fresh OpenShift clusters that you own.
     * [Base Environments](#base-environments)
         * [`ocp-aws-upi`](#ocp-aws-upi)
     * [Demos](#demos)
+        * [End-to-end VM automation and developer self-service](#end-to-end-vm-automation-and-developer-self-service)
         * [Local cluster observability with the Red Hat Observability Stack](#local-cluster-observability-with-the-red-hat-observability-stack)
 * [Components](#components)
 
@@ -227,6 +228,13 @@ When you're done exploring/showing off the environment.
 |             | **ocp-aws-sno-metal**: Same as `ocp-aws-sno`, but deploys on a metal instance that's compatible with OpenShift Virt |
 
 ### Demos
+
+#### End-to-end VM automation and developer self-service
+
+|             |                                                                                                                                                                                           |
+| :-----      | :-----                                                                                                                                                                                    |
+| **README**  | [link](./environments/rhdh-vm-demo/README.md)                                                                                                                                             |
+| **Purpose** | Demonstrates how to migrate VM template automation from Aria Automation with OpenShift Virt and AI and provide developer self-service with Developer Hub and Ansible Automation Platform. |
 
 #### Local cluster observability with the Red Hat Observability Stack
 
