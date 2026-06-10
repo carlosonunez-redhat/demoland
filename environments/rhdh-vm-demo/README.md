@@ -18,6 +18,8 @@ Developer Hub.
 
 ## Architecture
 
+![](./include/assets/img/architecture.png)
+
 ## Setting Up
 
 ### What You'll Need
