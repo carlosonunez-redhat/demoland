@@ -18,7 +18,7 @@ destroy_rhobs_s3_bucket() {
 }
 
 empty_rhobs_s3_bucket() {
-  _exec_aws s3 rm --recursive "s3://$(rhobs_s3_bucket)"
+  _exec_aws s3 rm --recursive "s3://$(_get_param_from_aws_cfn_stack loki_s3_bucket 'BucketName')"
 }
 
 empty_rhobs_s3_bucket || return 1
