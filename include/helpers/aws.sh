@@ -98,12 +98,6 @@ _get_param_from_aws_cfn_stack() {
     error "Stack does not exist: $resolved_stack_name"
     return 1
   fi
-  stack_state=$(jq -r '.StackStatus' <<< "$results")
-  if ! grep -Eiq '^(create|update)_complete$' <<< "$stack_state"
-  then
-    error "Can't get params right now; stack '$resolved_stack_name' is in state '$stack_state'"
-    return 1
-  fi
   echo "$results" | jq --arg k "$param" -r '.Outputs[] | select(.OutputKey == $k) | .OutputValue' |
     grep -v null |
     cat
