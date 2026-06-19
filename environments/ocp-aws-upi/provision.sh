@@ -221,14 +221,15 @@ remove_default_machinesets_from_installation_manifests() {
     info "Skipping openshift install manifest modification"
     return 0
   fi
-  for f in '99_openshift-cluster-api_master-machines' \
-    '99_openshift-machine-api_master-control-plane-machine-set' \
+  for f in '99_openshift-machine-api_master-control-plane-machine-set' \
     '99_openshift-cluster-api_worker-machineset'
   do
     info "Deleting manifests from install dir: $f"
     find "$(_openshift_install_dir)/openshift" -type f -name "*$f*" \
       -exec rm -rf {} \;
   done
+  info "Deleting default control plane machines"
+  rm -r "$(_openshift_install_dir)"/openshift/99_openshift-cluster-api_master-machines*
 }
 
 configure_control_plane_scheduling() {
