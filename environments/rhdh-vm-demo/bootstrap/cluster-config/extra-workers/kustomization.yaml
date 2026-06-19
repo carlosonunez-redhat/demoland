@@ -10,40 +10,40 @@ patches:
         value: gpu-worker
       - op: replace
         path: /metadata/labels/machine.openshift.io~1cluster-api-cluster
-        value: $CLUSTER_ID
+        value: 
       - op: replace
         path: /spec/selector/matchLabels/machine.openshift.io~1cluster-api-cluster
-        value: $CLUSTER_ID
+        value: 
       - op: replace
         path: /spec/selector/matchLabels/machine.openshift.io~1cluster-api-machineset
-        value: $CLUSTER_ID-worker-$AZ
+        value: -worker-
       - op: replace
         path: /spec/template/metadata/labels/machine.openshift.io~1cluster-api-cluster
-        value: $CLUSTER_ID
+        value: 
       - op: replace
         path: /spec/template/metadata/labels/machine.openshift.io~1cluster-api-machineset
-        value: $CLUSTER_ID-worker-$AZ
+        value: -worker-
       - op: replace
         path: /spec/template/spec/providerSpec/value/ami/id
-        value: $AMI_ID
+        value: 
       - op: replace
         path: /spec/template/spec/providerSpec/value/instanceType
         value: g5.4xlarge
       - op: replace
         path: /spec/template/spec/providerSpec/value/placement/availabilityZone
-        value: $AZ
+        value: 
       - op: replace
         path: /spec/template/spec/providerSpec/value/placement/region
-        value: $REGION
+        value: 
       - op: replace
         path: /spec/template/spec/providerSpec/value/iamInstanceProfile/id
-        value: $CLUSTER_ID-worker-profile
+        value: -worker-profile
       - op: replace
         path: /spec/template/spec/providerSpec/value/securityGroups/0/filters/0/values/0
-        value: $CLUSTER_ID-node
+        value: -node
       - op: replace
         path: /spec/template/spec/providerSpec/value/subnet/0/filters/0/values/0
-        value: $CLUSTER_ID-node-subnet-private-$ZONE
+        value: -node-subnet-private-$ZONE
       - op: replace
         path: /spec/template/spec/providerSpec/value/tags/0/name
-        value: kubernetes.io/cluster/$CLUSTER_ID
+        value: kubernetes.io/cluster/

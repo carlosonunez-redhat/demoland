@@ -16,3 +16,13 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 #
 # source "$ENVIRONMENT_INCLUDE_DIR/foo.sh"
 
+extra_worker_secret_defined() {
+  _get_secret_quiet 'rhdh-demo/extra-worker' && return 0
+
+  error "Extra worker secrets missing. \
+Define a secret named 'rhdh-demo/extra-worker' in the '.deploy.secrets' \
+object of the config for this environment."
+  return 1
+}
+
+extra_worker_secret_defined
