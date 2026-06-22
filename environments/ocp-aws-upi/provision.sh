@@ -221,13 +221,11 @@ remove_default_machinesets_from_installation_manifests() {
     info "Skipping openshift install manifest modification"
     return 0
   fi
-  for f in '99_openshift-cluster-api_master-machines' \
-    '99_openshift-machine-api_master-control-plane-machine-set' \
-    '99_openshift-cluster-api_worker-machineset'
+  for f in '99_openshift-machine-api_master-control-plane-machine-set' '99_openshift-cluster-api'
   do
     info "Deleting manifests from install dir: $f"
-    find "$(_openshift_install_dir)/openshift" -type f -name "*$f*" \
-      -exec rm -rf {} \;
+    find "$(_openshift_install_dir)" -type f -name "*$f*" \
+      -exec rm -rfv {} \;
   done
 }
 
@@ -1068,7 +1066,6 @@ select(.InstanceType | test("^(c8i|m8i|r8i)")) |
 map_cluster_admin_to_cluster_admins() {
   exec_oc_postinstall adm policy add-cluster-role-to-group cluster-admin 'system:cluster-admins'
 }
-
 
 create_ssh_key
 load_keys_into_ssh_agent
