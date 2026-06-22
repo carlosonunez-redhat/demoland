@@ -5,8 +5,16 @@ _cluster_name() {
       head -c 18
 }
 
+_ocp_cluster_name() {
+  printf "%s-%s"  \
+    "$(_cluster_name)" \
+    "$(_get_this_environment_id)"
+}
+
 _cluster_infra_name() {
-  printf "demoland-%s" "$(_get_top_level_environment_id | tr '[:upper:]' '[:lower:]' | head -c 8)"
+  printf "demoland-%s-%s" \
+    "$(_get_top_level_environment_id | tr '[:upper:]' '[:lower:]' | head -c 8)" \
+    "$(_get_this_environment_id)"
 }
 
 _cluster_ignition_files_bucket() {
@@ -35,8 +43,21 @@ _exec_oc() {
   command -- $(_oc_cmd "$1" "${@:2}")
 }
 
+_retrieve_env_kubeconfig() {
+  kubeconfigs=$(find /environment_info/kubeconfigs -type f -mindepth 2 | sort -u)
+  num_kubeconfigs=$(wc -l <<< "$kubeconfigs")
+  chosen_kubeconfig=$(head -1 <<< "$kubeconfigs")
+  if test "$num_kubeconfigs" -gt 1
+  then
+    warning "Multiple kubeconfigs written for environment $(_get_top_level_environment_name); \
+choosing '$(basename "$chosen_kubeconfig")' (use 'exec_oc_by_environment_name' to select \
+an environment)"
+  fi
+  echo "$chosen_kubeconfig"
+}
+
 exec_oc() {
-  _exec_oc "$(cat /environment_info/kubeconfig_path)" "$@"
+  _exec_oc "$(_retrieve_env_kubeconfig)" "$@"
 }
 
 exec_oc_postinstall() {
@@ -51,14 +72,14 @@ exec_oc_postinstall() {
 }
 
 print_oc_command() {
-  _oc_cmd "kubeconfigs/$(_cluster_name).kubeconfig" "$@"
+  _oc_cmd "$(_retrieve_env_kubeconfig)" "$@"
 }
 
 # saves a kubeconfig into the secret dir while also writing a reference to
 # it in the toplevel environment volume.
 expose_kubeconfig() {
   local kubeconfig_ref kubeconfig_path
-  kubeconfig_ref="/environment_info/kubeconfig_path"
+  kubeconfig_ref="/environment_info/kubeconfigs/$(_get_this_environment_name)"
   if test -f "$kubeconfig_ref"
   then kubeconfig_path=$(cat "$kubeconfig_ref")
   else kubeconfig_path=$(mktemp -u "$(_get_file_from_shared_secret_dir "kubeconfigs")/XXXXXXXXXXXXXXXX.kubeconfig")

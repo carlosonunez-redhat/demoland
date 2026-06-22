@@ -48,3 +48,12 @@ _get_top_level_environment_id() {
 _get_environment_dir() {
   echo '/app/environment'
 }
+
+_get_this_environment_name() {
+  test -n "$ENVIRONMENT_NAME" && echo "$ENVIRONMENT_NAME"
+  warning "Requested this environment name, but it's not set!"
+}
+
+_get_this_environment_id() {
+  _get_this_environment_name | base64 -d | tr '[:upper:]' '[:lower:]' | head -c 8
+}

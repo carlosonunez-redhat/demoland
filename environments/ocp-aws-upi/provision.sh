@@ -115,7 +115,7 @@ create_openshift_cluster() {
     cert="$(yq -r .users[0].user.client-certificate-data "$f" | base64 -d)"
     key="$(yq -r .users[0].user.client-key-data "$f" | base64 -d)"
     url=$(yq -r .clusters[0].cluster.server "$f")
-    want="$(_cluster_name)"
+    want="$(_ocp_cluster_name)"
     got=$(2>/dev/null curl -sS --connect-timeout 1 \
       --cacert <(echo "$cacert") \
       --cert <(echo "$cert") \
@@ -292,7 +292,7 @@ create_networking_resources() {
     return 1
   fi
   params=(
-    'ClusterName' "$(_cluster_name)"
+    'ClusterName' "$(_ocp_cluster_name)"
     'InfrastructureName' "$(_cluster_infra_name)"
     'HostedZoneId' "$(_hosted_zone_id)"
     'HostedZoneName' "$(_hosted_zone_name)"
@@ -435,7 +435,7 @@ create_openshift_install_config_file() {
       base_domain "$(_hosted_zone_name)"
       aws_hosted_zone_id "$(_hosted_zone_id)"
       rhcos_ami_id "$(_rhcos_ami_id)"
-      cluster_name "$(_cluster_name)"
+      cluster_name "$(_ocp_cluster_name)"
       aws_region "$(_get_from_config '.deploy.cloud_config.aws.networking.region')"
       pull_secret "$(_get_from_config '.deploy.node_config.common.pull_secret' | as_json_string)"
       control_plane_node_azs "$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones.control_plane[]' | as_yaml_list)"
@@ -459,7 +459,7 @@ create_openshift_install_config_file() {
       base_domain "$(_hosted_zone_name)"
       aws_hosted_zone_id "$(_hosted_zone_id)"
       rhcos_ami_id "$(_rhcos_ami_id)"
-      cluster_name "$(_cluster_name)"
+      cluster_name "$(_ocp_cluster_name)"
       aws_region "$(_get_from_config '.deploy.cloud_config.aws.networking.region')"
       pull_secret "$(_get_from_config '.deploy.node_config.common.pull_secret' | as_json_string)"
       control_plane_node_azs "$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones.control_plane[]' | as_yaml_list)"
@@ -776,7 +776,7 @@ create_ingress_dns_records() {
   router_elb_hosted_zone_id=$(_exec_aws elb describe-load-balancers |
     jq -r '.LoadBalancerDescriptions[] | select(.DNSName == "'"$router_elb_fqdn"'").CanonicalHostedZoneNameID') || return 1
   params=(
-    'ClusterName' "$(_cluster_name)"
+    'ClusterName' "$(_ocp_cluster_name)"
     'HostedZoneId' "$(_hosted_zone_id)"
     'HostedZoneName' "$(_hosted_zone_name)"
     'RouterELBHostedZoneId' "$router_elb_hosted_zone_id"
@@ -1073,7 +1073,7 @@ upload_key_into_ec2
 create_ignition_bucket_in_s3
 if ! cluster_created_and_kubeconfig_in_ignition_files_bucket
 then
-  error "Cluster [$(_cluster_name)] already exists but its kubeconfig doesn't exist in S3. \
+  error "Cluster [$(_ocp_cluster_name)] already exists but its kubeconfig doesn't exist in S3. \
 Log into the cluster as kubeadmin and upload your ~/.kube/config to the '$(_cluster_ignition_files_bucket)' bucket."
   exit 1
 fi

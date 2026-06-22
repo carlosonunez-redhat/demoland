@@ -329,6 +329,7 @@ _execute_containerized environment file ignore_not_found='false' custom_message=
     -v "{{ source_dir() }}/components:/components" \
     -e INCLUDE_DIR=/app/include \
     -e ENVIRONMENT_INCLUDE_DIR=/app/environment/include \
+    -e ENVIRONMENT_NAME='{{ environment }}' \
     -w /app); \
   while read var; \
   do command+=(-e "$var"); \
