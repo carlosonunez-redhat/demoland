@@ -111,6 +111,8 @@ served, like OpenShift and AAP.
 │   │   ├── expose.sh
 │   │   ├── postinstall.sh
 │   │   ├── destroy.sh
+│   │   ├── poweroff.sh
+│   │   ├── poweron.sh
 ├── include
 │   ├── containerfiles
 │   ├── helpers
@@ -129,6 +131,9 @@ served, like OpenShift and AAP.
 | `./environments/$ENV/provision.sh`   | Provisions base infra or a demo env.                          | Yes                      | No                              |
 | `./environments/$ENV/expose.sh`      | Exposes files/secrets to "dependent" base infra or demo envs. | Yes                      | No                              |
 | `./environments/$ENV/postinstall.sh` | Executes post-installation steps, like setting up GitOps.     | Yes                      | Yes                             |
+| `./environments/$ENV/destroy.sh`     | Tears downs a demo env and its base infra.                    | Yes                      | Yes                             |
+| `./environments/$ENV/poweroff.sh`    | Powers down infra (cloud provider dependent!).                | Yes                      | Yes                             |
+| `./environments/$ENV/poweron.sh`     | Powers up infra (cloud provider dependent!).                  | Yes                      | Yes                             |
 | `./environments/$ENV/destroy.sh`     | Tears downs a demo env and its base infra.                    | Yes                      | Yes                             |
 | `./environments/$ENV/include/`       | Base infra or demo env-scoped helper libraries.               | Optional                 | Optional                        |
 | `./environments/$ENV/gitops/`        | Kustomizations to apply via OpenShift GitOps/ArgoCD.          | Optional                 | Optional                        |
@@ -253,18 +258,18 @@ through an ArgoCD `Application` or Flux `Kustomization`.
 
 Go [here](./components/example) to view an example of a Demoland component.
 
-| Name                          | Description                                                                                                                                   | Location                                              |
-| :----                         | :-----                                                                                                                                        | :---                                                  |
-| `k8s-namespace`               | Creates a Kubernetes namespace/OpenShift Project.                                                                                             | [link](./components/k8s-namespace)                    |
-| `cluster-role-binding`        | Binds a user, group or Service Account to a cluster role.                                                                                     | [link](./components/rbac/cluster-role-binding)        |
-| `cluster-role`                | Creates a cluster role.                                                                                                                       | [link](./components/rbac/cluster-role)                |
-| `service-accounts/privileged` | Creates a service account with the ability to execute privileged-mode containers.                                                             | [link](./components/rbac/service-accounts/privileged) |
-| `openshift-monitoring`        | Enables cluster monitoring by the Prometheus instance included with the OpenShift Monitoring cluster operator.                                | [link](./components/openshift-monitoring)             |
-| `openshift-logging`           | Red Hat Cluster Logging Operator (CLO). Includes Loki and Vector with a CR for simplifying configuration.                                     | [link](./components/openshift-logging)                |
-| `openshift-observability`     | Red Hat Cluster Observabiilty Operator (COO). Includes useful UI plugins, Korrel8r for cluster correlation and Tempo for distributed tracing. | [link](./components/openshift-observability)          |
-| `openshift-otel`              | Red Hat Build of OpenTelemetry. Open-source OpenTelemetry operator with some security improvements.                                           | [link](./compnents/openshift-otel)                    |
-| `streams-for-apache-kafka`    | Red Hat AMQ Streams for Apache Kafka.                                                                                                         | [link](./components/streams-for-apache-kafka)         |
-| `k8s-namespace`               | Creates a Kubernetes namespace/OpenShift Project.                                 | [link](./components/k8s-namespace)                    |
-| `cluster-role-binding`        | Binds a user, group or Service Account to a cluster role.                         | [link](./components/rbac/cluster-role-binding)        |
-| `cluster-role`                | Creates a cluster role.                                                           | [link](./components/rbac/cluster-role)                |
-| `service-accounts/privileged` | Creates a service account with the ability to execute privileged-mode containers. | [link](./components/rbac/service-accounts/privileged) |
+| Name                          |  | Description                                                                                                                                   | Location                                              |
+| :----                         |  | :-----                                                                                                                                        | :---                                                  |
+| `k8s-namespace`               |  | Creates a Kubernetes namespace/OpenShift Project.                                                                                             | [link](./components/k8s-namespace)                    |
+| `cluster-role-binding`        |  | Binds a user, group or Service Account to a cluster role.                                                                                     | [link](./components/rbac/cluster-role-binding)        |
+| `cluster-role`                |  | Creates a cluster role.                                                                                                                       | [link](./components/rbac/cluster-role)                |
+| `service-accounts/privileged` |  | Creates a service account with the ability to execute privileged-mode containers.                                                             | [link](./components/rbac/service-accounts/privileged) |
+| `openshift-monitoring`        |  | Enables cluster monitoring by the Prometheus instance included with the OpenShift Monitoring cluster operator.                                | [link](./components/openshift-monitoring)             |
+| `openshift-logging`           |  | Red Hat Cluster Logging Operator (CLO). Includes Loki and Vector with a CR for simplifying configuration.                                     | [link](./components/openshift-logging)                |
+| `openshift-observability`     |  | Red Hat Cluster Observabiilty Operator (COO). Includes useful UI plugins, Korrel8r for cluster correlation and Tempo for distributed tracing. | [link](./components/openshift-observability)          |
+| `openshift-otel`              |  | Red Hat Build of OpenTelemetry. Open-source OpenTelemetry operator with some security improvements.                                           | [link](./compnents/openshift-otel)                    |
+| `streams-for-apache-kafka`    |  | Red Hat AMQ Streams for Apache Kafka.                                                                                                         | [link](./components/streams-for-apache-kafka)         |
+| `k8s-namespace`               |  | Creates a Kubernetes namespace/OpenShift Project.                                                                                             | [link](./components/k8s-namespace)                    |
+| `cluster-role-binding`        |  | Binds a user, group or Service Account to a cluster role.                                                                                     | [link](./components/rbac/cluster-role-binding)        |
+| `cluster-role`                |  | Creates a cluster role.                                                                                                                       | [link](./components/rbac/cluster-role)                |
+| `service-accounts/privileged` |  | Creates a service account with the ability to execute privileged-mode containers.                                                             | [link](./components/rbac/service-accounts/privileged) |

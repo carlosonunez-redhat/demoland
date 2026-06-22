@@ -53,7 +53,7 @@ precheck environment: \
 
 [doc("Deploys an environment")]
 deploy environment: clean \
-    (_run_stage_with_dependencies environment "_precheck" "_provision" "_expose" "_postinstall")
+    (_run_stage_with_dependencies environment "_precheck" "_poweron" "_provision" "_expose" "_postinstall")
 
 [doc("Destroys an environment")]
 destroy environment: clean \
@@ -61,6 +61,12 @@ destroy environment: clean \
 
 [doc("Performs post-install steps, like installing operators and such.")]
 postinstall environment: (_run_stage_with_dependencies environment "_precheck" "_postinstall")
+
+[doc("Powers off instances. Useful for saving cash.")]
+poweroff environment: (_run_stage_with_dependencies environment "_poweroff")
+
+[doc("Powers on instances.")]
+poweron environment: (_run_stage_with_dependencies environment "_poweron")
 
 _run_stage_with_dependencies environment +stages:\
     (_generate_toplevel_environment_info environment) \
@@ -108,6 +114,12 @@ _precheck environment:
 
 _provision environment: (_ensure_toplevel_environment_info_available environment)
   just _execute_containerized '{{ environment }}' 'provision.sh';
+
+_poweroff environment: (_ensure_toplevel_environment_info_available environment)
+  just _execute_containerized '{{ environment }}' 'poweroff.sh';
+
+_poweron environment: (_ensure_toplevel_environment_info_available environment)
+  just _execute_containerized '{{ environment }}' 'poweron.sh';
 
 _expose environment: (_ensure_toplevel_environment_info_available environment)
   just _execute_containerized '{{ environment }}' \
