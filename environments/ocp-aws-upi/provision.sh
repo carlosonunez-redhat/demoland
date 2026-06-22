@@ -115,7 +115,7 @@ create_openshift_cluster() {
     cert="$(yq -r .users[0].user.client-certificate-data "$f" | base64 -d)"
     key="$(yq -r .users[0].user.client-key-data "$f" | base64 -d)"
     url=$(yq -r .clusters[0].cluster.server "$f")
-    want="$(_ocp_cluster_name)"
+    want="$(_ocp_cluster_name | head -c 20)"
     got=$(2>/dev/null curl -sS --connect-timeout 1 \
       --cacert <(echo "$cacert") \
       --cert <(echo "$cert") \
@@ -335,6 +335,7 @@ create_bootstrap_machine() {
   create_openshift_cluster || return 0
   test -f "$(_get_file_from_openshift_install_dir '.bootstrap_complete')" && return 0
 
+  arch="$(_aws_get_arch_from_instance_type "$(_get_from_config '.deploy.node_config.bootstrap.instance_type')")"
   sg_id=$(fail_if_nil "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId')" \
     "Master security group ID not found")
   private_subnets=$(fail_if_nil "$(_get_param_from_aws_cfn_stack vpc 'PrivateSubnetIds')" \
@@ -353,7 +354,7 @@ create_bootstrap_machine() {
     'Internal service NLB target group ARN not found')
   params=(
     'InfrastructureName' "$(_cluster_infra_name)"
-    'RhcosAmi' "$(fail_if_nil "$(_rhcos_ami_id)" "CoreOS AMI ID not found")"
+    'RhcosAmi' "$(fail_if_nil "$(_rhcos_ami_id "$arch")" "CoreOS AMI ID not found")"
     'AllowedBootstrapSshCidr' "$(fail_if_nil "$(_this_ip)/32" "Couldn't resolve IP address")"
     'PublicSubnet' "$(_bootstrap_subnet)"
     'MasterSecurityGroupId' "$sg_id"
@@ -535,6 +536,7 @@ create_cluster_iam_user() {
 }
 
 create_control_plane_machines() {
+  arch="$(_aws_get_arch_from_instance_type "$(_get_from_config '.deploy.node_config.control_plane.instance_type')")"
   create_openshift_cluster || return 0
   sg_id=$(fail_if_nil "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId')" \
     "Master security group ID not found")
@@ -565,7 +567,7 @@ create_control_plane_machines() {
     "Couldn't get API server DNS name.")
   params=(
     'InfrastructureName' "$(_cluster_infra_name)"
-    'RhcosAmi' "$(fail_if_nil "$(_rhcos_ami_id)" "CoreOS AMI ID not found")"
+    'RhcosAmi' "$(fail_if_nil "$(_rhcos_ami_id "$arch")" "CoreOS AMI ID not found")"
     'MasterSecurityGroupId' "$sg_id"
     'MasterInstanceType' "$(_get_from_config '.deploy.node_config.control_plane.instance_type')"
     'RegisterNlbIpTargetsLambdaArn' "$lambda_arn"
@@ -587,6 +589,7 @@ create_control_plane_machines() {
 }
 
 create_worker_machines() {
+  arch="$(_aws_get_arch_from_instance_type "$(_get_from_config '.deploy.node_config.workers.instance_type')")"
   create_openshift_cluster || return 0
   { control_plane_nodes_exist && worker_nodes_exist; } && return 1
   num_workers="$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"
@@ -613,7 +616,7 @@ create_worker_machines() {
   do
     params=(
       'InfrastructureName' "$(_cluster_infra_name)"
-      'RhcosAmi' "$(fail_if_nil "$(_rhcos_ami_id)" "CoreOS AMI ID not found")"
+      'RhcosAmi' "$(fail_if_nil "$(_rhcos_ami_id "$arch")" "CoreOS AMI ID not found")"
       'Subnet0' "$(cut -f1 -d ',' <<< "$private_subnets")"
       'Subnet1' "$(cut -f2 -d ',' <<< "$private_subnets")"
       'Subnet2' "$(cut -f3 -d ',' <<< "$private_subnets")"

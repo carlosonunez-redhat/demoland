@@ -134,7 +134,7 @@ _postinstall environment: (_ensure_toplevel_environment_info_available environme
   (_ensure_container_postinstall_volume_exists environment) \
   (_clear_postinstall_volume environment) \
   (_install_components_into_environment environment)
-  ALIAS="$ALIAS" just _execute_containerized environment 'postinstall.sh' \
+  ALIAS="$ALIAS" just _execute_containerized '{{ environment }}' 'postinstall.sh' \
     'true' \
     'Environment {{ environment }} has no postinstall steps.'
 
@@ -176,11 +176,14 @@ _create_component_kustomization environment component:
 _install_component environment component: (_ensure_demoland_base_image environment)
   env=$(just _resolved_environment_name '{{ environment }}'); \
   just _log info "[postinstall] Installing component '{{ component }}' in environment '$env'"; \
-  {{ container_bin }} run --rm \
-    -v "$(just _container_postinstall_vol '{{ environment }}'):/vol" \
-    -v "$(just _container_secrets_vol_shared):/shared/secrets" \
-    {{ demoland_base_container_image }} \
-    oc --kubeconfig $(just _toplevel_environment_kubeconfig '{{ environment }}') apply -k /vol
+  for kubeconfig in $(just _toplevel_environment_kubeconfigs '{{ environment }}'); \
+  do \
+    {{ container_bin }} run --rm \
+      -v "$(just _container_postinstall_vol '{{ environment }}'):/vol" \
+      -v "$(just _container_secrets_vol_shared):/shared/secrets" \
+      {{ demoland_base_container_image }} \
+      oc --kubeconfig "$kubeconfig" apply -k /vol; \
+  done
 
 
 _ensure_demoland_base_image environment:
@@ -412,7 +415,7 @@ _ensure_toplevel_environment_info_available environment:
   exit 1
 
 _ensure_toplevel_environment_has_kubeconfig environment:
-  test -n "$(just _toplevel_environment_kubeconfig '{{ environment }}')" && exit 0; \
+  test -n "$(just _toplevel_environment_kubeconfigs '{{ environment }}')" && exit 0; \
   just _log error "A kubeconfig isn't available yet for environment '$(just _toplevel_environment '{{ environment }}')'"; \
   exit 1
 
@@ -566,11 +569,11 @@ _get_environment_directory_no_alias environment:
 _get_environment_directory_file environment fp:
   printf "%s/%s" $(just _get_environment_directory "{{ environment }}") "{{ fp }}"
 
-_toplevel_environment_kubeconfig environment:
+_toplevel_environment_kubeconfigs environment:
   {{ container_bin }} run --rm \
       -v "$(just _container_secrets_vol_shared):/shared/secrets" \
       -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
-      bash:5 -c 'test -f /environment_info/kubeconfig_path && cat /environment_info/kubeconfig_path'
+      bash:5 -c 'find /environment_info/kubeconfigs -mindepth 1 -type f -exec cat {} \;';
 
 _run_yq input query:
   echo "{{ input }}" | {{ container_bin }} run --rm -i {{ yq_image }} '{{ query }}'

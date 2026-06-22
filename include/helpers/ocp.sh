@@ -44,7 +44,7 @@ _exec_oc() {
 }
 
 _retrieve_env_kubeconfig() {
-  kubeconfigs=$(find /environment_info/kubeconfigs -type f -mindepth 2 | sort -u)
+  kubeconfigs=$(find /environment_info/kubeconfigs -mindepth 1 -type f | sort -u)
   num_kubeconfigs=$(wc -l <<< "$kubeconfigs")
   chosen_kubeconfig=$(head -1 <<< "$kubeconfigs")
   if test "$num_kubeconfigs" -gt 1
@@ -53,7 +53,7 @@ _retrieve_env_kubeconfig() {
 choosing '$(basename "$chosen_kubeconfig")' (use 'exec_oc_by_environment_name' to select \
 an environment)"
   fi
-  echo "$chosen_kubeconfig"
+  cat "$chosen_kubeconfig"
 }
 
 exec_oc() {
@@ -80,12 +80,12 @@ print_oc_command() {
 expose_kubeconfig() {
   local kubeconfig_ref kubeconfig_path
   kubeconfig_ref="/environment_info/kubeconfigs/$(_get_this_environment_name)"
+  test -d "$(dirname "$kubeconfig_ref")" || mkdir -p "$(dirname "$kubeconfig_ref")"
   if test -f "$kubeconfig_ref"
   then kubeconfig_path=$(cat "$kubeconfig_ref")
   else kubeconfig_path=$(mktemp -u "$(_get_file_from_shared_secret_dir "kubeconfigs")/XXXXXXXXXXXXXXXX.kubeconfig")
   fi
   info "Saving cluster kubeconfig to '$kubeconfig_path'"
-  test -d "$(dirname "$kubeconfig_path")" || mkdir -p "$(dirname "$kubeconfig_path")"
   echo "$1" > "$kubeconfig_path" && echo "$kubeconfig_path" > "$kubeconfig_ref"
 }
 
