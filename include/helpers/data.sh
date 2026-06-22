@@ -50,10 +50,14 @@ _get_environment_dir() {
 }
 
 _get_this_environment_name() {
-  test -n "$ENVIRONMENT_NAME" && echo "$ENVIRONMENT_NAME"
+  if test -n "$ENVIRONMENT_NAME"
+  then
+    echo "$ENVIRONMENT_NAME"
+    return 0
+  fi
   warning "Requested this environment name, but it's not set!"
 }
 
 _get_this_environment_id() {
-  _get_this_environment_name | base64 -d | tr '[:upper:]' '[:lower:]' | head -c 8
+  _get_this_environment_name | sha256sum | base64 -w 0 | tr '[:upper:]' '[:lower:]' | head -c 8
 }
