@@ -26,6 +26,7 @@ Create end-to-end OpenShift demos on fresh OpenShift clusters that you own.
         * [`ocp-aws-upi`](#ocp-aws-upi)
     * [Demos](#demos)
         * [Local cluster observability with the Red Hat Observability Stack](#local-cluster-observability-with-the-red-hat-observability-stack)
+        * [Quarkus on ARM vs x86](#quarkus-on-arm-vs-x86)
 * [Components](#components)
 
 <!-- vim-markdown-toc -->
@@ -239,6 +240,13 @@ When you're done exploring/showing off the environment.
 | :-----      | :-----                                                                                                              |
 | **README**  | [link](./environments/rhobs-demo/README.md)                                                                         |
 | **Purpose** | Demonstrates how platform engineers can observe cluster and application behavior within and outside of OpenShift.   |
+
+#### Quarkus on ARM vs x86
+
+|             |                                                                     |
+| :-----      | :-----                                                              |
+| **README**  | [link](./environments/quarkus-x86-arm/README.md)                    |
+| **Purpose** | Compares Quarkus on OpenShift for ARM vs x86 in AWS (self-managed). |
 
 ## Components
 
