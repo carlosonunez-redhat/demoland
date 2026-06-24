@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Provisions an environment!
+# Runs tests before deploying an environment with 'provision.sh'.
 #
 # This adds some functions for working with cloud providers, the config file, and
 # other useful things.
@@ -15,4 +15,3 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 # variable, like shown in the comment below.
 #
 # source "$ENVIRONMENT_INCLUDE_DIR/foo.sh"
-

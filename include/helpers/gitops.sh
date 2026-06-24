@@ -143,6 +143,14 @@ render_kustomization_patches() {
     curr_mods=$(yq -r '.[] | select(.file | contains("'"$fname"'"))' <<< "$mod_yaml")
     while read -r patch_json
     do
+      while read -r shell_var
+      do
+        value=$(yq -r '.shell_variables | to_entries[] | select(.key == "'"$shell_var"'" | .value' <<< "$curr_mods")
+        hits=$(grep -cr "\$$shell_var" "$file" | awk -F ':' '{print $NF}')
+        test "$hits" -eq 0 && continue
+        info "===> Modifying kustomization '$file' (shell_var: $shell_var)"
+        sed -i "s;\$$shell_var;$value;g" "$file"
+      done < <(yq -r '.shell_variables | to_entries[] | .key' <<< "$curr_mods")
       while read -r var
       do
         got_json=$(jq -r '.[] | select(.path | test(".*/'"$var"'$")) | .' <<< "$patch_json" | grep -Ev '^null$' | cat)

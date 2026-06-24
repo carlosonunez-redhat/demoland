@@ -1,0 +1,49 @@
+resources:
+  - ../../../../../components/openshift-machine-api/resources/machineset/aws/worker
+patches:
+  - target:
+      kind: MachineSet
+      name: replace-me
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: gpu-worker
+      - op: replace
+        path: /metadata/labels/machine.openshift.io~1cluster-api-cluster
+        value: 
+      - op: replace
+        path: /spec/selector/matchLabels/machine.openshift.io~1cluster-api-cluster
+        value: 
+      - op: replace
+        path: /spec/selector/matchLabels/machine.openshift.io~1cluster-api-machineset
+        value: -worker-
+      - op: replace
+        path: /spec/template/metadata/labels/machine.openshift.io~1cluster-api-cluster
+        value: 
+      - op: replace
+        path: /spec/template/metadata/labels/machine.openshift.io~1cluster-api-machineset
+        value: -worker-
+      - op: replace
+        path: /spec/template/spec/providerSpec/value/ami/id
+        value: 
+      - op: replace
+        path: /spec/template/spec/providerSpec/value/instanceType
+        value: g5.4xlarge
+      - op: replace
+        path: /spec/template/spec/providerSpec/value/placement/availabilityZone
+        value: 
+      - op: replace
+        path: /spec/template/spec/providerSpec/value/placement/region
+        value: 
+      - op: replace
+        path: /spec/template/spec/providerSpec/value/iamInstanceProfile/id
+        value: -worker-profile
+      - op: replace
+        path: /spec/template/spec/providerSpec/value/securityGroups/0/filters/0/values/0
+        value: -node
+      - op: replace
+        path: /spec/template/spec/providerSpec/value/subnet/0/filters/0/values/0
+        value: -node-subnet-private-$ZONE
+      - op: replace
+        path: /spec/template/spec/providerSpec/value/tags/0/name
+        value: kubernetes.io/cluster/
