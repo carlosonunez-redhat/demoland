@@ -8,13 +8,14 @@ _cluster_name() {
 _ocp_cluster_name() {
   printf "%s-%s"  \
     "$(_cluster_name)" \
-    "$(_get_this_environment_id)"
+    "$(_get_this_environment_id)" |
+    head -c 20
 }
 
 _cluster_infra_name() {
   printf "demoland-%s-%s" \
     "$(_get_top_level_environment_id | tr '[:upper:]' '[:lower:]' | head -c 8)" \
-    "$(_get_this_environment_id)"
+    "$(_get_this_environment_id)" | head -c 20
 }
 
 _cluster_ignition_files_bucket() {
