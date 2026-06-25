@@ -2,6 +2,7 @@
 _rhcos_ami_id() {
   local arch
   arch="$1"
+  test "${arch,,}" == arm64 && arch=aarch64
   region="$(_get_from_config '.deploy.cloud_config.aws.networking.region')"
   q=$(printf '.architectures.%s.images.aws.regions."%s".image' "$arch" "$region")
   openshift-install coreos print-stream-json  | jq -r "$q"

@@ -421,6 +421,7 @@ create_openshift_install_config_file() {
     grep -q 'Public' <<< "$1" && ids=$(grep -v "$(_bootstrap_subnet)" <<< "$ids")
     echo "$ids" | as_yaml_list
   }
+  arch="$(_aws_get_arch_from_instance_type "$(_get_from_config '.deploy.node_config.control_plane.instance_type')")"
   enable_sno=false
   num_cp_nodes="$(_get_from_config '.deploy.node_config.control_plane.quantity_per_zone')"
   test "$num_cp_nodes" -eq 1 && enable_sno=true
@@ -435,7 +436,7 @@ create_openshift_install_config_file() {
         "Couldn't obtain public key from SSH private key.")"
       base_domain "$(_hosted_zone_name)"
       aws_hosted_zone_id "$(_hosted_zone_id)"
-      rhcos_ami_id "$(_rhcos_ami_id)"
+      rhcos_ami_id "$(_rhcos_ami_id "$arch")"
       cluster_name "$(_ocp_cluster_name)"
       aws_region "$(_get_from_config '.deploy.cloud_config.aws.networking.region')"
       pull_secret "$(_get_from_config '.deploy.node_config.common.pull_secret' | as_json_string)"
@@ -459,7 +460,7 @@ create_openshift_install_config_file() {
         "Couldn't obtain public key from SSH private key.")"
       base_domain "$(_hosted_zone_name)"
       aws_hosted_zone_id "$(_hosted_zone_id)"
-      rhcos_ami_id "$(_rhcos_ami_id)"
+      rhcos_ami_id "$(_rhcos_ami_id "$arch")"
       cluster_name "$(_ocp_cluster_name)"
       aws_region "$(_get_from_config '.deploy.cloud_config.aws.networking.region')"
       pull_secret "$(_get_from_config '.deploy.node_config.common.pull_secret' | as_json_string)"
@@ -591,7 +592,7 @@ create_control_plane_machines() {
 create_worker_machines() {
   arch="$(_aws_get_arch_from_instance_type "$(_get_from_config '.deploy.node_config.workers.instance_type')")"
   create_openshift_cluster || return 0
-  { control_plane_nodes_exist && worker_nodes_exist; } && return 1
+  { control_plane_nodes_exist && worker_nodes_exist; } && return 0
   num_workers="$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"
   if test -z "$num_workers" || test "$num_workers" -eq 0
   then
@@ -1070,6 +1071,7 @@ map_cluster_admin_to_cluster_admins() {
   exec_oc_postinstall adm policy add-cluster-role-to-group cluster-admin 'system:cluster-admins'
 }
 
+debug "Environment name is: $(_get_this_environment_name), ID: $(_get_this_environment_id)"
 create_ssh_key
 load_keys_into_ssh_agent
 upload_key_into_ec2
@@ -1094,9 +1096,21 @@ create_ignition_files
 mark_openshift_install_creation_time
 sync_bootstrap_ignition_files_with_s3_bucket
 sync_kubeconfig_with_s3_bucket
-create_bootstrap_machine
-create_control_plane_machines
-create_worker_machines
+if ! create_bootstrap_machine
+then
+  error "Failed to create bootstrap node; cannot continue."
+  exit 1
+fi
+if ! create_control_plane_machines
+then
+  error "Failed to create control plane machines; cannot continue."
+  exit 1
+fi
+if ! create_worker_machines
+then
+  error "Failed to create worker nodes; cannot continue."
+  exit 1
+fi
 enable_nested_virtualization_on_worker_nodes
 wait_for_bootstrap_complete
 wait_for_first_worker_csr
@@ -1105,7 +1119,7 @@ wait_for_workers_to_become_ready
 wait_for_ingress_load_balancer_to_be_created
 create_ingress_dns_records
 wait_for_install_to_complete
-delete_bootstrap_machine
 create_cluster_users_htpasswd
 create_cluster_users_google_auth
 map_cluster_admin_to_cluster_admins
+delete_bootstrap_machine
