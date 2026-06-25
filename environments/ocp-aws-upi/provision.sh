@@ -199,9 +199,9 @@ upload_key_into_ec2() {
 
 create_installation_manifests() {
   create_openshift_cluster || return 0
-  if ! _openshift_install_files_still_current
+  if _openshift_install_files_still_current
   then
-    info "Skipping creating installation manifests"
+    info "Install files still current; skipping creating installation manifests"
     return 0
   fi
   info "Creating installation manifests"
@@ -221,7 +221,9 @@ remove_default_machinesets_from_installation_manifests() {
     info "Skipping openshift install manifest modification"
     return 0
   fi
-  for f in '99_openshift-machine-api_master-control-plane-machine-set' '99_openshift-cluster-api'
+  for f in '99_openshift-machine-api_master-control-plane-machine-set' \
+           '99_openshift-cluster-api' \
+           '99_openshift-cluster-api_worker-machineset'
   do
     info "Deleting manifests from install dir: $f"
     find "$(_openshift_install_dir)" -type f -name "*$f*" \
