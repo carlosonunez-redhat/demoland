@@ -82,13 +82,13 @@ _openshift_install_files_still_current() {
 }
 
 control_plane_nodes_exist() {
-  local num_worker_nodes_want num_worker_nodes_want
-  num_worker_nodes_want="$(_get_from_config '.deploy.node_config.control_plane.quantity_per_zone')"
-  num_worker_nodes_got=$(_exec_aws ec2 describe-instances \
+  local num_cp_nodes_want num_cp_nodes_want
+  num_cp_nodes_want="$(_get_from_config '.deploy.node_config.control_plane.quantity_per_zone')"
+  num_cp_nodes_got=$(_exec_aws ec2 describe-instances \
     --query 'Reservations[].Instances[?(State.Name == `running`) &&
 (@.Tags[?Key==`aws:cloudformation:logical-id` && contains(Value, `Master`)]) &&
 (@.Tags[?Key==`Name` && contains(Value, `'"$(_cluster_infra_name)"'`)])].InstanceId' --output text | wc -l)
-  test "$num_worker_nodes_got" == "$num_worker_nodes_want"
+  test "$num_cp_nodes_got" == "$num_cp_nodes_want"
 }
 
 worker_nodes_exist() {
