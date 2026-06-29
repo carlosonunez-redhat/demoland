@@ -293,5 +293,8 @@ _aws_get_arch_from_instance_type() {
   local it
   it="$1"
   q=$(printf 'InstanceTypes[?InstanceType==`%s`].ProcessorInfo.SupportedArchitectures[0]' "$it")
-  _exec_aws ec2 describe-instance-types --query "$q" --output text
+  res=$(_exec_aws ec2 describe-instance-types --query "$q" --output text)
+  test "${res,,}" == x86_64 && res=amd64
+  grep -Eiq '^(arm|aarch).*' <<< "$res" && res=arm64
+  echo "$res"
 }

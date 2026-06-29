@@ -16,6 +16,10 @@ _config_file_in_data_dir() {
   _get_file_from_openshift_install_dir 'install-config.yaml'
 }
 
+_backup_config_file_in_data_dir() {
+  _get_file_from_openshift_install_dir 'install-config.backup.yaml'
+}
+
 _config_file_dir() {
   dirname "$(_config_file_in_data_dir)"
 }
@@ -35,6 +39,7 @@ render_and_save_install_config() {
     "$(render_yaml_template install-config "$@")" \
     "Couldn't generate AWS install config.") || return 1
   echo "$yaml" > "$(_config_file_in_data_dir)" || return 1
+  echo "$yaml" > "$(_backup_config_file_in_data_dir)" || return 1
   test -f "$(_get_file_from_openshift_install_dir 'created_on')" && return 0
 
   date +%s > "$(_get_file_from_openshift_install_dir 'created_on')"

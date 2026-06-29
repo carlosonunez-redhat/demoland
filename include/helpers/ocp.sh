@@ -26,11 +26,8 @@ _cluster_ignition_files_bucket() {
     echo "$from_secret"
     return 0
   fi
-  printf "%s-ocp-ignition-files" "$(_ocp_cluster_name |
-    base64 -w 0 |
-    tr -d '=' |
-    tr '[:upper:]' '[:lower:]' |
-    head -c 12)"
+  printf "%s-%s-ocp-ignition-files" "$(_cluster_name)" "$(_get_top_level_environment_name)" |
+    tr '[:upper:]' '[:lower:]'
 }
 
 _oc_cmd() {
