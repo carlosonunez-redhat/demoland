@@ -1,11 +1,19 @@
 # shellcheck shell=bash
 _rhcos_ami_id() {
-  local arch
-  arch="$1"
-  test "${arch,,}" == arm64 && arch=aarch64
+  local arch res
+  case "${1,,}" in
+    arm*)
+      arch=aarch64
+      ;;
+    amd*|x86*)
+      arch=x86_64
+      ;;
+  esac
   region="$(_get_from_config '.deploy.cloud_config.aws.networking.region')"
   q=$(printf '.architectures.%s.images.aws.regions."%s".image' "$arch" "$region")
-  openshift-install coreos print-stream-json  | jq -r "$q"
+  res=$(openshift-install coreos print-stream-json  | jq -r "$q" | grep -iv null | cat)
+  test -z "$res" && warning "No CoreOS AMI found for architecture '$arch'!!!!!!"
+  echo "$res"
 }
 
 _exec_openshift_install_aws() {

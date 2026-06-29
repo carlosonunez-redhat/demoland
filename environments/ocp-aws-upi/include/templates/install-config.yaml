@@ -6,6 +6,7 @@ sshKey: #@ data.values.ssh_key
 baseDomain: #@ data.values.base_domain
 pullSecret: #@ data.values.pull_secret
 controlPlane:
+  architecture: #@ data.values.architecture
   zones: #@ data.values.control_plane_node_azs
   instanceType: #@ data.values.control_plane_node_instance_type
   amiID: #@ data.values.rhcos_ami_id
@@ -25,6 +26,7 @@ compute:
     additionalSecurityGroupIDs: #@ data.values.worker_security_groups
     iamProfile: #@ data.values.worker_instance_profile
     name: worker
+    architecture: #@ data.values.architecture
   #@ end
 platform:
   aws:
@@ -48,6 +50,7 @@ platform:
         #@ end
     hostedZone: #@ data.values.aws_hosted_zone_id
     defaultMachinePlatform:
+      architecture: #@ data.values.architecture
       amiID: #@ data.values.rhcos_ami_id
       additionalSecurityGroupIDs: #@ data.values.worker_security_groups
       iamProfile: #@ data.values.worker_instance_profile

@@ -455,6 +455,7 @@ create_openshift_install_config_file() {
       worker_node_azs '[]'
       worker_node_instance_type 'not-used'
       enable_sno "$enable_sno"
+      architecture "$arch"
     )
   else
     values=(
@@ -480,6 +481,7 @@ create_openshift_install_config_file() {
       internal_subnet_ids "$internal_subnet_ids"
       disable_workers "false"
       enable_sno "$enable_sno"
+      architecture "$arch"
     )
   fi
   render_and_save_install_config "${values[@]}"
