@@ -223,7 +223,9 @@ remove_default_machinesets_from_installation_manifests() {
   fi
   for f in '99_openshift-machine-api_master-control-plane-machine-set' \
            '99_openshift-cluster-api' \
-           '99_openshift-cluster-api_worker-machineset'
+           '99_openshift-cluster-api_worker-machineset' \
+           '10_inframachine' \
+           '10_machine'
   do
     info "Deleting manifests from install dir: $f"
     find "$(_openshift_install_dir)" -type f -name "*$f*" \
