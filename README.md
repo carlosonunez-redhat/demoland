@@ -26,6 +26,7 @@ Create end-to-end OpenShift demos on fresh OpenShift clusters that you own.
         * [`ocp-aws-upi`](#ocp-aws-upi)
     * [Demos](#demos)
         * [Local cluster observability with the Red Hat Observability Stack](#local-cluster-observability-with-the-red-hat-observability-stack)
+        * [Hybrid Cloud Made Easy with ROSA](#hybrid-cloud-made-easy-with-rosa)
 * [Components](#components)
 
 <!-- vim-markdown-toc -->
@@ -239,6 +240,14 @@ When you're done exploring/showing off the environment.
 | :-----      | :-----                                                                                                              |
 | **README**  | [link](./environments/rhobs-demo/README.md)                                                                         |
 | **Purpose** | Demonstrates how platform engineers can observe cluster and application behavior within and outside of OpenShift.   |
+
+#### Hybrid Cloud Made Easy with ROSA
+
+|             |                                                                                             |
+| :-----      | :-----                                                                                      |
+| **README**  | [link](./environments/hybrid-cloud-rosa/README.md)                                          |
+| **Purpose** | Illustrates how OpenShift enables hybrid cloud platforms with minimal operational overhead. |
+
 
 ## Components
 
