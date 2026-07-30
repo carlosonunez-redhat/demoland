@@ -416,7 +416,7 @@ _ensure_toplevel_environment_info_available environment:
   exit 1
 
 _ensure_toplevel_environment_has_kubeconfig environment:
-  test -n "$(just _toplevel_environment_kubeconfig '{{ environment }}')" && exit 0; \
+  test -n "$(just _toplevel_environment_kubeconfigs '{{ environment }}')" && exit 0; \
   just _log error "A kubeconfig isn't available yet for environment '$(just _toplevel_environment '{{ environment }}')'"; \
   exit 1
 
@@ -570,11 +570,11 @@ _get_environment_directory_no_alias environment:
 _get_environment_directory_file environment fp:
   printf "%s/%s" $(just _get_environment_directory "{{ environment }}") "{{ fp }}"
 
-_toplevel_environment_kubeconfig environment:
+_toplevel_environment_kubeconfigs environment:
   {{ container_bin }} run --rm \
       -v "$(just _container_secrets_vol_shared):/shared/secrets" \
       -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
-      bash:5 -c 'test -f /environment_info/kubeconfig_path && cat /environment_info/kubeconfig_path'
+      bash:5 -c "find /environment_info/kubeconfigs -type f -exec cat {} \;";
 
 _run_yq input query:
   echo "{{ input }}" | {{ container_bin }} run --rm -i {{ yq_image }} '{{ query }}'
