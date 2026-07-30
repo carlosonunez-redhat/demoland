@@ -224,9 +224,6 @@ _component_overlays environment component:
   test -d "$overlays_dir" || exit 0; \
   find "$overlays_dir" -type f;
 
-_destroy environment:
-  just _execute_containerized '{{ environment }}' 'destroy.sh';
-
 _get_dependent_environments environment:
   set +u; \
   env_data=$(sops --decrypt --extract '["environments"]["{{ environment }}"]' \
