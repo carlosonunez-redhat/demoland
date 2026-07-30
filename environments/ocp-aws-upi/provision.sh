@@ -221,7 +221,11 @@ remove_default_machinesets_from_installation_manifests() {
     info "Skipping openshift install manifest modification"
     return 0
   fi
-  for f in '99_openshift-machine-api_master-control-plane-machine-set' '99_openshift-cluster-api'
+  for f in '99_openshift-machine-api_master-control-plane-machine-set' \
+           '99_openshift-cluster-api' \
+           '99_openshift-cluster-api_worker-machineset' \
+           '10_inframachine' \
+           '10_machine'
   do
     info "Deleting manifests from install dir: $f"
     find "$(_openshift_install_dir)" -type f -name "*$f*" \
@@ -1097,9 +1101,21 @@ create_ignition_files
 mark_openshift_install_creation_time
 sync_bootstrap_ignition_files_with_s3_bucket
 sync_kubeconfig_with_s3_bucket
-create_bootstrap_machine
-create_control_plane_machines
-create_worker_machines
+if ! create_bootstrap_machine
+then
+  error "Failed to create bootstrap node; cannot continue."
+  exit 1
+fi
+if ! create_control_plane_machines
+then
+  error "Failed to create control plane machines; cannot continue."
+  exit 1
+fi
+if ! create_worker_machines
+then
+  error "Failed to create worker nodes; cannot continue."
+  exit 1
+fi
 enable_nested_virtualization_on_worker_nodes
 wait_for_bootstrap_complete
 wait_for_first_worker_csr
@@ -1108,7 +1124,7 @@ wait_for_workers_to_become_ready
 wait_for_ingress_load_balancer_to_be_created
 create_ingress_dns_records
 wait_for_install_to_complete
-delete_bootstrap_machine
 create_cluster_users_htpasswd
 create_cluster_users_google_auth
 map_cluster_admin_to_cluster_admins
+delete_bootstrap_machine
