@@ -95,9 +95,7 @@ _run_stage_with_dependencies environment +stages:\
       resolved_env=$(just _resolved_environment_name "$env"); \
       test "$env" != "$resolved_env" && env_details="$env_details (alias of: $resolved_env)"; \
       just _log info "Running operation [$stage_friendly_name] on $env_details"; \
-      alias=""; \
-      test "$env" != "$resolved_env" && alias="$env"; \
-      ALIAS="$alias" just "$stage" "$env"; \
+      just "$stage" "$env"; \
     done; \
   done;
 
@@ -105,26 +103,26 @@ _precheck environment:
   set +u; \
   if test -n "$SKIP_PRECHECK"; \
   then \
-    just _log info "Preflight checks skipped for environment '{{ environment }}' (alias: $ALIAS)"; \
+    just _log info "Preflight checks skipped for environment '{{ environment }}'"; \
     exit 0; \
   fi; \
   set -u; \
-  ALIAS="$ALIAS" just _execute_containerized '{{ environment }}' \
+  just _execute_containerized '{{ environment }}' \
     'preflight.sh' \
     'true' \
     'Environment {{ environment }} does not have preflight checks; skipping.';
 
 _provision environment: (_ensure_toplevel_environment_info_available environment)
-  ALIAS="$ALIAS" just _execute_containerized '{{ environment }}' 'provision.sh';
+  just _execute_containerized '{{ environment }}' 'provision.sh';
 
 _poweroff environment: (_ensure_toplevel_environment_info_available environment)
-  ALIAS="$ALIAS" just _execute_containerized '{{ environment }}' 'poweroff.sh';
+  just _execute_containerized '{{ environment }}' 'poweroff.sh';
 
 _poweron environment: (_ensure_toplevel_environment_info_available environment)
-  ALIAS="$ALIAS" just _execute_containerized '{{ environment }}' 'poweron.sh';
+  just _execute_containerized '{{ environment }}' 'poweron.sh';
 
 _expose environment: (_ensure_toplevel_environment_info_available environment)
-  ALIAS="$ALIAS" just _execute_containerized '{{ environment }}' \
+  just _execute_containerized '{{ environment }}' \
     'expose.sh' \
     'true' \
     'Environment {{ environment }} does not have anything to expose; skipping.';
@@ -133,13 +131,10 @@ _postinstall environment: (_ensure_toplevel_environment_info_available environme
   (_ensure_toplevel_environment_has_kubeconfig environment) \
   (_ensure_container_postinstall_volume_exists environment) \
   (_clear_postinstall_volume environment) \
-  (_install_components_into_environment environment)
-  ALIAS="$ALIAS" just _execute_containerized '{{ environment }}' 'postinstall.sh' \
+  (_install_components_into_environment environment) \
+  (_execute_containerized environment 'postinstall.sh' \
     'true' \
-    'Environment {{ environment }} has no postinstall steps.'
-
-_destroy environment:
-  ALIAS="$ALIAS" just _execute_containerized '{{ environment }}' 'destroy.sh';
+    'Environment {{ environment }} has no postinstall steps.')
 
 _install_components_into_environment environment:
   just _get_environment_components '{{ environment }}' | \
@@ -176,14 +171,11 @@ _create_component_kustomization environment component:
 _install_component environment component: (_ensure_demoland_base_image environment)
   env=$(just _resolved_environment_name '{{ environment }}'); \
   just _log info "[postinstall] Installing component '{{ component }}' in environment '$env'"; \
-  for kubeconfig in $(just _toplevel_environment_kubeconfigs '{{ environment }}'); \
-  do \
-    {{ container_bin }} run --rm \
-      -v "$(just _container_postinstall_vol '{{ environment }}'):/vol" \
-      -v "$(just _container_secrets_vol_shared):/shared/secrets" \
-      {{ demoland_base_container_image }} \
-      oc --kubeconfig "$kubeconfig" apply -k /vol; \
-  done
+  {{ container_bin }} run --rm \
+    -v "$(just _container_postinstall_vol '{{ environment }}'):/vol" \
+    -v "$(just _container_secrets_vol_shared):/shared/secrets" \
+    {{ demoland_base_container_image }} \
+    oc --kubeconfig $(just _toplevel_environment_kubeconfig '{{ environment }}') apply -k /vol
 
 
 _ensure_demoland_base_image environment:
@@ -223,6 +215,9 @@ _component_overlays environment component:
   overlays_dir="$(just _get_environment_directory '{{ environment }}')/overlays/{{ component }}"; \
   test -d "$overlays_dir" || exit 0; \
   find "$overlays_dir" -type f;
+
+_destroy environment:
+  just _execute_containerized '{{ environment }}' 'destroy.sh';
 
 _get_dependent_environments environment:
   set +u; \
@@ -323,7 +318,6 @@ _execute_containerized environment file ignore_not_found='false' custom_message=
     just _log info "'$file' is empty. Go put some stuff into it!"; \
     exit 0; \
   fi; \
-  env_name="${ALIAS:-{{ environment }}}"; \
   command=({{ container_bin }} run --rm -it \
     -v "$(just _container_vol {{ environment }}):/data" \
     -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
@@ -335,7 +329,6 @@ _execute_containerized environment file ignore_not_found='false' custom_message=
     -v "{{ source_dir() }}/components:/components" \
     -e INCLUDE_DIR=/app/include \
     -e ENVIRONMENT_INCLUDE_DIR=/app/environment/include \
-    -e ENVIRONMENT_NAME="$env_name" \
     -w /app); \
   while read var; \
   do command+=(-e "$var"); \
@@ -416,7 +409,7 @@ _ensure_toplevel_environment_info_available environment:
   exit 1
 
 _ensure_toplevel_environment_has_kubeconfig environment:
-  test -n "$(just _toplevel_environment_kubeconfigs '{{ environment }}')" && exit 0; \
+  test -n "$(just _toplevel_environment_kubeconfig '{{ environment }}')" && exit 0; \
   just _log error "A kubeconfig isn't available yet for environment '$(just _toplevel_environment '{{ environment }}')'"; \
   exit 1
 
@@ -570,11 +563,11 @@ _get_environment_directory_no_alias environment:
 _get_environment_directory_file environment fp:
   printf "%s/%s" $(just _get_environment_directory "{{ environment }}") "{{ fp }}"
 
-_toplevel_environment_kubeconfigs environment:
+_toplevel_environment_kubeconfig environment:
   {{ container_bin }} run --rm \
       -v "$(just _container_secrets_vol_shared):/shared/secrets" \
       -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
-      bash:5 -c "find /environment_info/kubeconfigs -type f -exec cat {} \;";
+      bash:5 -c 'test -f /environment_info/kubeconfig_path && cat /environment_info/kubeconfig_path'
 
 _run_yq input query:
   echo "{{ input }}" | {{ container_bin }} run --rm -i {{ yq_image }} '{{ query }}'

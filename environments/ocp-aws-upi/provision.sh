@@ -82,13 +82,13 @@ _openshift_install_files_still_current() {
 }
 
 control_plane_nodes_exist() {
-  local num_cp_nodes_want num_cp_nodes_want
-  num_cp_nodes_want="$(_get_from_config '.deploy.node_config.control_plane.quantity_per_zone')"
-  num_cp_nodes_got=$(_exec_aws ec2 describe-instances \
+  local num_worker_nodes_want num_worker_nodes_want
+  num_worker_nodes_want="$(_get_from_config '.deploy.node_config.control_plane.quantity_per_zone')"
+  num_worker_nodes_got=$(_exec_aws ec2 describe-instances \
     --query 'Reservations[].Instances[?(State.Name == `running`) &&
 (@.Tags[?Key==`aws:cloudformation:logical-id` && contains(Value, `Master`)]) &&
 (@.Tags[?Key==`Name` && contains(Value, `'"$(_cluster_infra_name)"'`)])].InstanceId' --output text | wc -l)
-  test "$num_cp_nodes_got" == "$num_cp_nodes_want"
+  test "$num_worker_nodes_got" == "$num_worker_nodes_want"
 }
 
 worker_nodes_exist() {
@@ -115,7 +115,7 @@ create_openshift_cluster() {
     cert="$(yq -r .users[0].user.client-certificate-data "$f" | base64 -d)"
     key="$(yq -r .users[0].user.client-key-data "$f" | base64 -d)"
     url=$(yq -r .clusters[0].cluster.server "$f")
-    want="$(_ocp_cluster_name | head -c 20)"
+    want="$(_cluster_name)"
     got=$(2>/dev/null curl -sS --connect-timeout 1 \
       --cacert <(echo "$cacert") \
       --cert <(echo "$cert") \
@@ -199,9 +199,9 @@ upload_key_into_ec2() {
 
 create_installation_manifests() {
   create_openshift_cluster || return 0
-  if _openshift_install_files_still_current
+  if ! _openshift_install_files_still_current
   then
-    info "Install files still current; skipping creating installation manifests"
+    info "Skipping creating installation manifests"
     return 0
   fi
   info "Creating installation manifests"
@@ -221,11 +221,7 @@ remove_default_machinesets_from_installation_manifests() {
     info "Skipping openshift install manifest modification"
     return 0
   fi
-  for f in '99_openshift-machine-api_master-control-plane-machine-set' \
-           '99_openshift-cluster-api' \
-           '99_openshift-cluster-api_worker-machineset' \
-           '10_inframachine' \
-           '10_machine'
+  for f in '99_openshift-machine-api_master-control-plane-machine-set' '99_openshift-cluster-api'
   do
     info "Deleting manifests from install dir: $f"
     find "$(_openshift_install_dir)" -type f -name "*$f*" \
@@ -296,7 +292,7 @@ create_networking_resources() {
     return 1
   fi
   params=(
-    'ClusterName' "$(_ocp_cluster_name)"
+    'ClusterName' "$(_cluster_name)"
     'InfrastructureName' "$(_cluster_infra_name)"
     'HostedZoneId' "$(_hosted_zone_id)"
     'HostedZoneName' "$(_hosted_zone_name)"
@@ -339,7 +335,6 @@ create_bootstrap_machine() {
   create_openshift_cluster || return 0
   test -f "$(_get_file_from_openshift_install_dir '.bootstrap_complete')" && return 0
 
-  arch="$(_aws_get_arch_from_instance_type "$(_get_from_config '.deploy.node_config.bootstrap.instance_type')")"
   sg_id=$(fail_if_nil "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId')" \
     "Master security group ID not found")
   private_subnets=$(fail_if_nil "$(_get_param_from_aws_cfn_stack vpc 'PrivateSubnetIds')" \
@@ -358,7 +353,7 @@ create_bootstrap_machine() {
     'Internal service NLB target group ARN not found')
   params=(
     'InfrastructureName' "$(_cluster_infra_name)"
-    'RhcosAmi' "$(fail_if_nil "$(_rhcos_ami_id "$arch")" "CoreOS AMI ID not found")"
+    'RhcosAmi' "$(fail_if_nil "$(_rhcos_ami_id)" "CoreOS AMI ID not found")"
     'AllowedBootstrapSshCidr' "$(fail_if_nil "$(_this_ip)/32" "Couldn't resolve IP address")"
     'PublicSubnet' "$(_bootstrap_subnet)"
     'MasterSecurityGroupId' "$sg_id"
@@ -425,7 +420,6 @@ create_openshift_install_config_file() {
     grep -q 'Public' <<< "$1" && ids=$(grep -v "$(_bootstrap_subnet)" <<< "$ids")
     echo "$ids" | as_yaml_list
   }
-  arch="$(_aws_get_arch_from_instance_type "$(_get_from_config '.deploy.node_config.control_plane.instance_type')")"
   enable_sno=false
   num_cp_nodes="$(_get_from_config '.deploy.node_config.control_plane.quantity_per_zone')"
   test "$num_cp_nodes" -eq 1 && enable_sno=true
@@ -440,8 +434,8 @@ create_openshift_install_config_file() {
         "Couldn't obtain public key from SSH private key.")"
       base_domain "$(_hosted_zone_name)"
       aws_hosted_zone_id "$(_hosted_zone_id)"
-      rhcos_ami_id "$(_rhcos_ami_id "$arch")"
-      cluster_name "$(_ocp_cluster_name)"
+      rhcos_ami_id "$(_rhcos_ami_id)"
+      cluster_name "$(_cluster_name)"
       aws_region "$(_get_from_config '.deploy.cloud_config.aws.networking.region')"
       pull_secret "$(_get_from_config '.deploy.node_config.common.pull_secret' | as_json_string)"
       control_plane_node_azs "$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones.control_plane[]' | as_yaml_list)"
@@ -457,7 +451,6 @@ create_openshift_install_config_file() {
       worker_node_azs '[]'
       worker_node_instance_type 'not-used'
       enable_sno "$enable_sno"
-      architecture "$arch"
     )
   else
     values=(
@@ -465,8 +458,8 @@ create_openshift_install_config_file() {
         "Couldn't obtain public key from SSH private key.")"
       base_domain "$(_hosted_zone_name)"
       aws_hosted_zone_id "$(_hosted_zone_id)"
-      rhcos_ami_id "$(_rhcos_ami_id "$arch")"
-      cluster_name "$(_ocp_cluster_name)"
+      rhcos_ami_id "$(_rhcos_ami_id)"
+      cluster_name "$(_cluster_name)"
       aws_region "$(_get_from_config '.deploy.cloud_config.aws.networking.region')"
       pull_secret "$(_get_from_config '.deploy.node_config.common.pull_secret' | as_json_string)"
       control_plane_node_azs "$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones.control_plane[]' | as_yaml_list)"
@@ -483,7 +476,6 @@ create_openshift_install_config_file() {
       internal_subnet_ids "$internal_subnet_ids"
       disable_workers "false"
       enable_sno "$enable_sno"
-      architecture "$arch"
     )
   fi
   render_and_save_install_config "${values[@]}"
@@ -543,7 +535,6 @@ create_cluster_iam_user() {
 }
 
 create_control_plane_machines() {
-  arch="$(_aws_get_arch_from_instance_type "$(_get_from_config '.deploy.node_config.control_plane.instance_type')")"
   create_openshift_cluster || return 0
   sg_id=$(fail_if_nil "$(_get_param_from_aws_cfn_stack security 'MasterSecurityGroupId')" \
     "Master security group ID not found")
@@ -574,7 +565,7 @@ create_control_plane_machines() {
     "Couldn't get API server DNS name.")
   params=(
     'InfrastructureName' "$(_cluster_infra_name)"
-    'RhcosAmi' "$(fail_if_nil "$(_rhcos_ami_id "$arch")" "CoreOS AMI ID not found")"
+    'RhcosAmi' "$(fail_if_nil "$(_rhcos_ami_id)" "CoreOS AMI ID not found")"
     'MasterSecurityGroupId' "$sg_id"
     'MasterInstanceType' "$(_get_from_config '.deploy.node_config.control_plane.instance_type')"
     'RegisterNlbIpTargetsLambdaArn' "$lambda_arn"
@@ -596,9 +587,8 @@ create_control_plane_machines() {
 }
 
 create_worker_machines() {
-  arch="$(_aws_get_arch_from_instance_type "$(_get_from_config '.deploy.node_config.workers.instance_type')")"
   create_openshift_cluster || return 0
-  { control_plane_nodes_exist && worker_nodes_exist; } && return 0
+  { control_plane_nodes_exist && worker_nodes_exist; } && return 1
   num_workers="$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')"
   if test -z "$num_workers" || test "$num_workers" -eq 0
   then
@@ -623,7 +613,7 @@ create_worker_machines() {
   do
     params=(
       'InfrastructureName' "$(_cluster_infra_name)"
-      'RhcosAmi' "$(fail_if_nil "$(_rhcos_ami_id "$arch")" "CoreOS AMI ID not found")"
+      'RhcosAmi' "$(fail_if_nil "$(_rhcos_ami_id)" "CoreOS AMI ID not found")"
       'Subnet0' "$(cut -f1 -d ',' <<< "$private_subnets")"
       'Subnet1' "$(cut -f2 -d ',' <<< "$private_subnets")"
       'Subnet2' "$(cut -f3 -d ',' <<< "$private_subnets")"
@@ -786,7 +776,7 @@ create_ingress_dns_records() {
   router_elb_hosted_zone_id=$(_exec_aws elb describe-load-balancers |
     jq -r '.LoadBalancerDescriptions[] | select(.DNSName == "'"$router_elb_fqdn"'").CanonicalHostedZoneNameID') || return 1
   params=(
-    'ClusterName' "$(_ocp_cluster_name)"
+    'ClusterName' "$(_cluster_name)"
     'HostedZoneId' "$(_hosted_zone_id)"
     'HostedZoneName' "$(_hosted_zone_name)"
     'RouterELBHostedZoneId' "$router_elb_hosted_zone_id"
@@ -1083,7 +1073,7 @@ upload_key_into_ec2
 create_ignition_bucket_in_s3
 if ! cluster_created_and_kubeconfig_in_ignition_files_bucket
 then
-  error "Cluster [$(_ocp_cluster_name)] already exists but its kubeconfig doesn't exist in S3. \
+  error "Cluster [$(_cluster_name)] already exists but its kubeconfig doesn't exist in S3. \
 Log into the cluster as kubeadmin and upload your ~/.kube/config to the '$(_cluster_ignition_files_bucket)' bucket."
   exit 1
 fi
@@ -1101,21 +1091,9 @@ create_ignition_files
 mark_openshift_install_creation_time
 sync_bootstrap_ignition_files_with_s3_bucket
 sync_kubeconfig_with_s3_bucket
-if ! create_bootstrap_machine
-then
-  error "Failed to create bootstrap node; cannot continue."
-  exit 1
-fi
-if ! create_control_plane_machines
-then
-  error "Failed to create control plane machines; cannot continue."
-  exit 1
-fi
-if ! create_worker_machines
-then
-  error "Failed to create worker nodes; cannot continue."
-  exit 1
-fi
+create_bootstrap_machine
+create_control_plane_machines
+create_worker_machines
 enable_nested_virtualization_on_worker_nodes
 wait_for_bootstrap_complete
 wait_for_first_worker_csr
@@ -1124,7 +1102,7 @@ wait_for_workers_to_become_ready
 wait_for_ingress_load_balancer_to_be_created
 create_ingress_dns_records
 wait_for_install_to_complete
+delete_bootstrap_machine
 create_cluster_users_htpasswd
 create_cluster_users_google_auth
 map_cluster_admin_to_cluster_admins
-delete_bootstrap_machine
