@@ -32,10 +32,10 @@ expose_cluster_kubeconfig() {
 
 yay_success() {
   local console_url
-  console_url="$(exec_oc get console cluster -o jsonpath='{.status.consoleURL}')"
+  console_url="$(exec_oc_postinstall get console cluster -o jsonpath='{.status.consoleURL}')"
   if test -z "$console_url"
   then
-    warning "Couldn't find console URL for cluster $(_cluster_name); check manually: \
+    warning "Couldn't find console URL for cluster $(_ocp_cluster_name); check manually: \
 $(print_oc_command get console cluster -o jsonpath='{.status.consoleURL}')"
     return 0
   fi

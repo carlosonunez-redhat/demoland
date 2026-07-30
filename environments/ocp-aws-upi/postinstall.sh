@@ -13,7 +13,7 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/aws.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/ocp.sh"
 
-configure_gitops_admins
+configure_gitops_admins_postinstall
 setup_gitops_postinstall ocp-aws-upi bootstrap/operators bootstrap-cluster-operators
 setup_gitops_postinstall ocp-aws-upi bootstrap/resources bootstrap-cluster-resources
 setup_gitops_postinstall ocp-aws-upi bootstrap/hacks bootstrap-cluster-hacks

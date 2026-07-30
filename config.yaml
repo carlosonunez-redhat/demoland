@@ -4,10 +4,10 @@ common:
             # aws.sts: AWS credentials for assuming into another role.
             # encrypted
             sts:
-                aws_access_key_id: ENC[AES256_GCM,data:c4HRs8TSLdk+9KRYAuO9I5GXngA=,iv:7ZHpzxzF6J7naPp5XagPflAeK8z5bA3zSBwBhdozkto=,tag:qbuEOf5tu3fjx4cw24ZvMQ==,type:str]
-                aws_secret_access_key: ENC[AES256_GCM,data:CAthNhLgY2Nh12FurKNcls72NHAKa54lpiv/75fCdvpYzNQwqa/PiQ==,iv:3o0WzGMzvEhzmHNUETSbbLZNhodnKjIHAUksa9qpdwg=,tag:kkxpP5hWOCcd9cwvsdnCfA==,type:str]
+                aws_access_key_id: ENC[AES256_GCM,data:FfTmBIs66kMRak7hEnwq45muoRE=,iv:Zdreq9YDt93VLa6RpRyaPIWc65Wquntui4EAnnMBPj4=,tag:VqrGaTp02jyMVedR/s2U4A==,type:str]
+                aws_secret_access_key: ENC[AES256_GCM,data:qywzvPdzaEGWJuIHEU0Z6mp1aDXui/nb6on0kEdoPixG7MM09xEkiw==,iv:VIM1x0qtVUajd5BsyqBKvHjfsNx5F4eG/635+riT6c4=,tag:wZxyp2y5sw8uMKBLiqopLA==,type:str]
                 aws_default_region: ENC[AES256_GCM,data:yhbppXp4Emsv,iv:PoWpnhgYk18InCtqBcLK5yrI8vrHqTX9BDR2kQ0Kya0=,tag:7Jooayomp5o2DNnbqlvfFg==,type:str]
-                aws_role_arn: ENC[AES256_GCM,data:7YS3XkAYIQbFtbVPn0+CXhLcpQ0NaLkIBZ0jFZ08h+EbPcC+M1NpbbYQlibEB9mD,iv:LHn8j7oBIIhfxk/KvKT3YhzXYjU0ulcsRdf5fZaM8bQ=,tag:KvD+iBjeSDvct6rO2KaOiQ==,type:str]
+                aws_role_arn: ENC[AES256_GCM,data:2gCNYGi/9tam27cKkzMjU5PQ4LXzFTQUyVcIJwNI+peapGEk5b2hG8vsalzUCf3o,iv:CCrRngOvrkXjJqv/n5FCIfYuZ96SXhxtbu46isDfYrE=,tag:T/sTCxyIXrUB/J1rhQxNuQ==,type:str]
                 aws_role_external_id: ENC[AES256_GCM,data:b52sm/9ISC/Zlp1Nzok+rYpbprY=,iv:TqyA4AEsR7VzSrlPFj9DUKIYJSYuwT6opDiiU0mu2IE=,tag:BHJ52wiQ0E9AaP30sB+oaw==,type:str]
             # aws.iam_user: AWS credentials assigned to IAM users. Must set AWS_DISABLE_STS=1 in
             # your environment variables to take effect.
@@ -85,6 +85,22 @@ environments:
         # ```
         components:
             - example
+    quarkus-x86-arm:
+        version: 20260402
+        alias_of: ""
+        depends_on:
+            - ocp-aws-sno
+            - ocp-aws-sno-arm
+        common_options:
+            ignore_installconfig_check: false
+        deploy:
+            environment_vars:
+                - SOME_KEY=some value
+                - ANOTHER_KEY=another value
+            secrets: {}
+        cloud_credentials:
+            aws: {}
+        components: []
     rhobs-demo:
         version: 20260402
         depends_on:
@@ -115,10 +131,10 @@ environments:
             aws:
                 # encrypted
                 iam_user:
-                    aws_access_key_id: ENC[AES256_GCM,data:U//gO/gpwsymBv8+5hgsXcBXCEI=,iv:Gh+O0clDQmfJoKIAvEimr8WA+aGyIIABTJMzY5++e7k=,tag:43o0R+MTxmrky1CZzS6ZVw==,type:str]
-                    aws_secret_access_key: ENC[AES256_GCM,data:Tvzq73IigFiKTb1LVu5yBQep/Rl/HJ9566+oSFMe8zID0p/nMeSqoA==,iv:KiXhAUuGLoJgvcovN98DX1DnSC9MN+SS5e1SWgADL6g=,tag:dVKXyAaGpflBw4GHy4vtnw==,type:str]
+                    aws_access_key_id: ENC[AES256_GCM,data:/xVES903xI41eZKlb6xaxpCljRg=,iv:qFS8rvxjnh0vnp2Aqk6CF09/ngkzGPltwvOi/E7m1Mk=,tag:2rUWadKhiRCOfVeICb2ynw==,type:str]
+                    aws_secret_access_key: ENC[AES256_GCM,data:FckcoMZG4blnGW2Z0mqNHulhsrPBvlDdIaYtEd98u8mVWvvcb1QtBQ==,iv:gxqDoB03g75IryrjKsTCtAXHNsYJ3PwlAzD0l737tFg=,tag:S2CXaQ0HCWsnqAS2jDpOEg==,type:str]
                     aws_default_region: ENC[AES256_GCM,data:lpeXPB0tymh6,iv:0jWk/hreDKLYSQHLLtMdD4IfrV3bKWLgbQihecUfUJA=,tag:XMCzYl4/swkA50596OvwdA==,type:str]
-                    aws_role_arn: ENC[AES256_GCM,data:1iDFNRbGcrcknP8jbr3T1mAAV+JZb+nuhEu8FlXXIs71AATf8g8geDij8q9vaWfC,iv:xMBbJWH/EpgykB/o+j5Kyp5NZf8Jv8VWvhrdF+Bn5e4=,tag:QH0wqJlABvhEwa0WR4A6RA==,type:str]
+                    aws_role_arn: ENC[AES256_GCM,data:BbX1XXepuGVOUubWajvJ4opOUnvUMsvhUCfAOtsGc09jziQsenUAtGa2iVVmcN1F,iv:D8b89IKy9nlpUE4pE2GxHk7ddEXU9d9UPTE9B5XYZCE=,tag:4vT7bb8ztWB+BYE60uTmog==,type:str]
                     aws_role_external_id: ENC[AES256_GCM,data:82Pqnnd0NrTDp9hDChzvq5INspI=,iv:Mbhexv+qsQOVdP0ESTof4CysMV+g4bbgwVNXlXUopCU=,tag:QJPJwj5FeOJUp+aj+cvlGA==,type:str]
         deploy:
             environment_vars:
@@ -204,6 +220,23 @@ environments:
                     quantity_per_zone: 0
                     instance_type: c8i.2xlarge
                     spot: false
+    ocp-aws-sno-arm:
+        alias_of: ocp-aws-upi
+        deploy:
+            node_config:
+                bootstrap:
+                    ignition_file_s3_key: bootstrap.ign
+                    instance_type: c8g.2xlarge
+                    spot: false
+                    quantity_per_zone: 1
+                control_plane:
+                    quantity_per_zone: 1
+                    instance_type: c8g.8xlarge
+                    spot: false
+                workers:
+                    quantity_per_zone: 0
+                    instance_type: c8g.2xlarge
+                    spot: false
     ocp-aws-sno-metal:
         alias_of: ocp-aws-upi
         deploy:
@@ -272,7 +305,7 @@ environments:
                 aws:
                     networking:
                         dns:
-                            domain_name: sandbox5159.opentlc.com
+                            domain_name: sandbox5245.opentlc.com
                         cidr_block: 10.0.0.0/16
                         region: us-east-2
                         availability_zones:
@@ -317,8 +350,8 @@ environments:
                     # encrypted
                     data: ENC[AES256_GCM,data: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,iv:HHjtH16Z0WCYc8fcQMlhgfFatunmKOYHQ/YkzZ04Fjc=,tag:cnN3kcQjpaiLvJ5yer/n2Q==,type:str]
 sops:
-    lastmodified: "2026-05-31T18:45:29Z"
-    mac: ENC[AES256_GCM,data:pTqldf3EItlgTRQ8Q93IvStHEI/EUjvrwxvTLRAIxW60g1CXq7SNwVgpsuO9xZogi3o32V76d0QTSWz4Jk4KoEZuWpfBiGzbGTIlqpu5UvcWu6xc2/Yw2NQdW1kAPxH4Q4B5XK5IRiPGB6mcFfwCWrcva3Yqc8OSUEYfp132irg=,iv:axzJA0BNLivDCBvYXdQofiOCZSDFwckJRBlMGJYog2w=,tag:fwKdDcF7QO7UrmIScYQboA==,type:str]
+    lastmodified: "2026-06-26T17:59:27Z"
+    mac: ENC[AES256_GCM,data:vnGzwYDIe4BWd3qhb7VKWlB7saRQ0F/Z8mzKioscNQHnIHjPqEPtC/sKnrZb2Rrjq+DY90HQs80azld6zwFugmplxa/TR1ZAjoRQSFA/pKpNH8ZvoQLWEU5mpQbOhnM6Mkg8J2v6Zw50brOLr9RJBSr5SpRmdP7MoItP8a06aCU=,iv:EkEMrakWbETNL4EXxM15tMIBCJ7adc3HCRThgRPMpig=,tag:oVSQZH5b5lm3L5XmMTEcEw==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
