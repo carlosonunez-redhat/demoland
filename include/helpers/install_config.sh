@@ -5,7 +5,7 @@ source "$(dirname "$0")/../include/helpers/yaml.sh"
 _openshift_install_dir() {
   printf '%s/%s' \
     "$(_get_file_from_data_dir 'openshift-install')" \
-    "$(_cluster_name)"
+    "$(_ocp_cluster_name)"
 }
 
 _get_file_from_openshift_install_dir() {

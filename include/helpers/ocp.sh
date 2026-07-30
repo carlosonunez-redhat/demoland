@@ -5,8 +5,17 @@ _cluster_name() {
       head -c 18
 }
 
+_ocp_cluster_name() {
+  printf "%s-%s"  \
+    "$(_cluster_name)" \
+    "$(_get_this_environment_id)" |
+    head -c 20
+}
+
 _cluster_infra_name() {
-  printf "demoland-%s" "$(_get_top_level_environment_id | tr '[:upper:]' '[:lower:]' | head -c 8)"
+  printf "demoland-%s-%s" \
+    "$(_get_top_level_environment_id | tr '[:upper:]' '[:lower:]' | head -c 8)" \
+    "$(_get_this_environment_id)" | head -c 20
 }
 
 _cluster_ignition_files_bucket() {
@@ -17,11 +26,8 @@ _cluster_ignition_files_bucket() {
     echo "$from_secret"
     return 0
   fi
-  printf "%s-ocp-ignition-files" "$(_cluster_name |
-    base64 -w 0 |
-    tr -d '=' |
-    tr '[:upper:]' '[:lower:]' |
-    head -c 12)"
+  printf "%s-%s-ocp-ignition-files" "$(_cluster_name)" "$(_get_top_level_environment_name)" |
+    tr '[:upper:]' '[:lower:]'
 }
 
 _oc_cmd() {

@@ -82,13 +82,13 @@ _openshift_install_files_still_current() {
 }
 
 control_plane_nodes_exist() {
-  local num_worker_nodes_want num_worker_nodes_want
-  num_worker_nodes_want="$(_get_from_config '.deploy.node_config.control_plane.quantity_per_zone')"
-  num_worker_nodes_got=$(_exec_aws ec2 describe-instances \
+  local num_cp_nodes_want num_cp_nodes_want
+  num_cp_nodes_want="$(_get_from_config '.deploy.node_config.control_plane.quantity_per_zone')"
+  num_cp_nodes_got=$(_exec_aws ec2 describe-instances \
     --query 'Reservations[].Instances[?(State.Name == `running`) &&
 (@.Tags[?Key==`aws:cloudformation:logical-id` && contains(Value, `Master`)]) &&
 (@.Tags[?Key==`Name` && contains(Value, `'"$(_cluster_infra_name)"'`)])].InstanceId' --output text | wc -l)
-  test "$num_worker_nodes_got" == "$num_worker_nodes_want"
+  test "$num_cp_nodes_got" == "$num_cp_nodes_want"
 }
 
 worker_nodes_exist() {
@@ -115,7 +115,7 @@ create_openshift_cluster() {
     cert="$(yq -r .users[0].user.client-certificate-data "$f" | base64 -d)"
     key="$(yq -r .users[0].user.client-key-data "$f" | base64 -d)"
     url=$(yq -r .clusters[0].cluster.server "$f")
-    want="$(_cluster_name)"
+    want="$(_ocp_cluster_name | head -c 20)"
     got=$(2>/dev/null curl -sS --connect-timeout 1 \
       --cacert <(echo "$cacert") \
       --cert <(echo "$cert") \
@@ -199,9 +199,9 @@ upload_key_into_ec2() {
 
 create_installation_manifests() {
   create_openshift_cluster || return 0
-  if ! _openshift_install_files_still_current
+  if _openshift_install_files_still_current
   then
-    info "Skipping creating installation manifests"
+    info "Install files still current; skipping creating installation manifests"
     return 0
   fi
   info "Creating installation manifests"
@@ -292,7 +292,7 @@ create_networking_resources() {
     return 1
   fi
   params=(
-    'ClusterName' "$(_cluster_name)"
+    'ClusterName' "$(_ocp_cluster_name)"
     'InfrastructureName' "$(_cluster_infra_name)"
     'HostedZoneId' "$(_hosted_zone_id)"
     'HostedZoneName' "$(_hosted_zone_name)"
@@ -782,7 +782,7 @@ create_ingress_dns_records() {
   router_elb_hosted_zone_id=$(_exec_aws elb describe-load-balancers |
     jq -r '.LoadBalancerDescriptions[] | select(.DNSName == "'"$router_elb_fqdn"'").CanonicalHostedZoneNameID') || return 1
   params=(
-    'ClusterName' "$(_cluster_name)"
+    'ClusterName' "$(_ocp_cluster_name)"
     'HostedZoneId' "$(_hosted_zone_id)"
     'HostedZoneName' "$(_hosted_zone_name)"
     'RouterELBHostedZoneId' "$router_elb_hosted_zone_id"
