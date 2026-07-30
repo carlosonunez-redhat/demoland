@@ -23,6 +23,7 @@ Create end-to-end OpenShift demos on fresh OpenShift clusters that you own.
     * [Destroy the demo environment](#destroy-the-demo-environment)
 * [Demolands](#demolands)
     * [Base Environments](#base-environments)
+        * [`ocp-on-ocp-aws`](#ocp-on-ocp-aws)
         * [`ocp-aws-upi`](#ocp-aws-upi)
     * [Demos](#demos)
         * [Local cluster observability with the Red Hat Observability Stack](#local-cluster-observability-with-the-red-hat-observability-stack)
@@ -222,6 +223,15 @@ When you're done exploring/showing off the environment.
 ## Demolands
 
 ### Base Environments
+
+#### `ocp-on-ocp-aws`
+
+|                  |                                                                                                                                  |
+| :-----           | :-----                                                                                                                           |
+| **Code**         | [link](./environments/ocp-on-ocp)                                                                                                |
+| **Purpose**      | Deploys an OpenShift Cluster underneath a single-node deployment of OpenShift Virtualization Engine (OVE), i.e. "Shift-on-Shift" |
+| **Dependencies** | - **ocp-aws-sno-metal**                                                                                                          |
+| **Aliases**      | none                                                                                                                             |
 
 #### `ocp-aws-upi`
 
