@@ -95,7 +95,9 @@ _run_stage_with_dependencies environment +stages:\
       resolved_env=$(just _resolved_environment_name "$env"); \
       test "$env" != "$resolved_env" && env_details="$env_details (alias of: $resolved_env)"; \
       just _log info "Running operation [$stage_friendly_name] on $env_details"; \
-      just "$stage" "$env"; \
+      alias=""; \
+      test "$env" != "$resolved_env" && alias="$env"; \
+      ALIAS="$alias" just "$stage" "$env"; \
     done; \
   done;
 
@@ -103,26 +105,26 @@ _precheck environment:
   set +u; \
   if test -n "$SKIP_PRECHECK"; \
   then \
-    just _log info "Preflight checks skipped for environment '{{ environment }}'"; \
+    just _log info "Preflight checks skipped for environment '{{ environment }}' (alias: $ALIAS)"; \
     exit 0; \
   fi; \
   set -u; \
-  just _execute_containerized '{{ environment }}' \
+  ALIAS="$ALIAS" just _execute_containerized '{{ environment }}' \
     'preflight.sh' \
     'true' \
     'Environment {{ environment }} does not have preflight checks; skipping.';
 
 _provision environment: (_ensure_toplevel_environment_info_available environment)
-  just _execute_containerized '{{ environment }}' 'provision.sh';
+  ALIAS="$ALIAS" just _execute_containerized '{{ environment }}' 'provision.sh';
 
 _poweroff environment: (_ensure_toplevel_environment_info_available environment)
-  just _execute_containerized '{{ environment }}' 'poweroff.sh';
+  ALIAS="$ALIAS" just _execute_containerized '{{ environment }}' 'poweroff.sh';
 
 _poweron environment: (_ensure_toplevel_environment_info_available environment)
-  just _execute_containerized '{{ environment }}' 'poweron.sh';
+  ALIAS="$ALIAS" just _execute_containerized '{{ environment }}' 'poweron.sh';
 
 _expose environment: (_ensure_toplevel_environment_info_available environment)
-  just _execute_containerized '{{ environment }}' \
+  ALIAS="$ALIAS" just _execute_containerized '{{ environment }}' \
     'expose.sh' \
     'true' \
     'Environment {{ environment }} does not have anything to expose; skipping.';
@@ -131,10 +133,13 @@ _postinstall environment: (_ensure_toplevel_environment_info_available environme
   (_ensure_toplevel_environment_has_kubeconfig environment) \
   (_ensure_container_postinstall_volume_exists environment) \
   (_clear_postinstall_volume environment) \
-  (_install_components_into_environment environment) \
-  (_execute_containerized environment 'postinstall.sh' \
+  (_install_components_into_environment environment)
+  ALIAS="$ALIAS" just _execute_containerized '{{ environment }}' 'postinstall.sh' \
     'true' \
-    'Environment {{ environment }} has no postinstall steps.')
+    'Environment {{ environment }} has no postinstall steps.'
+
+_destroy environment:
+  ALIAS="$ALIAS" just _execute_containerized '{{ environment }}' 'destroy.sh';
 
 _install_components_into_environment environment:
   just _get_environment_components '{{ environment }}' | \
@@ -318,6 +323,7 @@ _execute_containerized environment file ignore_not_found='false' custom_message=
     just _log info "'$file' is empty. Go put some stuff into it!"; \
     exit 0; \
   fi; \
+  env_name="${ALIAS:-{{ environment }}}"; \
   command=({{ container_bin }} run --rm -it \
     -v "$(just _container_vol {{ environment }}):/data" \
     -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
@@ -329,6 +335,7 @@ _execute_containerized environment file ignore_not_found='false' custom_message=
     -v "{{ source_dir() }}/components:/components" \
     -e INCLUDE_DIR=/app/include \
     -e ENVIRONMENT_INCLUDE_DIR=/app/environment/include \
+    -e ENVIRONMENT_NAME="$env_name" \
     -w /app); \
   while read var; \
   do command+=(-e "$var"); \
