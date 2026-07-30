@@ -574,7 +574,7 @@ _toplevel_environment_kubeconfigs environment:
   {{ container_bin }} run --rm \
       -v "$(just _container_secrets_vol_shared):/shared/secrets" \
       -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
-      bash:5 -c 'find /environment_info/kubeconfigs -mindepth 1 -type f -exec cat {} \;';
+      bash:5 -c "find /environment_info/kubeconfigs -type f -exec cat {} \;";
 
 _run_yq input query:
   echo "{{ input }}" | {{ container_bin }} run --rm -i {{ yq_image }} '{{ query }}'
