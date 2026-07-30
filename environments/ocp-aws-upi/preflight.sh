@@ -45,10 +45,10 @@ confirm_config_is_correct() {
 confirm_cluster_name_matches_regex() {
   local regex
   regex='[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*'
-  pf_log info "Checking that cluster name is valid: $(_cluster_name) [infra name: $(_cluster_infra_name)]"
-  grep -Eq "^$regex$" <<< "$(_cluster_name)" && return 0
+  pf_log info "Checking that cluster name is valid: $(_ocp_cluster_name) [infra name: $(_cluster_infra_name)]"
+  grep -Eq "^$regex$" <<< "$(_ocp_cluster_name)" && return 0
 
-  error "Cluster name isn't valid: $(_cluster_name) (name must conform to regex '$regex'"
+  error "Cluster name isn't valid: $(_ocp_cluster_name) (name must conform to regex '$regex')"
   return 1
 }
 
