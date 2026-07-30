@@ -288,3 +288,13 @@ _create_aws_resources_from_cfn_stack() {
 _create_aws_resources_from_cfn_stack_with_caps() {
   _create_cfn_stack "$1" "$2" "$3" "$4"
 }
+
+_aws_get_arch_from_instance_type() {
+  local it
+  it="$1"
+  q=$(printf 'InstanceTypes[?InstanceType==`%s`].ProcessorInfo.SupportedArchitectures[0]' "$it")
+  res=$(_exec_aws ec2 describe-instance-types --query "$q" --output text)
+  test "${res,,}" == x86_64 && res=amd64
+  grep -Eiq '^(arm|aarch).*' <<< "$res" && res=arm64
+  echo "$res"
+}
