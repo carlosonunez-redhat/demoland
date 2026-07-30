@@ -176,11 +176,14 @@ _create_component_kustomization environment component:
 _install_component environment component: (_ensure_demoland_base_image environment)
   env=$(just _resolved_environment_name '{{ environment }}'); \
   just _log info "[postinstall] Installing component '{{ component }}' in environment '$env'"; \
-  {{ container_bin }} run --rm \
-    -v "$(just _container_postinstall_vol '{{ environment }}'):/vol" \
-    -v "$(just _container_secrets_vol_shared):/shared/secrets" \
-    {{ demoland_base_container_image }} \
-    oc --kubeconfig $(just _toplevel_environment_kubeconfig '{{ environment }}') apply -k /vol
+  for kubeconfig in $(just _toplevel_environment_kubeconfigs '{{ environment }}'); \
+  do \
+    {{ container_bin }} run --rm \
+      -v "$(just _container_postinstall_vol '{{ environment }}'):/vol" \
+      -v "$(just _container_secrets_vol_shared):/shared/secrets" \
+      {{ demoland_base_container_image }} \
+      oc --kubeconfig "$kubeconfig" apply -k /vol; \
+  done
 
 
 _ensure_demoland_base_image environment:
