@@ -1,0 +1,7 @@
+# The HyperConverged operator configures Kubevirt. This is kind-of like an answer file for ESX.
+# Complete example: https://github.com/kubevirt/hyperconverged-cluster-operator/blob/main/deploy/hco.cr.yaml
+apiVersion: hco.kubevirt.io/v1beta1
+kind: HyperConverged
+metadata:
+  namespace: openshift-cnv
+spec: {}
