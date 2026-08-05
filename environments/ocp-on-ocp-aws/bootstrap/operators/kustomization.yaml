@@ -1,0 +1,2 @@
+resources:
+  - ../../../../components/openshift-virtualization/operator/kubevirt-hyperconverged
