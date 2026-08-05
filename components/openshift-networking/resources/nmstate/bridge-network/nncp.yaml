@@ -1,0 +1,22 @@
+# NOTE: This example is straight from the nmstate.io documentation.
+# You'll probably want to change `eth1` to the name of the network interface that will
+# be exposed to the bridge.
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: example-bridge-policy
+spec:
+  desiredState:
+    interfaces:
+    - name: br1
+      description: Bridge network for containers on machines in the cluster this policy is applied to.
+      type: linux-bridge
+      state: up
+      ipv4:
+        enabled: false
+      bridge:
+        options:
+          stp:
+            enabled: true
+        port:
+          - name: eth1
