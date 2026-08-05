@@ -3,6 +3,8 @@ kind: Subscription
 metadata:
   name: kubernetes-nmstate-operator
   namespace: openshift-nmstate
+  labels:
+    operators.coreos.com/kubernetes-nmstate-operator.openshift-nmstate: ""
 spec:
   sourceNamespace: openshift-marketplace
   source: redhat-operators

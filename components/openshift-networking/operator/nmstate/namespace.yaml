@@ -3,7 +3,9 @@ kind: Namespace
 metadata:
   name: openshift-nmstate
   labels:
+    kubernetes.io/metadata-name: openshift-nmstate
     openshift.io/cluster-monitoring: "true"
+    name: openshift-nmstate
 spec:
   finalizers:
   - kubernetes
