@@ -68,6 +68,10 @@ poweroff environment: (_run_stage_with_dependencies environment "_poweroff")
 [doc("Powers on instances.")]
 poweron environment: (_run_stage_with_dependencies environment "_poweron")
 
+[doc("Launches a shell inside of the runner container for the environment.")]
+start_shell environment:
+  SHELL=1 just _execute_containerized {{ environment }};
+
 _run_stage_with_dependencies environment +stages:\
     (_generate_toplevel_environment_info environment) \
     (_generate_container_vol environment ) \
@@ -294,29 +298,32 @@ _container_image environment:
   env=$(just _resolved_environment_name '{{ environment }}'); \
   echo "{{ container_image }}-$env"
 
-_execute_containerized environment file ignore_not_found='false' custom_message='none': \
+_execute_containerized environment file='empty' ignore_not_found='false' custom_message='none': \
     ( _ensure_container_image_exists environment ) \
     ( _ensure_container_secrets_vol_populated environment ) \
     ( _ensure_demoland_base_image environment )
   file=$(just _get_environment_directory_file {{ environment }} {{ file }}); \
-  if ! test -f "$file"; \
+  if test -z "$SHELL"; \
   then \
-    level=error; \
-    message="File not found in environment: {{ file }}"; \
-    test "{{ custom_message }}" != 'none' && message="{{ custom_message }}"; \
-    if test "{{ ignore_not_found }}" != 'false'; \
+    if ! test -f "$file"; \
     then \
-      level=warning; \
-      message="${message} (skipping)"; \
+      level=error; \
+      message="File not found in environment: {{ file }}"; \
+      test "{{ custom_message }}" != 'none' && message="{{ custom_message }}"; \
+      if test "{{ ignore_not_found }}" != 'false'; \
+      then \
+        level=warning; \
+        message="${message} (skipping)"; \
+      fi; \
+      just _log "$level" "$message"; \
+      test "{{ ignore_not_found }}" == 'false' && exit 1; \
     fi; \
-    just _log "$level" "$message"; \
-    test "{{ ignore_not_found }}" == 'false' && exit 1; \
-  fi; \
-  file_lines=$(grep -Ev '^#|source.*\.sh$' "$file" | grep -Ev '^$' | wc -l); \
-  if test "$file_lines" -eq 0; \
-  then \
-    just _log info "'$file' is empty. Go put some stuff into it!"; \
-    exit 0; \
+    file_lines=$(grep -Ev '^#|source.*\.sh$' "$file" | grep -Ev '^$' | wc -l); \
+    if test "$file_lines" -eq 0; \
+    then \
+      just _log info "'$file' is empty. Go put some stuff into it!"; \
+      exit 0; \
+    fi; \
   fi; \
   command=({{ container_bin }} run --rm -it \
     -v "$(just _container_vol {{ environment }}):/data" \
@@ -335,8 +342,13 @@ _execute_containerized environment file ignore_not_found='false' custom_message=
   done < <(just _run_yq \
     "$(just _get_property_from_env_config {{ environment }} '.deploy.environment_vars')" \
     '.[]'); \
-  command+=($(just _container_image {{ environment }}) /app/environment/{{ file }}); \
   set +u; \
+  if test -n "$SHELL"; \
+  then \
+    command+=(-it); \
+    command+=($(just _container_image {{ environment }}) bash); \
+  else command+=($(just _container_image {{ environment }}) /app/environment/{{ file }}); \
+  fi; \
   test -n "$SHOW_CONTAINER_COMMANDS" && just _log info "Running containerized command: ${command[@]}"; \
   set -u; \
   "${command[@]}"
