@@ -1,2 +1,2 @@
 resources:
-  - ../../../../components/openshift-virtualization/resources/hyperconverged
+  - ../../../../../components/openshift-virtualization/resources/hyperconverged
