@@ -1,2 +1,3 @@
 resources:
   - ../../../../components/openshift-virtualization/operator/kubevirt-hyperconverged
+  - ../../../../components/openshift-networking/operator/nmstate
