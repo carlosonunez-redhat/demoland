@@ -70,7 +70,7 @@ poweron environment: (_run_stage_with_dependencies environment "_poweron")
 
 [doc("Launches a shell inside of the runner container for the environment.")]
 start_shell environment:
-  SHELL=1 just _execute_containerized {{ environment }};
+  USE_SHELL=1 just _execute_containerized {{ environment }};
 
 _run_stage_with_dependencies environment +stages:\
     (_generate_toplevel_environment_info environment) \
@@ -303,7 +303,8 @@ _execute_containerized environment file='empty' ignore_not_found='false' custom_
     ( _ensure_container_secrets_vol_populated environment ) \
     ( _ensure_demoland_base_image environment )
   file=$(just _get_environment_directory_file {{ environment }} {{ file }}); \
-  if test -z "$SHELL"; \
+  set +u; \
+  if test -z "$USE_SHELL"; \
   then \
     if ! test -f "$file"; \
     then \
@@ -342,15 +343,13 @@ _execute_containerized environment file='empty' ignore_not_found='false' custom_
   done < <(just _run_yq \
     "$(just _get_property_from_env_config {{ environment }} '.deploy.environment_vars')" \
     '.[]'); \
-  set +u; \
-  if test -n "$SHELL"; \
+  if test -n "$USE_SHELL"; \
   then \
     command+=(-it); \
     command+=($(just _container_image {{ environment }}) bash); \
   else command+=($(just _container_image {{ environment }}) /app/environment/{{ file }}); \
   fi; \
   test -n "$SHOW_CONTAINER_COMMANDS" && just _log info "Running containerized command: ${command[@]}"; \
-  set -u; \
   "${command[@]}"
 
 _merge_aliased_environment environment:
