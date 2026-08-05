@@ -18,6 +18,7 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 # source "$ENVIRONMENT_INCLUDE_DIR/foo.sh"
 setup_gitops ocp-on-ocp-aws bootstrap/operators operators
 setup_gitops ocp-on-ocp-aws bootstrap/resources/base resources
+setup_gitops ocp-on-ocp-aws bootstrap/resources/networking networking
 info "WIP."
 exit 0
 wait_for_osv_to_become_ready
