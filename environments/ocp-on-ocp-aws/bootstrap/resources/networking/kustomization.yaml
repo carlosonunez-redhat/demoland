@@ -9,5 +9,5 @@ patches:
         path: /metadata/name
         value: br1-enp126s0-policy
       - op: replace
-        path: /spec/desiredState/interfaces/0/port/0
+        path: /spec/desiredState/interfaces/0/bridge/port/0
         value: enp126s0
