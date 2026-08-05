@@ -344,14 +344,17 @@ environments:
             environment_vars:
                 - SOME_KEY=some value
                 - ANOTHER_KEY=another value
-            secrets: {}
+            secrets:
+                gitops_branch:
+                    name: gitops/branch
+                    data: demo/hybrid-cloud-onprem-rosa
         cloud_credentials:
             aws: {}
         components:
             - example
 sops:
-    lastmodified: "2026-07-30T17:40:52Z"
-    mac: ENC[AES256_GCM,data:devxwUryZa1RBqjTzBSYF2VpEX0QI0WLxkyL1JeH7vfGdE5lAdzBV+2xmxu++fwa1YQut92ZNYLpwYudueLa7BY9v2xrAa+AqWEijhQqxd3SLfhjh0LqlYfTetqGrjub+13zcV+yQQ+JPvXhjmitP/yWlsIMd6rfWZ2d1+8FZ9M=,iv:yh+EmVonvoV0hy9HbWNqWg+kndhJgRojV2YPsBXlUgE=,tag:MICk8HkA5cBdlrqSr7VniA==,type:str]
+    lastmodified: "2026-07-31T16:08:11Z"
+    mac: ENC[AES256_GCM,data:/b/jXT7+gpHZFJeEwd8nEjfmGO+3xDY4D8hEA4rfaLmJYVO360lelFGnV4viOjBB10Px7zLdn1LK9iK9aqs5xFBBCdrOEOR5apRjukNMQlJE9VcY3b4i48EAHTc9Nk/Uy0kjmE/cXE5spHSSZsNtbTokHHUQYnI+ItesmB3ZGZs=,iv:zR9qr7xTEGB7JmK5aGqKnFkALXLtIPpVGqremxfQ2Dc=,tag:jCoJ9fDy7PJnlJZDa6y0Zw==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
