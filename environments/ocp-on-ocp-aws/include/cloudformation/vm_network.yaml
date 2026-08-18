@@ -22,4 +22,5 @@ Resources:
     Properties:
       NetworkInterfaceId: !Ref NetworkInterface
       InstanceId: !Ref InstanceId
+      DeviceIndex: 1
       DeleteOnTermination: "true"
