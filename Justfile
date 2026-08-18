@@ -56,8 +56,10 @@ deploy environment: clean \
     (_run_stage_with_dependencies environment "_precheck" "_poweron" "_provision" "_expose" "_postinstall")
 
 [doc("Destroys an environment")]
-destroy environment: clean \
-    (_run_stage_with_dependencies environment "_destroy")
+destroy environment: clean (_run_stage_with_dependencies environment "_destroy")
+
+[doc("Rebuild deployer images.")]
+rebuild_images environment: clean (_run_stage_with_dependencies environment "_rebuild")
 
 [doc("Performs post-install steps, like installing operators and such.")]
 postinstall environment: (_run_stage_with_dependencies environment "_precheck" "_postinstall")
@@ -72,6 +74,24 @@ poweron environment: (_run_stage_with_dependencies environment "_poweron")
 start_shell environment:
   USE_SHELL=1 just _execute_containerized {{ environment }};
 
+# A word about the rebuild logic in this stage.
+#
+# Environments are deployed starting with their dependent environments. In other
+# words, given an environment `$X` which depends on environments `$A`, `$B` and `$C`,
+# deployment will happen in this order: `$A -> $B -> $C -> $X`.
+#
+# Destroys, thus, happen in the reverse order. However, this introduces an interesting
+# edge case when it comes to image rebuilds.
+#
+# OpenShift binaries like `openshift-install` are included in the `demoland-base` image.
+# These binaries take the version of OpenShift being installed into the cluster into account.
+# For our example environment `$X`, this means that the version of `openshift-install`
+# that gets installed into the base image is determined by the version information provided to
+# environments `$A`, `$B` or `$C`, in that order.
+#
+# Therefore, any environment destroys happening at the same time as an image rebuild need
+# to do an image rebuild run first in "deploy" order before destroying in "destroy" order.
+# That's what the "REBUILD" code in this stage does.
 _run_stage_with_dependencies environment +stages:\
     (_generate_toplevel_environment_info environment) \
     (_generate_container_vol environment ) \
@@ -80,8 +100,10 @@ _run_stage_with_dependencies environment +stages:\
   envs="{{ environment }}"; \
   if test -z "$SKIP_DEPENDENCIES"; \
   then \
-    if echo '{{ stages }}' | grep -q destroy; \
-    then envs="{{ environment }};$(just _get_dependent_environments {{ environment }})"; \
+    if test '{{ stages }}' == '_destroy'; \
+    then \
+      (test -n "$REBUILD" || test -n "REBUILD_IMAGES") && just rebuild_images '{{ environment }}'; \
+      envs="{{ environment }};$(just _get_dependent_environments {{ environment }})"; \
     else envs="$(just _get_dependent_environments {{ environment }});{{ environment }}"; \
     fi; \
   fi; \
@@ -130,6 +152,11 @@ _expose environment: (_ensure_toplevel_environment_info_available environment)
     'expose.sh' \
     'true' \
     'Environment {{ environment }} does not have anything to expose; skipping.';
+
+_rebuild environment:
+  for stage in _rebuild_demoland_base_image _rebuild_environment_base_image; \
+  do just "$stage" "{{ environment }}"; \
+  done
 
 _postinstall environment: (_ensure_toplevel_environment_info_available environment) \
   (_ensure_toplevel_environment_has_kubeconfig environment) \
@@ -181,21 +208,50 @@ _install_component environment component: (_ensure_demoland_base_image environme
     {{ demoland_base_container_image }} \
     oc --kubeconfig $(just _toplevel_environment_kubeconfig '{{ environment }}') apply -k /vol
 
+_rebuild_demoland_base_image environment:
+  openshift_version=$(just _get_property_from_env_config_use_alias \
+    {{ environment }} \
+    '.deploy.cluster_config.openshift_version'); \
+    just _log info "(re)building demoland environment base image [openshift version: $openshift_version]"; \
+  {{ container_bin }} image build -t "{{ demoland_base_container_image }}" \
+    --build-arg OPENSHIFT_VERSION="$openshift_version" - < "$PWD/include/containerfiles/base.Dockerfile"
 
-_ensure_demoland_base_image environment:
-  set +u; \
-  test -z "$REBUILD_DEMOLAND_BASE_IMAGE" && \
-    {{ container_bin }} image ls | grep -q "{{ demoland_base_container_image }}" && exit 0; \
-  set -u; \
+_rebuild_environment_base_image environment:
+  container_file=$(just _get_property_from_env_config \
+    {{ environment }} \
+    '.deploy.container_file'); \
+  test -z "$container_file" && \
+    container_file=$(just _get_environment_directory_file {{ environment }} Containerfile); \
+  if ! test -f "$container_file"; \
+  then \
+    just _log error "Containerfile not found at: $container_file"; \
+    exit 1; \
+  fi; \
+  file_lines=$(cat "$container_file" | wc -l); \
+  if test "$file_lines" -eq 0; \
+  then \
+    just _log error "Containerfile for '{{ environment }}' at '$container_file' is empty!"; \
+    exit 1; \
+  fi; \
   openshift_version=$(just _get_property_from_env_config_use_alias \
     {{ environment }} \
     '.deploy.cluster_config.openshift_version'); \
   test -z "$openshift_version" && openshift_version={{ default_openshift_version }}; \
-  just _log info "building demoland environment base image [openshift version: $openshift_version]"; \
-  test -n "${REBUILD_DEMOLAND_BASE_IMAGE:-}" && \
-    just _log info "(re)building demoland environment base image [openshift version: $openshift_version]"; \
-  {{ container_bin }} image build -t "{{ demoland_base_container_image }}" \
-    --build-arg OPENSHIFT_VERSION="$openshift_version" - < "$PWD/include/containerfiles/base.Dockerfile"
+  just _log info "(re)building deployer image '$image_name' [openshift version: $openshift_version]"; \
+  {{ container_bin }} build -t "$image_name" \
+    -f "$container_file" \
+    --build-arg OPENSHIFT_VERSION="$openshift_version" \
+    $PWD
+
+_ensure_demoland_base_image environment:
+  {{ container_bin }} image ls | grep -q "{{ demoland_base_container_image }}" && exit 0; \
+  just _rebuild_demoland_base_image "{{ environment }}"; 
+
+_ensure_container_image_exists environment:
+  set +u; \
+  image_name="$(just _container_image {{ environment }})";  \
+  {{ container_bin }} images  | grep -q "$image_name" && exit 0; \
+  just _rebuild_environment_base_image "{{ environment }}";
 
 _ensure_component_exists environment component:
   test -d "$PWD/components/{{ component }}" && exit 0; \
@@ -481,38 +537,6 @@ _generate_container_vol environment:
     test -n "$REBUILD_DATA_VOLUME" && {{ container_bin }} volume rm -f "$vol" >/dev/null; \
     {{ container_bin }} volume create "$vol" >/dev/null; \
   done;
-
-_ensure_container_image_exists environment:
-  set +u; \
-  image_name="$(just _container_image {{ environment }})";  \
-  {{ container_bin }} images  | grep -q "$image_name" && \
-    test -z "$REBUILD_IMAGE" && \
-    exit 0; \
-  container_file=$(just _get_property_from_env_config \
-    {{ environment }} \
-    '.deploy.container_file'); \
-  test -z "$container_file" && \
-    container_file=$(just _get_environment_directory_file {{ environment }} Containerfile); \
-  if ! test -f "$container_file"; \
-  then \
-    just _log error "Containerfile not found at: $container_file"; \
-    exit 1; \
-  fi; \
-  file_lines=$(cat "$container_file" | wc -l); \
-  if test "$file_lines" -eq 0; \
-  then \
-    just _log error "Containerfile for '{{ environment }}' at '$container_file' is empty!"; \
-    exit 1; \
-  fi; \
-  openshift_version=$(just _get_property_from_env_config_use_alias \
-    {{ environment }} \
-    '.deploy.cluster_config.openshift_version'); \
-  test -z "$openshift_version" && openshift_version={{ default_openshift_version }}; \
-  just _log info "(re)building deployer image '$image_name' [openshift version: $openshift_version]"; \
-  {{ container_bin }} build -t "$image_name" \
-    -f "$container_file" \
-    --build-arg OPENSHIFT_VERSION="$openshift_version" \
-    $PWD
 
 _confirm_environment environment: \
     ( _confirm_environment_in_config environment ) \
