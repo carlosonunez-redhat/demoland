@@ -4,7 +4,7 @@ common:
             # aws.sts: AWS credentials for assuming into another role.
             # encrypted
             sts:
-                aws_access_key_id: ENC[AES256_GCM,data:YNmxN15bq78RHbRV8yJP16MWrOoVgoGXra5aRp8T1kuJ+Sex,iv:p0AVFkAYsBoebrxANY6A9KPrhfGxMF3KpAvgvJ4WKNc=,tag:BQ/N2BMqKu9PleS8rWgoIw==,type:str]
+                aws_access_key_id: ENC[AES256_GCM,data:XCwC/lmg1+i1XR1gn24b/zGHatg=,iv:dZ4WGH/SSIAF+Ozo4lr4aGyMz3xb0wngpk510MeJB6s=,tag:fx5tEecyP/QqEnQfIvvFRA==,type:str]
                 aws_secret_access_key: ENC[AES256_GCM,data:unaqFl7jsAHy3dGAX/65klb75CUU7Abf+VwffmcrXzMF28eGvIpEfw==,iv:+8/+tBZUq1eoQHUsoXZOQikWasyzSWDDEcsZdY0VRn8=,tag:haK2wRHmaoBFpbD7VdxAeA==,type:str]
                 aws_default_region: ENC[AES256_GCM,data:yhbppXp4Emsv,iv:PoWpnhgYk18InCtqBcLK5yrI8vrHqTX9BDR2kQ0Kya0=,tag:7Jooayomp5o2DNnbqlvfFg==,type:str]
                 aws_role_arn: ENC[AES256_GCM,data:1QHaEjI6J4zqlM6sDNXe81zzh6EfAHL9sOOI2OJlIqLXGWq5epzIj5RZdo3T4yVP,iv:Yisjxh+jttVGA1P94LACJxaIWzlSYGyEfPpuDMizP9k=,tag:RemiVHjujEmC+FOjn0y9Sg==,type:str]
@@ -132,7 +132,7 @@ environments:
             aws:
                 # encrypted
                 iam_user:
-                    aws_access_key_id: ENC[AES256_GCM,data:vwGWgp+EF1CNDQtxTUeirkSaBQv5YV+Vc4T3TjQjto826dLw,iv:LYCUBNDzagSPbjSG3ixEWbb8WDeYlNsoyYcpmwmzNKg=,tag:FbiWpuJD8GHCQ7xuBfN/NQ==,type:str]
+                    aws_access_key_id: ENC[AES256_GCM,data:Frg/67jyTmqVjaLOcE7jLZG1bm4=,iv:hrtom72KX9lfVdOVMaMngeRcctBLhXrbrt+L9fSYzRc=,tag:vZIeBqrbuJhUc+kTZ6aiJQ==,type:str]
                     aws_secret_access_key: ENC[AES256_GCM,data:zx2HyvR1AHC8LOST2XLfJs5AutmcXAg6aUMrP02Fd279wcMFgC+npQ==,iv:U0cW9b5FQEIntcxMKy+anHnqw7apffq+ruOitA7Ob3Y=,tag:LHLRQH+RWG57+nuFGXSz2w==,type:str]
                     aws_default_region: ENC[AES256_GCM,data:lpeXPB0tymh6,iv:0jWk/hreDKLYSQHLLtMdD4IfrV3bKWLgbQihecUfUJA=,tag:XMCzYl4/swkA50596OvwdA==,type:str]
                     aws_role_arn: ENC[AES256_GCM,data:ywwK0qHy9UN5Ul8Vmjus7PeYE6qt40Hj/kdq6zi86QKwDkgYJHhh1WLh3ZugZAvc,iv:smFz6cjDgcggeehMry6nO7VOJMh/V2ZiTxCTiz9TOb0=,tag:8CW90/RLEUD9J4OjjEJ/jg==,type:str]
@@ -353,8 +353,8 @@ environments:
         components:
             - example
 sops:
-    lastmodified: "2026-08-18T15:02:16Z"
-    mac: ENC[AES256_GCM,data:W/C5TyTbzHoPXkeAmgN/dm903rit2AmLB9FZzDYtIgQ7I0OXK0nE88qv+xVDvSA/p3NYEzg5wbbPHr5hwWZbVwWnsb6sap+kGaGz23PM2+UjOl73IdJufs5Odi8BKGhUcAarIUnRWzZRFQUoFfEcRnAb2qDeP5ufl/MZpol5RrY=,iv:FtslbcNqN6N36Whbj1V821DVpbXf/GhGINlXUYgniqg=,tag:v8fh4VM6+G+GO/0QfFLZMw==,type:str]
+    lastmodified: "2026-08-18T15:04:30Z"
+    mac: ENC[AES256_GCM,data:GFRHBtsXbWNPUiIS46j0hqpqRSzi/HF1y2YhBtYEx9WVEtJV0cMXH2iaGWBhEQN394MaKmA79MTo+wxlL08u2B9BGAVQq70M5IYWnRDSsXe4NHBIz96nzQbCP+CvX7qDS5VxIH3hwMil66+2XRTPo1lWKCb44dXmcXdDVQYyJWk=,iv:J4BZAJ999mzUc87OBENhmHexx0ajDHFirlRyFSmOkf8=,tag:F3kAalm3L+09f01AlRxeug==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
