@@ -4,10 +4,10 @@ common:
             # aws.sts: AWS credentials for assuming into another role.
             # encrypted
             sts:
-                aws_access_key_id: ENC[AES256_GCM,data:Ge0lpHjiyd6tZDgz0BkmTMaUwDk=,iv:Y2WGFB6ypY+D4zTosanuFqhlYr3jOtJSJAMHlEmMzsg=,tag:K3xWZGYMupRwko7nRkIckw==,type:str]
-                aws_secret_access_key: ENC[AES256_GCM,data:KZ2tPoj5/3LjwOqvfW1uipcM4x69pp8jzGsyhhKwR0/YjmMsdF3FXA==,iv:7lvnoTZv9cvsWetrE5dcJ2tjWEgV1jUrk8XyJIgFOy0=,tag:w+eCVF2wzjZEjwzuW1DZdg==,type:str]
+                aws_access_key_id: ENC[AES256_GCM,data:vwARlxKrW+EM6aODnwPMjAhZFik=,iv:N9Jl/Gc3JKfFsasFIFCmU/w0r+DGQsSW25R4rnuQ4Lk=,tag:98ZE5+PjkIqlQ8Hvhkccjw==,type:str]
+                aws_secret_access_key: ENC[AES256_GCM,data:HQOsTm6YKJfxn9HIXy4dRaDkUgb/932wDpQHyuOywX0wLAdcTLshpA==,iv:6R2zSsQqD0p6ATGpUjQFWZpuq0143q/r4iV8BURkEOU=,tag:9thKKd3/UCyHd6KQGP3KAw==,type:str]
                 aws_default_region: ENC[AES256_GCM,data:yhbppXp4Emsv,iv:PoWpnhgYk18InCtqBcLK5yrI8vrHqTX9BDR2kQ0Kya0=,tag:7Jooayomp5o2DNnbqlvfFg==,type:str]
-                aws_role_arn: ENC[AES256_GCM,data:D9XN7uv6BCxUBfGYYPJC4qqw3fokJCvq5nW+L6EG8akINJTWLH0NBeCLDAFYbpLf,iv:3aLPlNl357O0otJqxn+BS3JLuZxEGNx4Wul/vqevhHE=,tag:xEjtBkwzOJyxJ+MHRciLYQ==,type:str]
+                aws_role_arn: ENC[AES256_GCM,data:1QHaEjI6J4zqlM6sDNXe81zzh6EfAHL9sOOI2OJlIqLXGWq5epzIj5RZdo3T4yVP,iv:Yisjxh+jttVGA1P94LACJxaIWzlSYGyEfPpuDMizP9k=,tag:RemiVHjujEmC+FOjn0y9Sg==,type:str]
                 aws_role_external_id: ENC[AES256_GCM,data:b52sm/9ISC/Zlp1Nzok+rYpbprY=,iv:TqyA4AEsR7VzSrlPFj9DUKIYJSYuwT6opDiiU0mu2IE=,tag:BHJ52wiQ0E9AaP30sB+oaw==,type:str]
             # aws.iam_user: AWS credentials assigned to IAM users. Must set AWS_DISABLE_STS=1 in
             # your environment variables to take effect.
@@ -132,10 +132,10 @@ environments:
             aws:
                 # encrypted
                 iam_user:
-                    aws_access_key_id: ENC[AES256_GCM,data:ojgQK8ye84vlqDyKXippt+y0/9Y=,iv:Nv/BbcTizvtleLtv/SeK3AWsGgbXSNl+Ycss0P7DVYw=,tag:fgC1Qa0lSX4oByy8IVPO3w==,type:str]
-                    aws_secret_access_key: ENC[AES256_GCM,data:0goZlDTUhXK7TUQ7E3K8RQJfNyPGribSHBbeoCHQkohs4ikq6pb1tw==,iv:+9zVhsBRAf5RECojQJ/Ij+6wgM98rgJMWABvdQNGfzw=,tag:GLanWz86Eu9q7GHz4HJOIA==,type:str]
+                    aws_access_key_id: ENC[AES256_GCM,data:QEc1Ateb6sAYWAkSyisi6aJFu3k=,iv:UouaD+S9OAHEqaEQXOY297r4oA2wRg2Wv9VG/oVsUhk=,tag:gA15iWCsOY6exbU2CVP9Ew==,type:str]
+                    aws_secret_access_key: ENC[AES256_GCM,data:7SUhnH1YlD9qpPVfFR7tgjspolUI6tsjII8uYhbNH/BI6/dEe/XBIA==,iv:8T1AOxQQgUi9vP1uXJcusERmyZgRwcnCp20nTz4bW1k=,tag:zC13aYOV2yXVwyEqErCH7A==,type:str]
                     aws_default_region: ENC[AES256_GCM,data:lpeXPB0tymh6,iv:0jWk/hreDKLYSQHLLtMdD4IfrV3bKWLgbQihecUfUJA=,tag:XMCzYl4/swkA50596OvwdA==,type:str]
-                    aws_role_arn: ENC[AES256_GCM,data:00NiX+NR4bkZLrCG9NqulfL/gz3n5avCOpDbfnXvoQnsqEWrJCflDZoA/oWwN+Ke,iv:bKSzAlt+qa4mIGa6tLMk4usw0GJKgCSlkaMUambOgfs=,tag:LfPaDZQ0ZhOxVdMkYe1g1A==,type:str]
+                    aws_role_arn: ENC[AES256_GCM,data:ywwK0qHy9UN5Ul8Vmjus7PeYE6qt40Hj/kdq6zi86QKwDkgYJHhh1WLh3ZugZAvc,iv:smFz6cjDgcggeehMry6nO7VOJMh/V2ZiTxCTiz9TOb0=,tag:8CW90/RLEUD9J4OjjEJ/jg==,type:str]
                     aws_role_external_id: ENC[AES256_GCM,data:82Pqnnd0NrTDp9hDChzvq5INspI=,iv:Mbhexv+qsQOVdP0ESTof4CysMV+g4bbgwVNXlXUopCU=,tag:QJPJwj5FeOJUp+aj+cvlGA==,type:str]
         deploy:
             environment_vars:
@@ -289,7 +289,7 @@ environments:
                 aws:
                     networking:
                         dns:
-                            domain_name: sandbox844.opentlc.com
+                            domain_name: sandbox3071.opentlc.com
                         cidr_block: 10.0.0.0/16
                         region: us-east-2
                         availability_zones:
@@ -353,8 +353,8 @@ environments:
         components:
             - example
 sops:
-    lastmodified: "2026-07-31T16:08:11Z"
-    mac: ENC[AES256_GCM,data:/b/jXT7+gpHZFJeEwd8nEjfmGO+3xDY4D8hEA4rfaLmJYVO360lelFGnV4viOjBB10Px7zLdn1LK9iK9aqs5xFBBCdrOEOR5apRjukNMQlJE9VcY3b4i48EAHTc9Nk/Uy0kjmE/cXE5spHSSZsNtbTokHHUQYnI+ItesmB3ZGZs=,iv:zR9qr7xTEGB7JmK5aGqKnFkALXLtIPpVGqremxfQ2Dc=,tag:jCoJ9fDy7PJnlJZDa6y0Zw==,type:str]
+    lastmodified: "2026-08-18T14:59:03Z"
+    mac: ENC[AES256_GCM,data:FwJhv41p2wT2y6xuJBzsPTnSHFHGWRY2q0WgN/kroJ9vUwLsH2a8+ZTgnjIMR0gfb/aIc0puvKTYERZjW5NsDYRbDV45CmKwFRibX/UJwZJr3MjQREQ/vE7zgV6aHBAaTIDG5gAw7pLAhjAV2vez1gLlK0XPtbYphPx5j4hy5po=,iv:RG3SavuisRBhRBiM1BPi53ddUf50vfteX96I4jRNmlA=,tag:oUhAsog6F4YcotjW9TsUdg==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
