@@ -4,8 +4,8 @@ common:
             # aws.sts: AWS credentials for assuming into another role.
             # encrypted
             sts:
-                aws_access_key_id: ENC[AES256_GCM,data:vwARlxKrW+EM6aODnwPMjAhZFik=,iv:N9Jl/Gc3JKfFsasFIFCmU/w0r+DGQsSW25R4rnuQ4Lk=,tag:98ZE5+PjkIqlQ8Hvhkccjw==,type:str]
-                aws_secret_access_key: ENC[AES256_GCM,data:HQOsTm6YKJfxn9HIXy4dRaDkUgb/932wDpQHyuOywX0wLAdcTLshpA==,iv:6R2zSsQqD0p6ATGpUjQFWZpuq0143q/r4iV8BURkEOU=,tag:9thKKd3/UCyHd6KQGP3KAw==,type:str]
+                aws_access_key_id: ENC[AES256_GCM,data:YNmxN15bq78RHbRV8yJP16MWrOoVgoGXra5aRp8T1kuJ+Sex,iv:p0AVFkAYsBoebrxANY6A9KPrhfGxMF3KpAvgvJ4WKNc=,tag:BQ/N2BMqKu9PleS8rWgoIw==,type:str]
+                aws_secret_access_key: ENC[AES256_GCM,data:unaqFl7jsAHy3dGAX/65klb75CUU7Abf+VwffmcrXzMF28eGvIpEfw==,iv:+8/+tBZUq1eoQHUsoXZOQikWasyzSWDDEcsZdY0VRn8=,tag:haK2wRHmaoBFpbD7VdxAeA==,type:str]
                 aws_default_region: ENC[AES256_GCM,data:yhbppXp4Emsv,iv:PoWpnhgYk18InCtqBcLK5yrI8vrHqTX9BDR2kQ0Kya0=,tag:7Jooayomp5o2DNnbqlvfFg==,type:str]
                 aws_role_arn: ENC[AES256_GCM,data:1QHaEjI6J4zqlM6sDNXe81zzh6EfAHL9sOOI2OJlIqLXGWq5epzIj5RZdo3T4yVP,iv:Yisjxh+jttVGA1P94LACJxaIWzlSYGyEfPpuDMizP9k=,tag:RemiVHjujEmC+FOjn0y9Sg==,type:str]
                 aws_role_external_id: ENC[AES256_GCM,data:b52sm/9ISC/Zlp1Nzok+rYpbprY=,iv:TqyA4AEsR7VzSrlPFj9DUKIYJSYuwT6opDiiU0mu2IE=,tag:BHJ52wiQ0E9AaP30sB+oaw==,type:str]
@@ -60,7 +60,7 @@ environments:
             #   aws:
             #     # encrypted
             #     sts:
-            #       aws_access_key_id: AKIAFOOBAR12345
+            #       aws_access_key_id: AKIATOCIPTHNHTROFGV5FOOBAR12345
             #       aws_secret_access_key: superdupersecret
             #       aws_default_region: us-west-1
             #       aws_role_arn: foo
@@ -132,8 +132,8 @@ environments:
             aws:
                 # encrypted
                 iam_user:
-                    aws_access_key_id: ENC[AES256_GCM,data:QEc1Ateb6sAYWAkSyisi6aJFu3k=,iv:UouaD+S9OAHEqaEQXOY297r4oA2wRg2Wv9VG/oVsUhk=,tag:gA15iWCsOY6exbU2CVP9Ew==,type:str]
-                    aws_secret_access_key: ENC[AES256_GCM,data:7SUhnH1YlD9qpPVfFR7tgjspolUI6tsjII8uYhbNH/BI6/dEe/XBIA==,iv:8T1AOxQQgUi9vP1uXJcusERmyZgRwcnCp20nTz4bW1k=,tag:zC13aYOV2yXVwyEqErCH7A==,type:str]
+                    aws_access_key_id: ENC[AES256_GCM,data:vwGWgp+EF1CNDQtxTUeirkSaBQv5YV+Vc4T3TjQjto826dLw,iv:LYCUBNDzagSPbjSG3ixEWbb8WDeYlNsoyYcpmwmzNKg=,tag:FbiWpuJD8GHCQ7xuBfN/NQ==,type:str]
+                    aws_secret_access_key: ENC[AES256_GCM,data:zx2HyvR1AHC8LOST2XLfJs5AutmcXAg6aUMrP02Fd279wcMFgC+npQ==,iv:U0cW9b5FQEIntcxMKy+anHnqw7apffq+ruOitA7Ob3Y=,tag:LHLRQH+RWG57+nuFGXSz2w==,type:str]
                     aws_default_region: ENC[AES256_GCM,data:lpeXPB0tymh6,iv:0jWk/hreDKLYSQHLLtMdD4IfrV3bKWLgbQihecUfUJA=,tag:XMCzYl4/swkA50596OvwdA==,type:str]
                     aws_role_arn: ENC[AES256_GCM,data:ywwK0qHy9UN5Ul8Vmjus7PeYE6qt40Hj/kdq6zi86QKwDkgYJHhh1WLh3ZugZAvc,iv:smFz6cjDgcggeehMry6nO7VOJMh/V2ZiTxCTiz9TOb0=,tag:8CW90/RLEUD9J4OjjEJ/jg==,type:str]
                     aws_role_external_id: ENC[AES256_GCM,data:82Pqnnd0NrTDp9hDChzvq5INspI=,iv:Mbhexv+qsQOVdP0ESTof4CysMV+g4bbgwVNXlXUopCU=,tag:QJPJwj5FeOJUp+aj+cvlGA==,type:str]
@@ -353,8 +353,8 @@ environments:
         components:
             - example
 sops:
-    lastmodified: "2026-08-18T14:59:03Z"
-    mac: ENC[AES256_GCM,data:FwJhv41p2wT2y6xuJBzsPTnSHFHGWRY2q0WgN/kroJ9vUwLsH2a8+ZTgnjIMR0gfb/aIc0puvKTYERZjW5NsDYRbDV45CmKwFRibX/UJwZJr3MjQREQ/vE7zgV6aHBAaTIDG5gAw7pLAhjAV2vez1gLlK0XPtbYphPx5j4hy5po=,iv:RG3SavuisRBhRBiM1BPi53ddUf50vfteX96I4jRNmlA=,tag:oUhAsog6F4YcotjW9TsUdg==,type:str]
+    lastmodified: "2026-08-18T15:02:16Z"
+    mac: ENC[AES256_GCM,data:W/C5TyTbzHoPXkeAmgN/dm903rit2AmLB9FZzDYtIgQ7I0OXK0nE88qv+xVDvSA/p3NYEzg5wbbPHr5hwWZbVwWnsb6sap+kGaGz23PM2+UjOl73IdJufs5Odi8BKGhUcAarIUnRWzZRFQUoFfEcRnAb2qDeP5ufl/MZpol5RrY=,iv:FtslbcNqN6N36Whbj1V821DVpbXf/GhGINlXUYgniqg=,tag:v8fh4VM6+G+GO/0QfFLZMw==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
