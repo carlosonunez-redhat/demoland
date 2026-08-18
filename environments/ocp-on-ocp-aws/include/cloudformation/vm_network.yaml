@@ -1,0 +1,25 @@
+# vi: set syntax=cloudformation:
+AWSTemplateFormatVersion: 2010-09-09
+Description: Adds a secondary network interface to provide a single-node OpenShift cluster a dedicated VM network.
+Parameters:
+  InstanceId:
+    Type: AWS::EC2::Instance::Id
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+  OCPControlPlaneSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+Resources:
+  NetworkInterface:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      Description: VM Network Interface
+      SourceDestCheck: "false"
+      GroupSet:
+        - !Ref OCPControlPlaneSecurityGroupId
+      SubnetId: !Ref SubnetId
+  NetworkInterfaceAttachment:
+    Type: AWS::EC2::NetworkInterfaceAttachment
+    Properties:
+      NetworkInterfaceId: !Ref NetworkInterface
+      InstanceId: !Ref InstanceId
+      DeleteOnTermination: "true"

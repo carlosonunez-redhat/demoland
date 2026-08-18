@@ -15,4 +15,9 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 # variable, like shown in the comment below.
 #
 # source "$ENVIRONMENT_INCLUDE_DIR/foo.sh"
-
+remove_vm_network_nic() {
+  _delete_aws_resources_from_cfn_stack \
+    vm_network \
+    "Deleting VM Network NIC..."
+}
+remove_vm_network_nic
