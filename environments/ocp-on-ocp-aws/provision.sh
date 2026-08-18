@@ -19,20 +19,20 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 
 add_vm_network_nic() {
   instances=$(_exec_aws ec2 describe-instances \
-    --query 'Reservations[].Instances[?(@.Tags[?Key==`Name` && contains(Value, `'"$(_cluster_infra_name)"'`)])]' | \
-    jq -cr 'flatten | .[] | {
+    --query 'Reservations[].Instances[?(@.State.Name == `running` && @.Tags[?Key==`Name` && contains(Value, `'"$(_cluster_infra_name)"'`)])]' | \
+    jq -cr '[flatten | .[] | {
   id: .InstanceId,
   primary_nic: {
     subnet_id: .NetworkInterfaces[0].SubnetId,
     sg_id: .NetworkInterfaces[0].Groups[0].GroupId
   }
-}')
+}]')
   if test -z "$instances"
   then
     error "Couldn't find any nodes with cluster name: $(_cluster_infra_name)"
     return 1
   fi
-  num_instances=$(jq -r '.[].id' <<< "$instances")
+  num_instances=$(jq -r '[.[].id] | flatten | length' <<< "$instances")
   if test "$num_instances" -gt 1
   then
     error "This function only supports single-node OpenShift clusters (found '$num_instances' nodes)"
