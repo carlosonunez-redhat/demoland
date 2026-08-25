@@ -47,8 +47,8 @@ patch_nncp_for_vm_network() {
     modifications="$(cat <<-EOF
 - file: bootstrap/resources/networking/kustomization.yaml
   variables:
-    "metadata/name": "br1-$1-policy"
-    desiredState: "$1"
+    "metadata/name": "br1-${1}-policy"
+    "desiredState.*interfaces.*": "$1"
 EOF
 )"
     render_kustomization_patches "$modifications"
