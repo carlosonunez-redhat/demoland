@@ -47,7 +47,7 @@ patch_nncp_for_vm_network() {
     modifications="$(cat <<-EOF
 - file: bootstrap/resources/networking/kustomization.yaml
   variables:
-    name: "br1-$1-policy"
+    "metadata/name": "br1-$1-policy"
     desiredState: "$1"
 EOF
 )"
@@ -55,33 +55,38 @@ EOF
   }
 
   all_available_ifaces=""
-  for node in $(_exec_oc get nodes -o name)
+  for node in $(exec_oc get nodes -o name | sed 's;^node/;;')
   do
     all_ifaces=$(_find_physical_ifaces_on_node "$node")
     claimed_ifaces=$(_find_physical_iface_members_in_brex_bridge "$node")
     available_ifaces=$(_find_unclaimed_ifaces "$all_ifaces" "$claimed_ifaces")
     all_available_ifaces="$all_available_ifaces $available_ifaces"
   done
-  all_available_ifaces=$(tr ' ' '\n' <<< "$all_available_ifaces" | sort -u)
+  all_available_ifaces=$(tr ' ' '\n' <<< "$all_available_ifaces" | tr -d ' ' | grep -Ev '^$' | sort -u)
+  if test -z "$all_available_ifaces"
+  then
+    error "No available interfaces found (found: [$(tr '\n' ',' <<< "$all_ifaces" | sed 's/.$//')], claimed: [$claimed_ifaces])"
+    return 1
+  fi
   num_unique_available_ifaces=$(wc -l <<< "$all_available_ifaces")
   if test "$num_unique_available_ifaces" -gt 1
   then
     error "One or more nodes have mismatched network interface device identifiers; interfaces: $all_available_ifaces"
     return 1
   fi
-  patches=$(_patch_nncp_kustomization "$all_available_ifaces")
+  patches=$(_patch_nncp_kustomization "$(head -1 <<< "$all_available_ifaces")") || return 1
   test "$patches" -eq 0 && return 0
 
   info "NodeNetworkConfigurationPolicy kustomization updated. Commit and push your changes to apply."
   return 1
 }
 
-patch_nncp_for_vm_network || return 1
+patch_nncp_for_vm_network || exit 1
+info "WIP."
+exit 0
 setup_gitops ocp-on-ocp-aws bootstrap/operators operators
 setup_gitops ocp-on-ocp-aws bootstrap/resources/base resources
 setup_gitops ocp-on-ocp-aws bootstrap/resources/networking networking
-info "WIP."
-exit 0
 
 wait_for_osv_to_become_ready
 if ! nested_ocp_cluster_created
