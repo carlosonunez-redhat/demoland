@@ -10,4 +10,4 @@ patches:
         value: br1-enp127s0-policy
       - op: replace
         path: /spec/desiredState/interfaces/0/bridge/port/0/name
-        value: enp126s0
+        value: enp127s0
