@@ -18,7 +18,7 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 # source "$ENVIRONMENT_INCLUDE_DIR/foo.sh"
 patch_nncp_for_vm_network() {
   _find_physical_iface_members_in_brex_bridge() {
-    pod=$(_exec_oc get pod -n openshift-ovn-kubernetes \
+    pod=$(exec_oc get pod -n openshift-ovn-kubernetes \
       --field-selector=spec.nodeName="$1" \
       -l app=ovnkube-node \
       -o name)
@@ -27,13 +27,13 @@ patch_nncp_for_vm_network() {
       error "ovn pod not found on worker node '$1'"
       return 1
     fi
-    _exec_oc exec -n openshift-ovn-kubernetes "$pod" -- ovs-vsctl list-ports br-ex |
+    exec_oc exec -q -n openshift-ovn-kubernetes "$pod" -- ovs-vsctl list-ports br-ex |
       grep -Ev '^patch-' |
       sort
   }
 
   _find_physical_ifaces_on_node() {
-    _exec_oc debug "node/$1" -- ip -br a | grep -E '^(en|eth)' | awk '{print $1}' | sort
+    exec_oc debug -q "node/$1" -- ip -br a | grep -E '^(en|eth)' | awk '{print $1}' | sort
   }
 
   _find_unclaimed_ifaces() {
