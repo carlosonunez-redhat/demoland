@@ -40,7 +40,7 @@ patch_nncp_for_vm_network() {
     local all claimed
     all="$1"
     claimed="$2"
-    comm -13 <(echo "$all") <(echo "$claimed") | sort -u
+    comm -23 <(echo "$all") <(echo "$claimed") | sort -u
   }
 
   _patch_nncp_kustomization() {
