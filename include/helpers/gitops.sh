@@ -147,6 +147,19 @@ render_kustomization_patches() {
       do
         got_json=$(jq -r '.[] | select(.path | test(".*/'"$var"'$")) | .' <<< "$patch_json" | grep -Ev '^null$' | cat)
         test -z "$got_json" && continue
+        paths_found=$(jq -r '.path' <<< "$got_json" | grep -Ev '^null$' | cat)
+        if test "$(wc -l <<< "$paths_found")" -gt 1
+        then
+          error "$(cat <<-EOF
+More than one key found in Kustomization that matches '$var':
+
+$(sed 's/^/- /' <<< "$paths_found")
+
+Please make '$var' in your variables block more specific.
+EOF
+)"
+          return 1
+        fi
         got=$(jq -r '.value' <<< "$got_json" | grep -Ev '^null$' | cat)
         want=$(yq -r '.variables | to_entries[] | select(.key == "'"$var"'") | .value' <<< "$curr_mods" |
           grep -Ev '^null$' |
