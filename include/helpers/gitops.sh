@@ -129,7 +129,7 @@ configure_gitops_admins_postinstall() {
 #     key: string # `key` is a part of a path in a patch to modify.
 #                 # `value` is the desired value for that patch.
 render_kustomization_patches() {
-  local replacements_made mod_yaml want got curr_mods patch_json
+  local replacements_made mod_yaml want got curr_mods patch_json new_patch
   replacements_made=0
   mod_yaml="$(yq -r '.' <<< "$1")"
   if test -z "$mod_yaml"
@@ -141,8 +141,11 @@ render_kustomization_patches() {
   do
     file="$(_get_environment_dir)/$fname"
     curr_mods=$(yq -r '.[] | select(.file | contains("'"$fname"'"))' <<< "$mod_yaml")
-    while read -r patch_json
+    while read -r patch_data
     do
+      patch_target_kind=$(yq -p=j -r '.target.kind' <<< "$patch_data")
+      patch_target_name=$(yq -p=j -r '.target.name' <<< "$patch_data")
+      patch_json=$(yq -o=j -r '.patch | fromyaml' <<< "$patch_data")
       while read -r var
       do
         got_json=$(jq -r '.[] | select(.path | test(".*/'"$var"'$")) | .' <<< "$patch_json" | grep -Ev '^null$' | cat)
@@ -177,9 +180,13 @@ EOF
         test "$want" == "$got" && continue
         replacements_made=$((replacements_made+1))
         info "===> Modifying kustomization '$file' (key: '$var', want: '$want', got: '$got')"
-        sed -i "s;$got;$want;g" "$file"
+        new_patch=$(jq -cr --arg val "$want" --arg path "$paths_found" '(.[] | select(.path == $path) | .value) = $val' <<< "$patch_json")
+        curr_mods=$(yq -r '.[] | select(.file | contains("'"$fname"'"))' <<< "$mod_yaml")
+        yq -I=2 -i '(.patches[] | '\
+'select(.target.kind == "'"$patch_target_kind"'" and .target.name == "'"$patch_target_name"'") | '\
+'.patch) = ('"$new_patch"' | to_yaml)' "$file"
       done < <(yq -r '.variables | to_entries[] | .key' <<< "$curr_mods")
-    done < <(yq -o=j -I=0 -r '.patches[].patch | fromyaml' "$file")
+    done < <(yq -o=j -I=0 -r '.patches[]' "$file")
   done < <(yq -r '.[].file' <<< "$mod_yaml")
   echo "$replacements_made"
 }
