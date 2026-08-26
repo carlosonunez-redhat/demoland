@@ -43,12 +43,32 @@ patch_nncp_for_vm_network() {
     comm -23 <(echo "$all") <(echo "$claimed") | sort -u
   }
 
+  _nad_config() {
+    local br_name vlan_id
+    br_name="$1"
+    vlan_id="${2:-100}"
+    cat <<-EOF | jq tostring | sed 's/^"// ; s/"$//'
+{
+  "cniVersion": "0.3.1",
+  "name": "bridge-network",
+  "type": "bridge",
+  "bridge": "$br_name",
+  "macspoofchk": false,
+  "vlan": $vlan_id,
+  "disableContainerInterface": true,
+  "preserveDefaultVlan": false
+}
+EOF
+  }
+
   _patch_nncp_kustomization() {
     modifications="$(cat <<-EOF
 - file: bootstrap/resources/networking/kustomization.yaml
   variables:
     "metadata/name": "br1-${1}-policy"
-    "desiredState.*interfaces.*": "$1"
+    "desiredState.*bridge/port.*": "$1"
+    "resourceName": "bridge.network.kubevirt.io/br1"
+    "config": "$(_nad_config br1)"
 EOF
 )"
     render_kustomization_patches "$modifications"

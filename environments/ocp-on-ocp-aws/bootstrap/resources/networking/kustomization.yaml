@@ -1,13 +1,30 @@
 resources:
   - ../../../../../components/openshift-networking/resources/nmstate/bridge-network
+  - ../../../../../components/openshift-networking/resources/network-attachment-definition
 patches:
   - target:
       kind: NodeNetworkConfigurationPolicy
       name: example-bridge-policy
     patch: |-
       - op: replace
+        path: /spec/desiredState/interfaces/0/name
+        value: br1
+      - op: replace
         path: /metadata/name
         value: br1-enp127s0-policy
       - op: replace
         path: /spec/desiredState/interfaces/0/bridge/port/0/name
         value: enp127s0
+  - target:
+      kind: NetworkAttachmentDefinition
+      name: nad
+    patch: |
+      - op: replace
+        path: /metadata/name
+        value: vm-bridge-network
+      - op: replace
+        path: /metadata/annotations/k8s.v1.cni.cncf.io~1resourceName
+        value: bridge.network.kubevirt.io/br1
+      - op: replace
+        path: /spec/config
+        value: '{"cniVersion":"0.3.1","name":"bridge-network","type":"bridge","bridge":"br1","macspoofchk":false,"vlan":100,"disableContainerInterface":true,"preserveDefaultVlan":false}'
