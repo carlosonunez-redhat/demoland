@@ -1,5 +1,6 @@
 # shellcheck shell=bash
 source "$(dirname "$0")/../include/helpers/ocp.sh"
+source "$(dirname "$0")/../include/helpers/yaml.sh"
 
 _wait_for_gitops_ready() {
   _namespace_available() {
@@ -124,70 +125,92 @@ configure_gitops_admins_postinstall() {
 #
 # ```yaml
 # ---
-# - file: string # path to kustomization file
+# # file: path to a Kustomization file to manipulate
+# - file: string
+#   target:
+#     # target.name: The name of the resource in the Kustomization whose patch is being altered
+#     name: ""
+#     # target.kind: The Kind of the resource in the Kustomization whose patch is being altered
+#     kind: ""
 #   variables:
-#     key: string # `key` is a part of a path in a patch to modify.
-#                 # `value` is the desired value for that patch.
+#     # variables.[path]: A mapping of a regexp for a resource path in the patch JSON to alter to its value.
+#     #                   The value can be any JSON-acceptable object.
+#     key: $value
+# ```
+#
 render_kustomization_patches() {
-  local replacements_made mod_yaml want got curr_mods patch_json new_patch
-  replacements_made=0
-  mod_yaml="$(yq -r '.' <<< "$1")"
-  if test -z "$mod_yaml"
+  _path_values_are_equal() {
+    test "$(base64 -w 0 <<< "$1")" == "$(base64 -w 0 <<< "$2")"
+  }
+
+  local modifications_made modifications_yaml
+  modifications_made=0
+  modifications_yaml="$1"
+  if test -z "$modifications_yaml"
   then
-    error "Kustomization modifications YAML empty or malformed: $1"
+    error "Modifications YAML is empty"
     return 1
   fi
-  while read -r fname
+  if ! &>/dev/null yq . <<< "$modifications_yaml"
+  then
+    error "Modifications YAML is malformed"
+    return 1
+  fi
+  while read -r modification_data
   do
-    file="$(_get_environment_dir)/$fname"
-    curr_mods=$(yq -r '.[] | select(.file | contains("'"$fname"'"))' <<< "$mod_yaml")
-    while read -r patch_data
+    kustomization_file_str=$(jq_strip_null -r '.file' <<< "$modification_data")
+    if test -z "$kustomization_file_str"
+    then
+      error "File is missing in modification block '$modification_data'"
+      return 1
+    fi
+    kustomization_file_str="$(_get_environment_dir)/$kustomization_file_str"
+    if ! test -f "$kustomization_file_str"
+    then
+      error "Kustomization file not found: $kustomization_file_str"
+      return 1
+    fi
+    modifications=$(jq_strip_null -r '.variables' <<< "$modification_data")
+    if test -z "$modifications"
+    then
+      error "Modification block is missing modifications: $modification_data"
+      return 1
+    fi
+    kustomization=$(yq -r '.' "$kustomization_file_str")
+    this_target_name=$(jq_strip_null -r '.target.name' <<< "$modification_data")
+    this_target_kind=$(jq_strip_null -r '.target.kind' <<< "$modification_data")
+    for patch_idx in $(seq 0 "$(yq -r '(.patches | length) - 1' <<< "$kustomization")")
     do
-      patch_target_kind=$(yq -p=j -r '.target.kind' <<< "$patch_data")
-      patch_target_name=$(yq -p=j -r '.target.name' <<< "$patch_data")
-      patch_json=$(yq -o=j -r '.patch | fromyaml' <<< "$patch_data")
-      while read -r var
+      patch_statement=$(yq -r ".patches[$patch_idx]" <<< "$kustomization")
+      patch_target_name=$(yq_strip_null -r '.target.name' <<< "$patch_statement")
+      patch_target_kind=$(yq_strip_null -r '.target.kind' <<< "$patch_statement")
+      { test -n "$this_target_name" && { test "$this_target_name" != "$patch_target_name"; } ; } && continue
+      { test -n "$this_target_kind" && { test "$this_target_kind" != "$patch_target_kind"; } ; } && continue
+      patch_statement_json=$(yq -o=j -I=0 -r ".patch | from_yaml" <<< "$patch_statement")
+      while read -r modification
       do
-        got_json=$(jq -r '.[] | select(.path | test(".*/'"$var"'$")) | .' <<< "$patch_json" | grep -Ev '^null$' | cat)
-        test -z "$got_json" && continue
-        paths_found=$(jq -r '.path' <<< "$got_json" | grep -Ev '^null$' | cat)
-        if test "$(wc -l <<< "$paths_found")" -gt 1
+        mod_path_regexp=$(jq -r '.key' <<< "$modification")
+        paths_found=$(jq --arg re "$mod_path_regexp" -r '[.[] | select(.path | test($re)) | .path] | flatten' <<< "$patch_statement_json")
+        paths_found_length=$(jq -r 'length' <<< "$paths_found")
+        if test "$paths_found_length" -gt 1
         then
-          error "$(cat <<-EOF
-More than one key found in Kustomization that matches '$var':
-
-$(sed 's/^/- /' <<< "$paths_found")
-
-Please make '$var' in your variables block more specific.
-EOF
-)"
+          error "Multiple paths found that match '$mod_path_regexp'; only one is allowed: $paths_found"
           return 1
         fi
-        got=$(jq -r '.value' <<< "$got_json" | grep -Ev '^null$' | cat)
-        want=$(yq -r '.variables | to_entries[] | select(.key == "'"$var"'") | .value' <<< "$curr_mods" |
-          grep -Ev '^null$' |
-          cat)
-        if test -z "$want"
-        then
-          error "Value for '$var' is empty; cannot continue patching Kustomization"
+        path_found=$(jq -r '.[0]' <<< "$paths_found")
+        current_path_value="$(jq -cr --arg path "$path_found" '.[] | select(.path == $path) | .value' <<< "$patch_statement_json")"
+        new_path_value=$(jq -cr '.value' <<< "$modification")
+        _path_values_are_equal "$current_path_value" "$new_path_value" && continue
+        info "Modifying path '$path_found' in kustomization '$kustomization_file_str'; current: '$current_path_value', new: '$new_path_value'"
+        new_patch_statement_json=$(jq --arg path "$path_found" \
+          --arg val "$new_path_value" \
+          -r \
+          '(.[] | select(.path == $path) | .value) = ($val | tostring)' <<< "$patch_statement_json")
+        yq -i "(.patches[$patch_idx].patch) = ($new_patch_statement_json | to_yaml)" "$kustomization_file_str" ||
           return 1
-        fi
-        if test -z "$got"
-        then
-          warning "Value for '$var' in Kustomization '$file' not set; setting to '$want'"
-          got="$want"
-        fi
-        test "$want" == "$got" && continue
-        replacements_made=$((replacements_made+1))
-        info "===> Modifying kustomization '$file' (key: '$var', want: '$want', got: '$got')"
-        new_patch=$(jq -cr --arg val "$want" --arg path "$paths_found" '(.[] | select(.path == $path) | .value) = $val' <<< "$patch_json")
-        curr_mods=$(yq -r '.[] | select(.file | contains("'"$fname"'"))' <<< "$mod_yaml")
-        yq -I=2 -i '(.patches[] | '\
-'select(.target.kind == "'"$patch_target_kind"'" and .target.name == "'"$patch_target_name"'") | '\
-'.patch) = ('"$new_patch"' | to_yaml)' "$file"
-      done < <(yq -r '.variables | to_entries[] | .key' <<< "$curr_mods")
-    done < <(yq -o=j -I=0 -r '.patches[]' "$file")
-  done < <(yq -r '.[].file' <<< "$mod_yaml")
-  echo "$replacements_made"
+        modifications_made=$((modifications_made+1))
+      done < <(yq -o=j -I=0 -r '. | to_entries[]' <<< "$modifications")
+    done
+  done < <(yq -o=j -I=0 -r '.[]' <<< "$modifications_yaml")
+  echo "$modifications_made"
 }
-
