@@ -64,9 +64,16 @@ EOF
   _patch_nncp_kustomization() {
     modifications="$(cat <<-EOF
 - file: bootstrap/resources/networking/kustomization.yaml
+  target:
+    name: example-bridge-policy
   variables:
     "metadata/name": "br1-${1}-policy"
     "desiredState.*bridge/port.*": "$1"
+- file: bootstrap/resources/networking/kustomization.yaml
+  target:
+    name: nad
+  variables:
+    'metadata/name': vm-bridge-network
     "resourceName": "bridge.network.kubevirt.io/br1"
     "config": "$(_nad_config br1)"
 EOF
@@ -102,11 +109,11 @@ EOF
 }
 
 patch_nncp_for_vm_network || exit 1
-info "WIP."
-exit 0
 setup_gitops ocp-on-ocp-aws bootstrap/operators operators
 setup_gitops ocp-on-ocp-aws bootstrap/resources/base resources
 setup_gitops ocp-on-ocp-aws bootstrap/resources/networking networking
+info "WIP."
+exit 0
 
 wait_for_osv_to_become_ready
 if ! nested_ocp_cluster_created
