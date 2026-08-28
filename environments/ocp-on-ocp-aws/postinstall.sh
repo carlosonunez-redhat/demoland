@@ -176,6 +176,7 @@ patch_storage_machineconfig || exit 1
 setup_gitops ocp-on-ocp-aws bootstrap/operators operators
 setup_gitops ocp-on-ocp-aws bootstrap/resources/base resources
 setup_gitops ocp-on-ocp-aws bootstrap/resources/networking networking
+setup_gitops ocp-on-ocp-aws bootstrap/resources/storage storage
 wait_for_vm_storage_pool_disk_to_mount
 info "WIP."
 exit 0
