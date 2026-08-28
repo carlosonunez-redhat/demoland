@@ -50,4 +50,18 @@ add_vm_network_nic() {
     "Adding additional NIC for VM network..."
 }
 
+add_vm_storage_pool_disk() {
+  params=(
+    InstanceId "$(jq -r '.[0].id' <<< "$(_vm_instance_data)")"
+    AZ "$(jq -r '.[0].az' <<< "$(_vm_instance_data)")"
+  )
+  _create_aws_resources_from_cfn_stack_with_caps \
+    vm_storage \
+    "$(_create_aws_cf_params_json "${params[@]}")" \
+    "CAPABILITY_NAMED_IAM" \
+    "Adding storage pool disk..."
+}
+
+set -e
 add_vm_network_nic
+add_vm_storage_pool_disk

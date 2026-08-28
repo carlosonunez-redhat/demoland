@@ -1,0 +1,33 @@
+# vi: set syntax=cloudformation:
+AWSTemplateFormatVersion: 2010-09-09
+Description: Adds a secondary network interface to provide a single-node OpenShift cluster a dedicated VM network.
+Parameters:
+  AZ:
+    Type: String
+  InstanceId:
+    Type: AWS::EC2::Instance::Id
+  VolumeSizeGB:
+    Type: Number
+    Default: 500
+  VolumeType:
+    Type: String
+    Default: gp3
+  VolumeDeviceIndex:
+    Type: Number
+    Default: 2
+  VolumeDeviceMount:
+    Type: String
+    Default: /dev/sdh
+Resources:
+  Volume:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: !Ref AZ
+      Size: !Ref VolumeSizeGB
+      VolumeType: !Ref VolumeType
+  VolumeAttachment:
+    Type: AWS::EC2::VolumeAttachment
+    Properties:
+      InstanceId: !Ref InstanceId
+      VolumeId: !Ref Volume
+      Device: !Ref VolumeDeviceMount

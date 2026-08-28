@@ -108,10 +108,71 @@ EOF
   return 1
 }
 
+_exec_on_virt_node() {
+  node_name="$(exec_oc get nodes -o jsonpath='node/{.items[0].metadata.name}')"
+  if test -z "$node_name"
+  then
+    error "Couldn't resolve SNO node name"
+    return 1
+  fi
+  exec_oc debug -q "$node_name" -- "$@"
+}
+
+_vm_storage_pool_disk_name() {
+  disk_names=$(_exec_on_virt_node lsblk -o NAME -J |
+    jq_strip_null -r '[.blockdevices[] | select(.name | test("^nvme[?!0]"))] | flatten | .[].name')
+  if test -z "$disk_names"
+  then
+    error "Unable to get disk names from node '$node_name'"
+    return 1
+  fi
+  if test "$(wc -l <<< "$disk_names")" -gt 1
+  then
+    error "More than one disk found; there should only be one: $disk_names"
+    return 1
+  fi
+  head -1 <<< "$disk_names"
+}
+
+patch_storage_machineconfig() {
+  disk_name=$(_vm_storage_pool_disk_name)
+  modifications="$(cat <<-EOF
+- file: bootstrap/resources/base/kustomization.yaml
+  options:
+    replace_all_match: true
+  variables:
+    device: "$disk_name"
+    path: "$VM_STORAGE_POOL_PATH"
+EOF
+)"
+  patches="$(render_kustomization_patches "$modifications")"
+  test "$patches" -eq 0 && return 0
+
+  info "Base resources kustomization updated. Commit and push your changes to apply."
+  return 1
+}
+
+wait_for_vm_storage_pool_disk_to_mount() {
+  disk_name=$(_vm_storage_pool_disk_name) || return 1
+  local attempts=1
+  while test "$attempts" -lt 60
+  do
+    info "[${attempts}/60] Waiting for VM storage pool disk '$disk_name' to mount onto '$VM_STORAGE_POOL_PATH'"
+    mounts_found=$(_exec_on_virt_node mount | grep "$disk_name")
+    test -n "$mounts_found" && return 0
+    attempts=$((attempts+1))
+    sleep 1
+  done
+  error "Timed out while waiting for disk to mount"
+  return 1
+}
+
 patch_nncp_for_vm_network || exit 1
+patch_storage_machineconfig || exit 1
 setup_gitops ocp-on-ocp-aws bootstrap/operators operators
 setup_gitops ocp-on-ocp-aws bootstrap/resources/base resources
 setup_gitops ocp-on-ocp-aws bootstrap/resources/networking networking
+wait_for_vm_storage_pool_disk_to_mount
 info "WIP."
 exit 0
 

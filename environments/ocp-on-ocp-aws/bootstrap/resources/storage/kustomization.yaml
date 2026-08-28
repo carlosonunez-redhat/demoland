@@ -1,0 +1,21 @@
+resources:
+  - ../../../../../components/storage/resources/storageclasses/hostpath-csi
+  - ../../../../../components/storage/resources/provisioners/hostpath
+patches:
+  - target:
+      kind: HostPathProvisioner
+      name: replace-me
+    patch: |-
+      - op: replace
+        metadata: /spec/storagePools/0/name
+        value: local-storage-pool
+      - op: replace
+        metadata: /spec/storagePools/0/path
+        value: '/mnt/virt-storage-pool'
+  - target:
+      kind: StorageClass
+      name: hostpath-csi
+    patch: |-
+      - op: replace
+        metadata: /parameters/storagePool
+        name: local-storage-pool

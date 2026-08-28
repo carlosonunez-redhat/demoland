@@ -342,8 +342,7 @@ environments:
             ignore_installconfig_check: false
         deploy:
             environment_vars:
-                - SOME_KEY=some value
-                - ANOTHER_KEY=another value
+                - VM_STORAGE_POOL_PATH=/vm-storage-pool
             secrets:
                 gitops_branch:
                     name: gitops/branch
@@ -353,8 +352,8 @@ environments:
         components:
             - example
 sops:
-    lastmodified: "2026-08-18T15:04:30Z"
-    mac: ENC[AES256_GCM,data:GFRHBtsXbWNPUiIS46j0hqpqRSzi/HF1y2YhBtYEx9WVEtJV0cMXH2iaGWBhEQN394MaKmA79MTo+wxlL08u2B9BGAVQq70M5IYWnRDSsXe4NHBIz96nzQbCP+CvX7qDS5VxIH3hwMil66+2XRTPo1lWKCb44dXmcXdDVQYyJWk=,iv:J4BZAJ999mzUc87OBENhmHexx0ajDHFirlRyFSmOkf8=,tag:F3kAalm3L+09f01AlRxeug==,type:str]
+    lastmodified: "2026-08-28T17:42:06Z"
+    mac: ENC[AES256_GCM,data:gDlhWGRPyKrnYGsJCUKH8YOx75fy/zdMZ61FLLCANDjuBHSBfPITls5oEBMoJEoFRAYIYSowUXt7QNZz6lIQDaxbVPs865Nj7GZiIy0SZUys4txSC7ELAs44/HoiSD3CkmagId4Df1AqxJ4/ps31oUAC4Hg6wOpr3eavgRmHKQY=,iv:i66iSE9T0otcUShT6n8MNNdp0qqnFtFBpYzwocdMKHU=,tag:FnTewgsWKdkUf8kGqnc1Vw==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
