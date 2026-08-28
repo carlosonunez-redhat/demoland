@@ -137,7 +137,7 @@ _vm_storage_pool_disk_name() {
 patch_storage_machineconfig() {
   disk_name=$(_vm_storage_pool_disk_name)
   modifications="$(cat <<-EOF
-- file: bootstrap/resources/base/kustomization.yaml
+- file: bootstrap/resources/storage/kustomization.yaml
   options:
     replace_all_match: true
   variables:
