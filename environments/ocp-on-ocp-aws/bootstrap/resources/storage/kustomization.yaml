@@ -29,7 +29,7 @@ patches:
       name: extra-disks
     patch: |
       - op: replace
-        path: /metadata/labels/machineconfig.openshift.io~1role
+        path: /metadata/labels/machineconfiguration.openshift.io~1role
         value: master
       - op: replace
         path: /spec/config/storage/disks/0/device
