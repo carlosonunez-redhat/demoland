@@ -1,0 +1,21 @@
+# NOTE: Refer to this guide for additional options: https://coreos.github.io/ignition/configuration-v3_2/
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: worker
+  name: extra-disks
+spec:
+  config:
+    ignition:
+      version: 3.1.0
+    storage:
+      disks:
+        - device: replace-me
+          wipeTable: true
+          partitions:
+            - label: gpt
+          filesystems:
+          - device: replace-me
+            path: replace-me
+            format: ext4
