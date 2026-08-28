@@ -30,10 +30,10 @@ patches:
     patch: |
       - op: replace
         path: /spec/config/storage/disks/0/device
-        value: nvme0n1
+        value: /dev/nvme0n1
       - op: replace
         path: /spec/config/storage/disks/0/filesystems/0/device
-        value: nvme0n1
+        value: /dev/nvme0n1
       - op: replace
         path: /spec/config/storage/disks/0/filesystems/0/path
         value: /mnt/vm-storage-pool

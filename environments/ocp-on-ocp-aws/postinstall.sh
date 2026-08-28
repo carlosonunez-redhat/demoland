@@ -143,7 +143,7 @@ patch_storage_machineconfig() {
   variables:
     "storagePools/0/name": "$VM_STORAGE_POOL_NAME"
     "parameters/storagePool": "$VM_STORAGE_POOL_NAME"
-    device: "$disk_name"
+    device: "/dev/$disk_name"
     path: "$VM_STORAGE_POOL_PATH"
 EOF
 )"
