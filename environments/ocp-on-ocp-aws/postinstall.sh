@@ -141,6 +141,8 @@ patch_storage_machineconfig() {
   options:
     replace_all_match: true
   variables:
+    "storagePools/0/name": "$VM_STORAGE_POOL_NAME"
+    "parameters/storagePool": "$VM_STORAGE_POOL_NAME"
     device: "$disk_name"
     path: "$VM_STORAGE_POOL_PATH"
 EOF

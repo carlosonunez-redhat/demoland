@@ -15,13 +15,17 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 # variable, like shown in the comment below.
 #
 # source "$ENVIRONMENT_INCLUDE_DIR/foo.sh"
-check_vm_storage_pool_env_var_defined() {
-  test -n "$VM_STORAGE_POOL_PATH" && return 0
+check_vm_storage_pool_env_vars_defined() {
+  for k in 'NAME' 'PATH'
+  do
+    var="VM_STORAGE_POOL_${k}"
+    test -n "${!var}" && return 0
 
-  error "Expecting VM_STORAGE_POOL_PATH to be defined in environment, but it is not.
+    error "Expecting '$var' to be defined in environment, but it is not.
 
 Set it in '.deploy.environment_vars'."
-  return 1
+    return 1
+  done
 }
 set -e
-check_vm_storage_pool_env_var_defined
+check_vm_storage_pool_env_vars_defined
