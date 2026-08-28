@@ -16,12 +16,12 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 # variable, like shown in the comment below.
 #
 # source "$ENVIRONMENT_INCLUDE_DIR/foo.sh"
-
-add_vm_network_nic() {
+_vm_instance_data() {
   instances=$(_exec_aws ec2 describe-instances \
     --query 'Reservations[].Instances[?(@.State.Name == `running` && @.Tags[?Key==`Name` && contains(Value, `'"$(_cluster_infra_name)"'`)])]' | \
     jq -cr '[flatten | .[] | {
   id: .InstanceId,
+  az: .Placement.AvailabilityZone,
   primary_nic: {
     subnet_id: .NetworkInterfaces[0].SubnetId,
     sg_id: .NetworkInterfaces[0].Groups[0].GroupId
@@ -38,10 +38,14 @@ add_vm_network_nic() {
     error "This function only supports single-node OpenShift clusters (found '$num_instances' nodes)"
     return 1
   fi
+  echo "$instances"
+}
+
+add_vm_network_nic() {
   params=(
-    InstanceId "$(jq -r '.[0].id' <<< "$instances")"
-    SubnetId "$(jq -r '.[0].primary_nic.subnet_id' <<< "$instances")"
-    OCPControlPlaneSecurityGroupId "$(jq -r '.[0].primary_nic.sg_id' <<< "$instances")"
+    InstanceId "$(jq -r '.[0].id' <<< "$(_vm_instance_data)")"
+    SubnetId "$(jq -r '.[0].primary_nic.subnet_id' <<< "$(_vm_instance_data)")"
+    OCPControlPlaneSecurityGroupId "$(jq -r '.[0].primary_nic.sg_id' <<< "$(_vm_instance_data)")"
   )
   _create_aws_resources_from_cfn_stack_with_caps \
     vm_network \
