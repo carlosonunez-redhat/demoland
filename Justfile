@@ -74,6 +74,10 @@ poweron environment: (_run_stage_with_dependencies environment "_poweron")
 start_shell environment:
   USE_SHELL=1 just _execute_containerized {{ environment }};
 
+[doc("Exports the kubeconfig generated for an environment, if available.")]
+export_kubeconfig environment:
+  EXPORT_KUBECONFIG=1 just _execute_containerized '{{ environment }}'
+
 # A word about the rebuild logic in this stage.
 #
 # Environments are deployed starting with their dependent environments. In other
@@ -360,7 +364,7 @@ _execute_containerized environment file='empty' ignore_not_found='false' custom_
     ( _ensure_demoland_base_image environment )
   file=$(just _get_environment_directory_file {{ environment }} {{ file }}); \
   set +u; \
-  if test -z "$USE_SHELL"; \
+  if test -z "$USE_SHELL" && test -z "$EXPORT_KUBECONFIG"; \
   then \
     if ! test -f "$file"; \
     then \
@@ -403,6 +407,8 @@ _execute_containerized environment file='empty' ignore_not_found='false' custom_
   then \
     command+=(-it); \
     command+=($(just _container_image {{ environment }}) bash); \
+  elif test -n "$EXPORT_KUBECONFIG"; \
+  then command+=($(just _container_image {{ environment }}) sh -c 'test -f /environment_info/kubeconfig_path && cat $(cat /environment_info/kubeconfig_path)'); \
   else command+=($(just _container_image {{ environment }}) /app/environment/{{ file }}); \
   fi; \
   test -n "$SHOW_CONTAINER_COMMANDS" && just _log info "Running containerized command: ${command[@]}"; \
