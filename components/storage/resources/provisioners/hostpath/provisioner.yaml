@@ -1,0 +1,12 @@
+apiVersion: hostpathprovisioner.kubevirt.io/v1beta1
+kind: HostPathProvisioner
+metadata:
+  name: replace-me
+spec:
+  imagePullPolicy: IfNotPresent
+  storagePools:
+    - name: replace-me
+      path: /replace/me
+  workload:
+    nodeSelector:
+      kubernetes.io/os: linux
