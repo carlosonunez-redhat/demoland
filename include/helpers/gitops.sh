@@ -176,39 +176,41 @@ render_kustomization_patches() {
       error "Modification block is missing modifications: $modification_data"
       return 1
     fi
-    kustomization=$(yq -r '.' "$kustomization_file_str")
-    this_target_name=$(jq_strip_null -r '.target.name' <<< "$modification_data")
-    this_target_kind=$(jq_strip_null -r '.target.kind' <<< "$modification_data")
-    for patch_idx in $(seq 0 "$(yq -r '(.patches | length) - 1' <<< "$kustomization")")
+    requested_target_name=$(jq_strip_null -r '.target.name' <<< "$modification_data")
+    requested_target_kind=$(jq_strip_null -r '.target.kind' <<< "$modification_data")
+    replace_all_match=$(jq_strip_null -r '.options.replace_all_match' <<< "$modification_data")
+    for patch_idx in $(seq 0 "$(yq -r '(.patches | length) - 1' "$kustomization_file_str")")
     do
-      patch_statement=$(yq -r ".patches[$patch_idx]" <<< "$kustomization")
-      patch_target_name=$(yq_strip_null -r '.target.name' <<< "$patch_statement")
-      patch_target_kind=$(yq_strip_null -r '.target.kind' <<< "$patch_statement")
-      { test -n "$this_target_name" && { test "$this_target_name" != "$patch_target_name"; } ; } && continue
-      { test -n "$this_target_kind" && { test "$this_target_kind" != "$patch_target_kind"; } ; } && continue
-      patch_statement_json=$(yq -o=j -I=0 -r ".patch | from_yaml" <<< "$patch_statement")
       while read -r modification
       do
+        patch_target_name=$(yq_strip_null -r ".patches[$patch_idx].target.name" "$kustomization_file_str")
+        patch_target_kind=$(yq_strip_null -r ".patches[$patch_idx].target.kind" "$kustomization_file_str")
+        { test -n "$requested_target_name" && { test "$requested_target_name" != "$patch_target_name"; } ; } && continue
+        { test -n "$requested_target_kind" && { test "$requested_target_kind" != "$patch_target_kind"; } ; } && continue
+        patch_statement_json=$(yq -o=j -I=0 -r ".patches[$patch_idx].patch | from_yaml" "$kustomization_file_str")
         mod_path_regexp=$(jq -r '.key' <<< "$modification")
         paths_found=$(jq --arg re "$mod_path_regexp" -r '[.[] | select(.path | test($re)) | .path] | flatten' <<< "$patch_statement_json")
         paths_found_length=$(jq -r 'length' <<< "$paths_found")
-        if test "$paths_found_length" -gt 1
+        if test "${replace_all_match,,}" != true && test "$paths_found_length" -gt 1
         then
           error "Multiple paths found that match '$mod_path_regexp'; only one is allowed: $paths_found"
           return 1
         fi
-        path_found=$(jq -r '.[0]' <<< "$paths_found")
-        current_path_value="$(jq -cr --arg path "$path_found" '.[] | select(.path == $path) | .value' <<< "$patch_statement_json")"
-        new_path_value=$(jq -cr '.value' <<< "$modification")
-        _path_values_are_equal "$current_path_value" "$new_path_value" && continue
-        info "Modifying path '$path_found' in kustomization '$kustomization_file_str'; current: '$current_path_value', new: '$new_path_value'"
-        new_patch_statement_json=$(jq --arg path "$path_found" \
-          --arg val "$new_path_value" \
-          -r \
-          '(.[] | select(.path == $path) | .value) = ($val | tostring)' <<< "$patch_statement_json")
-        yq -i "(.patches[$patch_idx].patch) = ($new_patch_statement_json | to_yaml)" "$kustomization_file_str" ||
-          return 1
-        modifications_made=$((modifications_made+1))
+        while read -r path_found
+        do
+          patch_statement_json=$(yq -o=j -I=0 -r ".patches[$patch_idx].patch | from_yaml" "$kustomization_file_str")
+          current_path_value="$(jq -cr --arg path "$path_found" '.[] | select(.path == $path) | .value' <<< "$patch_statement_json")"
+          new_path_value=$(jq -cr '.value' <<< "$modification")
+          _path_values_are_equal "$current_path_value" "$new_path_value" && continue
+          info "Modifying path '$path_found' in kustomization '$kustomization_file_str'; current: '$current_path_value', new: '$new_path_value'"
+          new_patch_statement_json=$(jq --arg path "$path_found" \
+            --arg val "$new_path_value" \
+            -r \
+            '(.[] | select(.path == $path) | .value) = ($val | tostring)' <<< "$patch_statement_json")
+          yq -i "(.patches[$patch_idx].patch) = ($new_patch_statement_json | to_yaml)" "$kustomization_file_str" ||
+            return 1
+          modifications_made=$((modifications_made+1))
+        done < <(yq -r '.[]' <<< "$paths_found")
       done < <(yq -o=j -I=0 -r '. | to_entries[]' <<< "$modifications")
     done
   done < <(yq -o=j -I=0 -r '.[]' <<< "$modifications_yaml")
