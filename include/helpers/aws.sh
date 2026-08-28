@@ -122,6 +122,10 @@ _create_aws_cf_params_json() {
   printf "[%s]" "$(sed -E 's/,$// ; s/^,//' <<< "$json")"
 }
 
+_aws_cf_no_params() {
+  echo '{}'
+}
+
 _aws_cf_stack_name() {
   printf '%s-cfn-%s' \
     "$(_get_top_level_environment_name)" \
