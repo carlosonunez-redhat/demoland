@@ -1,18 +1,3 @@
 resources:
   - ../../../../../components/openshift-virtualization/resources/hyperconverged
   - ../../../../../components/openshift-networking/resources/nmstate/nmstate-instance
-  - ../../../../../components/openshift-machine-api/resources/machineconfigs/extra-disks
-patches:
-  - target:
-      kind: MachineConfig
-      name: extra-disks
-    patch: |
-      - op: replace
-        path: /spec/config/storage/disks/0/device
-        value: nvme0n1
-      - op: replace
-        path: /spec/config/storage/disks/0/filesystems/0/device
-        value: nvme0n1
-      - op: replace
-        path: /spec/config/storage/disks/0/filesystems/0/path
-        value: /vm-storage-pool

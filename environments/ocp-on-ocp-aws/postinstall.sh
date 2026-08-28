@@ -145,7 +145,11 @@ patch_storage_machineconfig() {
     path: "$VM_STORAGE_POOL_PATH"
 EOF
 )"
-  patches="$(render_kustomization_patches "$modifications")"
+  if ! patches="$(render_kustomization_patches "$modifications")"
+  then
+    error "Something went wrong while rendering kustomzations; see errors above."
+    return 1
+  fi
   test "$patches" -eq 0 && return 0
 
   info "Base resources kustomization updated. Commit and push your changes to apply."
