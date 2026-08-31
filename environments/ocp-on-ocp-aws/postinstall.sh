@@ -16,6 +16,23 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 # variable, like shown in the comment below.
 #
 source "$ENVIRONMENT_INCLUDE_DIR/node.sh"
+patch_base() {
+  modifications=$(cat <<-EOF
+- file: bootstrap/resources/base/kustomization.yaml
+  target:
+    name: patch-me
+    kind: Namespace
+  variables:
+    "/metadata/name$": "$VM_NAMESPACE"
+EOF
+)
+  num_applied=$(render_kustomization_patches "$modifications")
+  test "$num_applied" -eq 0 && return 0
+
+  info "Base kustomizations updated. Please commit your changes and re-run."
+  return 1
+}
+
 patch_nncp_for_vm_network() {
   _find_physical_iface_members_in_brex_bridge() {
     pod=$(exec_oc get pod -n openshift-ovn-kubernetes \
@@ -148,6 +165,7 @@ wait_for_vm_storage_pool_disk_to_mount() {
   return 1
 }
 
+patch_base || exit 1
 patch_nncp_for_vm_network || exit 1
 patch_storage_machineconfig || exit 1
 setup_gitops ocp-on-ocp-aws bootstrap/operators operators
