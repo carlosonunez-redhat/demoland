@@ -73,7 +73,8 @@ EOF
   target:
     name: nad
   variables:
-    'metadata/name': vm-bridge-network
+    'metadata/name$': vm-bridge-network
+    'metadata/namespace': "$VM_NAMESPACE"
     "resourceName": "bridge.network.kubevirt.io/br1"
     "config": "$(_nad_config br1)"
 EOF

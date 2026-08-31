@@ -344,6 +344,7 @@ environments:
             environment_vars:
                 - VM_STORAGE_POOL_NAME=vm-storage-pool
                 - VM_STORAGE_POOL_PATH=/mnt/vm-storage-pool
+                - VM_NAMESPACE=openshift-cluster-example
             secrets:
                 gitops_branch:
                     name: gitops/branch
@@ -353,8 +354,8 @@ environments:
         components:
             - example
 sops:
-    lastmodified: "2026-08-28T23:10:51Z"
-    mac: ENC[AES256_GCM,data:V+5UVpomMEmWAp3jlIbH63nsK6aVWABk9SFawuuPJev4QCIj9cp+OEJ5x9vAeHU9VoeZMuyL0xAtQybnJiVnTWlWBHE63t2rT/YvZaPJ09T0CaUUoU/pE39xL9HSpWZUARM1zNMNpTIBqEdfAfKiFyOmLi6I5zyzWY/OAbg2BEs=,iv:x/GUcp5WEF7LdvIWXZxzqrjOkXq12rXN7z8Dc6P7ldA=,tag:aKOjnHe0qadjJg2D8TFQlA==,type:str]
+    lastmodified: "2026-08-31T23:09:36Z"
+    mac: ENC[AES256_GCM,data:cGYqOzjhSsevnhwVIB9dzG4+eV7sZ6ava/6rKqR81eTcLRtkCYtbI7u9zvduyxyeIbXUbH7rGNUtqA/vIHxDIw7EVU8sBNZDndwtJb7a3f3CJY0TYrKtgwIfmY8dGF1STyFNfCk241mZUX10BN1lU+bxBXbcYHf7L8B6SxyhBaY=,iv:/pWP32MJLlC9n2FdFDcSXSF0/aQwBeKSz3+slXwXtg8=,tag:Bj1JtJLIiiAj7fnn++LQSw==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-

@@ -22,6 +22,9 @@ patches:
       - op: replace
         path: /metadata/name
         value: vm-bridge-network
+      - op: add
+        path: /metadata/namespace
+        value: openshift-cluster-example
       - op: replace
         path: /metadata/annotations/k8s.v1.cni.cncf.io~1resourceName
         value: bridge.network.kubevirt.io/br1

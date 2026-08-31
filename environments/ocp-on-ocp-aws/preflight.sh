@@ -16,10 +16,9 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 #
 # source "$ENVIRONMENT_INCLUDE_DIR/foo.sh"
 check_vm_storage_pool_env_vars_defined() {
-  for k in 'NAME' 'PATH'
+  for k in 'VM_STORAGE_POOL_NAME' 'VM_STORAGE_POOL_PATH' 'VM_NAMESPACE'
   do
-    var="VM_STORAGE_POOL_${k}"
-    test -n "${!var}" && return 0
+    test -n "${!k}" && return 0
 
     error "Expecting '$var' to be defined in environment, but it is not.
 
