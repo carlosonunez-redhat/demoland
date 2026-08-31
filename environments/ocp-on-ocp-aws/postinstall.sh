@@ -15,7 +15,7 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 # If this environment has includes of its own, use the $ENVIRONMENT_INCLUDE_DIR environment
 # variable, like shown in the comment below.
 #
-# source "$ENVIRONMENT_INCLUDE_DIR/foo.sh"
+source "$ENVIRONMENT_INCLUDE_DIR/node.sh"
 patch_nncp_for_vm_network() {
   _find_physical_iface_members_in_brex_bridge() {
     pod=$(exec_oc get pod -n openshift-ovn-kubernetes \
@@ -108,34 +108,8 @@ EOF
   return 1
 }
 
-_exec_on_virt_node() {
-  node_name="$(exec_oc get nodes -o jsonpath='node/{.items[0].metadata.name}')"
-  if test -z "$node_name"
-  then
-    error "Couldn't resolve SNO node name"
-    return 1
-  fi
-  exec_oc debug -q "$node_name" -- "$@"
-}
-
-_vm_storage_pool_disk_name() {
-  disk_names=$(_exec_on_virt_node lsblk -o NAME -J |
-    jq_strip_null -r '[.blockdevices[] | select(.name | test("^nvme[?!0]"))] | flatten | .[].name')
-  if test -z "$disk_names"
-  then
-    error "Unable to get disk names from node '$node_name'"
-    return 1
-  fi
-  if test "$(wc -l <<< "$disk_names")" -gt 1
-  then
-    error "More than one disk found; there should only be one: $disk_names"
-    return 1
-  fi
-  head -1 <<< "$disk_names"
-}
-
 patch_storage_machineconfig() {
-  disk_name=$(_vm_storage_pool_disk_name)
+  disk_name=$(vm_storage_pool_disk_name)
   modifications="$(cat <<-EOF
 - file: bootstrap/resources/storage/kustomization.yaml
   options:
@@ -159,12 +133,12 @@ EOF
 }
 
 wait_for_vm_storage_pool_disk_to_mount() {
-  disk_name=$(_vm_storage_pool_disk_name) || return 1
+  disk_name=$(vm_storage_pool_disk_name) || return 1
   local attempts=1
   while test "$attempts" -lt 60
   do
     info "[${attempts}/60] Waiting for VM storage pool disk '$disk_name' to mount onto '$VM_STORAGE_POOL_PATH'"
-    mounts_found=$(_exec_on_virt_node mount | grep "$disk_name")
+    mounts_found=$(exec_on_virt_node mount | grep "$disk_name")
     test -n "$mounts_found" && return 0
     attempts=$((attempts+1))
     sleep 1

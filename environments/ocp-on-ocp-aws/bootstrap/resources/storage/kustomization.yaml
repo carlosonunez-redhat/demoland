@@ -1,7 +1,6 @@
 resources:
   - ../../../../../components/storage/resources/storageclasses/hostpath-csi
   - ../../../../../components/storage/resources/provisioners/hostpath
-  - ../../../../../components/openshift-machine-api/resources/machineconfigs/extra-disks
 patches:
   - target:
       kind: HostPathProvisioner
@@ -24,19 +23,3 @@ patches:
         path: /parameters/storagePool
         name: local-storage-pool
         value: vm-storage-pool
-  - target:
-      kind: MachineConfig
-      name: extra-disks
-    patch: |
-      - op: replace
-        path: /metadata/labels/machineconfiguration.openshift.io~1role
-        value: master
-      - op: replace
-        path: /spec/config/storage/disks/0/device
-        value: /dev/nvme0n1
-      - op: replace
-        path: /spec/config/storage/disks/0/filesystems/0/device
-        value: /dev/nvme0n1
-      - op: replace
-        path: /spec/config/storage/disks/0/filesystems/0/path
-        value: /mnt/vm-storage-pool
