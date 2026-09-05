@@ -150,21 +150,6 @@ EOF
   return 1
 }
 
-wait_for_vm_storage_pool_disk_to_mount() {
-  disk_name=$(vm_storage_pool_disk_name) || return 1
-  local attempts=1
-  while test "$attempts" -lt 60
-  do
-    info "[${attempts}/60] Waiting for VM storage pool disk '$disk_name' to mount onto '$VM_STORAGE_POOL_PATH'"
-    mounts_found=$(exec_on_virt_node mount | grep "$disk_name")
-    test -n "$mounts_found" && return 0
-    attempts=$((attempts+1))
-    sleep 1
-  done
-  error "Timed out while waiting for disk to mount"
-  return 1
-}
-
 patch_base || exit 1
 patch_nncp_for_vm_network || exit 1
 patch_storage_machineconfig || exit 1
@@ -172,7 +157,7 @@ setup_gitops ocp-on-ocp-aws bootstrap/operators operators
 setup_gitops ocp-on-ocp-aws bootstrap/resources/base resources
 setup_gitops ocp-on-ocp-aws bootstrap/resources/networking networking
 setup_gitops ocp-on-ocp-aws bootstrap/resources/storage storage
-wait_for_vm_storage_pool_disk_to_mount
+setup_gitops ocp-on-ocp-aws bootstrap/resources/images images
 info "WIP."
 exit 0
 

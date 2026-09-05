@@ -1,0 +1,24 @@
+resources:
+  - ../../../../../components/openshift-virtualization/resources/datavolume/from_image
+patches:
+  - target:
+      kind: HostPathProvisioner
+      name: replace-me
+    patch: |
+      - op: replace
+        path: /metadata/name
+        value: default
+      - op: replace
+        path: /spec/storagePools/0/name
+        value: vm-storage-pool
+      - op: replace
+        path: /spec/storagePools/0/path
+        value: /mnt/vm-storage-pool
+  - target:
+      kind: StorageClass
+      name: hostpath-csi
+    patch: |
+      - op: replace
+        path: /parameters/storagePool
+        name: local-storage-pool
+        value: vm-storage-pool
