@@ -4,10 +4,10 @@ common:
             # aws.sts: AWS credentials for assuming into another role.
             # encrypted
             sts:
-                aws_access_key_id: ENC[AES256_GCM,data:XCwC/lmg1+i1XR1gn24b/zGHatg=,iv:dZ4WGH/SSIAF+Ozo4lr4aGyMz3xb0wngpk510MeJB6s=,tag:fx5tEecyP/QqEnQfIvvFRA==,type:str]
-                aws_secret_access_key: ENC[AES256_GCM,data:unaqFl7jsAHy3dGAX/65klb75CUU7Abf+VwffmcrXzMF28eGvIpEfw==,iv:+8/+tBZUq1eoQHUsoXZOQikWasyzSWDDEcsZdY0VRn8=,tag:haK2wRHmaoBFpbD7VdxAeA==,type:str]
+                aws_access_key_id: ENC[AES256_GCM,data:aoWFlxu3X9zaB54tGYBdtTHAp90=,iv:G0nrBfJ8492heLByNkqekZWBlmp/t90Vl0wQMIDQWbY=,tag:yTPOHi10T6j+KSkN0oX0pw==,type:str]
+                aws_secret_access_key: ENC[AES256_GCM,data:fmLX3cTH0uELOsW4TxBqPF7/RpoJUTTDmzNzt9+uW1ZUz9fhObimrQ==,iv:A5t70bnKbnf0p0nOVjhBZ9zSpxa0VBNTqah2KuFTHZM=,tag:Lp/Pn4I5leD2++cozv0AKQ==,type:str]
                 aws_default_region: ENC[AES256_GCM,data:yhbppXp4Emsv,iv:PoWpnhgYk18InCtqBcLK5yrI8vrHqTX9BDR2kQ0Kya0=,tag:7Jooayomp5o2DNnbqlvfFg==,type:str]
-                aws_role_arn: ENC[AES256_GCM,data:1QHaEjI6J4zqlM6sDNXe81zzh6EfAHL9sOOI2OJlIqLXGWq5epzIj5RZdo3T4yVP,iv:Yisjxh+jttVGA1P94LACJxaIWzlSYGyEfPpuDMizP9k=,tag:RemiVHjujEmC+FOjn0y9Sg==,type:str]
+                aws_role_arn: ENC[AES256_GCM,data:4SjU4i9tj+RXRA16gMyLga/ZQzkPVNQjfx/IASwhAMdIPp939DenFhP5EM6d8OBz,iv:v43++dPyjr+OscbRXjw1DCnKZrqicSXEgf10azEgMIo=,tag:yo0qGSxWUT352p7ZxAMNVQ==,type:str]
                 aws_role_external_id: ENC[AES256_GCM,data:b52sm/9ISC/Zlp1Nzok+rYpbprY=,iv:TqyA4AEsR7VzSrlPFj9DUKIYJSYuwT6opDiiU0mu2IE=,tag:BHJ52wiQ0E9AaP30sB+oaw==,type:str]
             # aws.iam_user: AWS credentials assigned to IAM users. Must set AWS_DISABLE_STS=1 in
             # your environment variables to take effect.
@@ -60,7 +60,7 @@ environments:
             #   aws:
             #     # encrypted
             #     sts:
-            #       aws_access_key_id: AKIATOCIPTHNHTROFGV5FOOBAR12345
+            #       aws_access_key_id: AKIAVWABJZURFXJQAZPAFOOBAR12345
             #       aws_secret_access_key: superdupersecret
             #       aws_default_region: us-west-1
             #       aws_role_arn: foo
@@ -132,10 +132,10 @@ environments:
             aws:
                 # encrypted
                 iam_user:
-                    aws_access_key_id: ENC[AES256_GCM,data:Frg/67jyTmqVjaLOcE7jLZG1bm4=,iv:hrtom72KX9lfVdOVMaMngeRcctBLhXrbrt+L9fSYzRc=,tag:vZIeBqrbuJhUc+kTZ6aiJQ==,type:str]
-                    aws_secret_access_key: ENC[AES256_GCM,data:zx2HyvR1AHC8LOST2XLfJs5AutmcXAg6aUMrP02Fd279wcMFgC+npQ==,iv:U0cW9b5FQEIntcxMKy+anHnqw7apffq+ruOitA7Ob3Y=,tag:LHLRQH+RWG57+nuFGXSz2w==,type:str]
+                    aws_access_key_id: ENC[AES256_GCM,data:XGXB30E4YtrqCMEpIjwB1Qks948=,iv:7lq4xBS0pGr0d95bCq0cnnHcJdmzFq6xnfiT7j1G0Sg=,tag:yIzy4lkEveb1+adcdqmCUg==,type:str]
+                    aws_secret_access_key: ENC[AES256_GCM,data:eRCYvOz6FetbUVV4iPVJRvPlRMdvBdD7vtJRTtFvLAB+d9xKjM1Lgg==,iv:e/mFN4nke/a8E9mo1WKzQ3E894Vh9RY6RoBZ+I1Joxs=,tag:itl1tXe++9ycWjblHknPWQ==,type:str]
                     aws_default_region: ENC[AES256_GCM,data:lpeXPB0tymh6,iv:0jWk/hreDKLYSQHLLtMdD4IfrV3bKWLgbQihecUfUJA=,tag:XMCzYl4/swkA50596OvwdA==,type:str]
-                    aws_role_arn: ENC[AES256_GCM,data:ywwK0qHy9UN5Ul8Vmjus7PeYE6qt40Hj/kdq6zi86QKwDkgYJHhh1WLh3ZugZAvc,iv:smFz6cjDgcggeehMry6nO7VOJMh/V2ZiTxCTiz9TOb0=,tag:8CW90/RLEUD9J4OjjEJ/jg==,type:str]
+                    aws_role_arn: ENC[AES256_GCM,data:HCChtr+lzzI9+up/AfNr9ETIaJ+P0daYG4v8DbVhZOXXJa9GN399Rq0k5IZsu1do,iv:gGp1CDPaY8aQahubttdz9Pc1z1JFpCXktzyCdVY6Jeg=,tag:OQ0Bi6S+OOc+4L89uf0+jg==,type:str]
                     aws_role_external_id: ENC[AES256_GCM,data:82Pqnnd0NrTDp9hDChzvq5INspI=,iv:Mbhexv+qsQOVdP0ESTof4CysMV+g4bbgwVNXlXUopCU=,tag:QJPJwj5FeOJUp+aj+cvlGA==,type:str]
         deploy:
             environment_vars:
@@ -289,7 +289,7 @@ environments:
                 aws:
                     networking:
                         dns:
-                            domain_name: sandbox3071.opentlc.com
+                            domain_name: sandbox5265.opentlc.com
                         cidr_block: 10.0.0.0/16
                         region: us-east-2
                         availability_zones:
@@ -354,8 +354,8 @@ environments:
         components:
             - example
 sops:
-    lastmodified: "2026-08-31T23:09:36Z"
-    mac: ENC[AES256_GCM,data:cGYqOzjhSsevnhwVIB9dzG4+eV7sZ6ava/6rKqR81eTcLRtkCYtbI7u9zvduyxyeIbXUbH7rGNUtqA/vIHxDIw7EVU8sBNZDndwtJb7a3f3CJY0TYrKtgwIfmY8dGF1STyFNfCk241mZUX10BN1lU+bxBXbcYHf7L8B6SxyhBaY=,iv:/pWP32MJLlC9n2FdFDcSXSF0/aQwBeKSz3+slXwXtg8=,tag:Bj1JtJLIiiAj7fnn++LQSw==,type:str]
+    lastmodified: "2026-09-05T18:37:37Z"
+    mac: ENC[AES256_GCM,data:pUGhLtZ5/vQuv4faEdTv8BlNYu2BwR5T7SDJWs8uf5oLKro3SkXMT157W5skFrgpGB+9QIF5nkWFy7g7PWc/u6BW5PApGIZmCfWJv1n4LiR63rXzGOe6eGB/SSCrXXeRfS8qEBOOBdtZcqapisCaxvb8CPfvIxdbIqnwsnYBehM=,iv:MG7VZaCwLOf1gn6vr3UuRUEwWotJSczU6LPEx4uZ9Rw=,tag:trHTmOpOlNaiW4RagXskZA==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
