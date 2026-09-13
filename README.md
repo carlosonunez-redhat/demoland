@@ -14,6 +14,7 @@ Create end-to-end OpenShift demos on fresh OpenShift clusters that you own.
     * [Demo Environments](#demo-environments)
     * [Base Infrastructure](#base-infrastructure)
     * [Directory Structure](#directory-structure)
+    * [GitOps Considerations](#gitops-considerations)
 * [Quick Start](#quick-start)
     * [Install prerequisites](#install-prerequisites)
     * [Clone Demoland](#clone-demoland)
@@ -74,6 +75,13 @@ that aim to demonstrate product capabilities.
   automation aside from Demoland entrypoints (explained below) do not require
   Demoland scaffolding to be deployed.
 
+> 📝 **NOTE**
+>
+> I **highly** recommend using GitOps to configure your demo environments. This
+> will make it much easier to keep your environment consistent as you update it
+> while also making any infrastructure components, like operators or Kubernetes
+> resources, reusable for other demos.
+
 ### Base Infrastructure
 
 **Base infrastructure** is the infrastructure on which demo environments are
@@ -83,6 +91,14 @@ served, like OpenShift and AAP.
 
 * Does NOT have a `DEMO.md` file.
 * Provisions an environment for a "demo environment" to be deployed on top of.
+
+> 📝 **NOTE**
+>
+> I recommend aliasing `ocp-aws-upi` for new OpenShift environments on AWS and `osa` for
+> ROSA clusters if you need to create a base environment quickly.
+>
+> `ocp-aws-upi` is capable of deploying single-node clusters as well as using
+> mixed instance types between control planes and worker nodes.
 
 ### Directory Structure
 
@@ -99,7 +115,19 @@ served, like OpenShift and AAP.
 │   ├── component-n
 ├── environments
 │   ├── example
-│   │   ├── gitops
+│   │   ├── bootstrap
+│   │   │   ├── operators
+│   │   │   │   ├── kustomization.yaml # should not have any subdirectories
+│   │   │   ├── resources
+│   │   │   │   ├── k8s-resource-1
+│   │   │   │   ├── k8s-resource-2
+│   │   │   │   ├── k8s-resource-3
+│   │   │   │   ├── kustomization.yaml
+│   │   │   ├── apps
+│   │   │   │   ├── app-1
+│   │   │   │   ├── app-2
+│   │   │   │   ├── app-3
+│   │   │   │   ├── kustomization.yaml
 │   │   ├── include
 │       │   ├── helper_1.sh
 │       │   ├── helper_2.sh
@@ -121,28 +149,50 @@ served, like OpenShift and AAP.
 └── README.md
 ```
 
-| **File/Directory**                   | **Purpose**                                                   | **Used for Base Infra?** | **Used for Demo Envs?**         |
-| :---                                 | :---                                                          | :---                     | :---                            |
-| `./config.yaml`                      | Config for base infra and demo envs. Encrypted with sOps.     | Yes                      | Yes                             |
-| `./Justfile`                         | Demoland commands, like `deploy` and `postinstall`.           | Yes                      | Yes (Demoland entrypoints only) |
-| `./include`                          | Helper libraries usable by all demo envs/base infra           | Yes                      | Yes (Demoland entrypoints only) |
-| `./environments/$ENV/preflight.sh`   | Demoland entrypoint for executing preflight checks            | Yes                      | Yes                             |
-| `./environments/$ENV/provision.sh`   | Provisions base infra or a demo env.                          | Yes                      | No                              |
-| `./environments/$ENV/expose.sh`      | Exposes files/secrets to "dependent" base infra or demo envs. | Yes                      | No                              |
-| `./environments/$ENV/postinstall.sh` | Executes post-installation steps, like setting up GitOps.     | Yes                      | Yes                             |
-| `./environments/$ENV/destroy.sh`     | Tears downs a demo env and its base infra.                    | Yes                      | Yes                             |
-| `./environments/$ENV/poweroff.sh`    | Powers down infra (cloud provider dependent!).                | Yes                      | Yes                             |
-| `./environments/$ENV/poweron.sh`     | Powers up infra (cloud provider dependent!).                  | Yes                      | Yes                             |
-| `./environments/$ENV/destroy.sh`     | Tears downs a demo env and its base infra.                    | Yes                      | Yes                             |
-| `./environments/$ENV/include/`       | Base infra or demo env-scoped helper libraries.               | Optional                 | Optional                        |
-| `./environments/$ENV/gitops/`        | Kustomizations to apply via OpenShift GitOps/ArgoCD.          | Optional                 | Optional                        |
-| `./components`                       | Reusable resources to apply/customize via GitOps.             | Optional                 | Yes                             |
-| `./apps`                             | Example applications used within demos.                       | No                       | Yes                             |
+| **File/Directory**                   | **Purpose**                                                             | **Used for Base Infra?** | **Used for Demo Envs?**         |
+| :---                                 | :---                                                                    | :---                     | :---                            |
+| `./config.yaml`                      | Config for base infra and demo envs. Encrypted with sOps.               | Yes                      | Yes                             |
+| `./Justfile`                         | Demoland commands, like `deploy` and `postinstall`.                     | Yes                      | Yes (Demoland entrypoints only) |
+| `./include`                          | Helper libraries usable by all demo envs/base infra                     | Yes                      | Yes (Demoland entrypoints only) |
+| `./environments/$ENV/preflight.sh`   | Demoland entrypoint for executing preflight checks                      | Yes                      | Yes                             |
+| `./environments/$ENV/provision.sh`   | Provisions base infra or a demo env.                                    | Yes                      | No                              |
+| `./environments/$ENV/expose.sh`      | Exposes files/secrets to "dependent" base infra or demo envs.           | Yes                      | No                              |
+| `./environments/$ENV/postinstall.sh` | Executes post-installation steps, like setting up GitOps.               | Yes                      | Yes                             |
+| `./environments/$ENV/destroy.sh`     | Tears downs a demo env and its base infra.                              | Yes                      | Yes                             |
+| `./environments/$ENV/poweroff.sh`    | Powers down infra (cloud provider dependent!).                          | Yes                      | Yes                             |
+| `./environments/$ENV/poweron.sh`     | Powers up infra (cloud provider dependent!).                            | Yes                      | Yes                             |
+| `./environments/$ENV/destroy.sh`     | Tears downs a demo env and its base infra.                              | Yes                      | Yes                             |
+| `./environments/$ENV/include/`       | Base infra or demo env-scoped helper libraries.                         | Optional                 | Optional                        |
+| `./environments/$ENV/bootstrap/`     | Kustomizations to apply via OpenShift GitOps/ArgoCD (see GitOps section | Optional                 | Optional                        |
+| `./components`                       | Reusable resources to apply/customize via GitOps.                       | Optional                 | Yes                             |
+| `./apps`                             | Example applications used within demos.                                 | No                       | Yes                             |
+
+### GitOps Considerations
+
+Demo environments provisioned by Demoland are maintained almost entirely by
+GitOps. These components live in the `./bootstrap` directory within the demo
+environment and provisioned with the `setup_gitops` function.
+
+Anything that cannot be provisioned by GitOps is created by the `provision` or
+`postinstall` scripts. Use this guidance to determine which script to use for
+resources that can't be deployed by GitOps:
+
+- Use `provision.sh` to add or configure hardware or anything with OpenShift on
+  the clusters created by your base environment, like disks or NICs. Examples:
+  - Creating `MachineConfig` CRs to configure CoreOS on the worker nodes.
+  - Adding additional storage to worker nodes and formatting a filesystem onto
+    them.
+- Use `postinstall.sh` to add anything that's related to your demo environment
+  specifically. Examples:
+  - Creating `Secret`s or other CRs that will be used by applications/Kubernetes
+    resources provisioned by GitOps
+  - Waiting for an operator (that is managed by GitOps) to become ready.
 
 ## Quick Start
 
-Here's how to deploy the Red Hat Observability Demo Environment onto a
-Single-node OpenShift cluster in your AWS account.
+Here's how to deploy a demo environment, like the Red Hat Observability Demo
+Environment, onto a base environment, like the `ocp-aws-sno` Single-node
+OpenShift cluster demo environment, into your AWS account.
 
 ### Install prerequisites
 
