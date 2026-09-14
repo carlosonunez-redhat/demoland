@@ -1,0 +1,80 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Template for EKS IAM Roles and Instance Profiles
+
+Parameters:
+  InfrastructureName:
+    AllowedPattern: ^([a-zA-Z][a-zA-Z0-9\-]{0,26})$
+    MaxLength: 27
+    MinLength: 1
+    ConstraintDescription: Infrastructure name must be alphanumeric, start with a letter, and have a maximum of 27 characters.
+    Description: A short, unique cluster ID used to tag cloud resources and identify items owned or used by the cluster.
+    Type: String
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: "Cluster Information"
+      Parameters:
+      - InfrastructureName
+    ParameterLabels:
+      InfrastructureName:
+        default: "Infrastructure Name"
+
+Resources:
+  EksClusterRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join ["-", [!Ref InfrastructureName, "eks-cluster-role"]]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: "Allow"
+          Principal:
+            Service:
+            - "eks.amazonaws.com"
+          Action:
+          - "sts:AssumeRole"
+      ManagedPolicyArns:
+      - "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+      - "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
+
+  WorkerNodeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join ["-", [!Ref InfrastructureName, "worker-node-role"]]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: "Allow"
+          Principal:
+            Service:
+            - "ec2.amazonaws.com"
+          Action:
+          - "sts:AssumeRole"
+      ManagedPolicyArns:
+      - "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+      - "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+      - "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+      - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+
+  WorkerInstanceProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      InstanceProfileName: !Join ["-", [!Ref InfrastructureName, "worker-profile"]]
+      Roles:
+      - !Ref WorkerNodeRole
+
+Outputs:
+  EksClusterRoleArn:
+    Description: ARN of the EKS cluster IAM role.
+    Value: !GetAtt EksClusterRole.Arn
+  WorkerNodeRoleArn:
+    Description: ARN of the worker node IAM role.
+    Value: !GetAtt WorkerNodeRole.Arn
+  WorkerInstanceProfileName:
+    Description: Name of the worker node instance profile.
+    Value: !Ref WorkerInstanceProfile
+  WorkerInstanceProfileArn:
+    Description: ARN of the worker node instance profile.
+    Value: !GetAtt WorkerInstanceProfile.Arn
