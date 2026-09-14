@@ -1,0 +1,173 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Template for EKS Self-Managed Worker Nodes (Launch Template + ASG)
+
+Parameters:
+  InfrastructureName:
+    AllowedPattern: ^([a-zA-Z][a-zA-Z0-9\-]{0,26})$
+    MaxLength: 27
+    MinLength: 1
+    ConstraintDescription: Infrastructure name must be alphanumeric, start with a letter, and have a maximum of 27 characters.
+    Description: A short, unique cluster ID used to tag cloud resources and identify items owned or used by the cluster.
+    Type: String
+  ClusterName:
+    Description: The name of the EKS cluster to join.
+    Type: String
+  ClusterEndpoint:
+    Description: API server endpoint URL for the EKS cluster.
+    Type: String
+  ClusterCertificateAuthority:
+    Description: Base64-encoded certificate authority data for the EKS cluster.
+    Type: String
+  WorkerAmiId:
+    Description: EKS-optimized AMI ID for worker nodes. Resolve via SSM parameter /aws/service/eks/optimized-ami/<version>/amazon-linux-2/recommended/image_id before stack creation.
+    Type: AWS::EC2::Image::Id
+  WorkerInstanceType:
+    Default: c8i.2xlarge
+    Description: EC2 instance type for worker nodes.
+    Type: String
+  WorkerInstanceProfileArn:
+    Description: ARN of the IAM instance profile for worker nodes.
+    Type: String
+  WorkerSecurityGroupId:
+    Description: Security group ID for worker nodes.
+    Type: AWS::EC2::SecurityGroup::Id
+  SubnetIds:
+    Description: Comma-separated list of private subnet IDs for worker nodes.
+    Type: List<AWS::EC2::Subnet::Id>
+  KeyName:
+    Description: EC2 key pair name for SSH access to worker nodes.
+    Type: AWS::EC2::KeyPair::KeyName
+  DesiredCapacity:
+    Default: 6
+    Description: Desired number of worker nodes.
+    Type: Number
+  MinSize:
+    Default: 1
+    Description: Minimum number of worker nodes in the ASG.
+    Type: Number
+  MaxSize:
+    Default: 9
+    Description: Maximum number of worker nodes in the ASG.
+    Type: Number
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: "Cluster Information"
+      Parameters:
+      - InfrastructureName
+      - ClusterName
+      - ClusterEndpoint
+      - ClusterCertificateAuthority
+    - Label:
+        default: "Host Information"
+      Parameters:
+      - WorkerInstanceType
+      - WorkerAmiId
+      - KeyName
+      - WorkerInstanceProfileArn
+      - WorkerSecurityGroupId
+    - Label:
+        default: "Network Configuration"
+      Parameters:
+      - SubnetIds
+    - Label:
+        default: "Auto Scaling Configuration"
+      Parameters:
+      - DesiredCapacity
+      - MinSize
+      - MaxSize
+    ParameterLabels:
+      InfrastructureName:
+        default: "Infrastructure Name"
+      ClusterName:
+        default: "EKS Cluster Name"
+      ClusterEndpoint:
+        default: "EKS Cluster Endpoint"
+      ClusterCertificateAuthority:
+        default: "EKS Cluster CA"
+      WorkerAmiId:
+        default: "Worker AMI ID"
+      WorkerInstanceType:
+        default: "Worker Instance Type"
+      WorkerInstanceProfileArn:
+        default: "Worker Instance Profile ARN"
+      WorkerSecurityGroupId:
+        default: "Worker Security Group ID"
+      SubnetIds:
+        default: "Worker Subnet IDs"
+      KeyName:
+        default: "SSH Key Pair Name"
+      DesiredCapacity:
+        default: "Desired Capacity"
+      MinSize:
+        default: "Minimum Size"
+      MaxSize:
+        default: "Maximum Size"
+
+Resources:
+  WorkerLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Join ["-", [!Ref InfrastructureName, "worker-lt"]]
+      LaunchTemplateData:
+        ImageId: !Ref WorkerAmiId
+        InstanceType: !Ref WorkerInstanceType
+        KeyName: !Ref KeyName
+        IamInstanceProfile:
+          Arn: !Ref WorkerInstanceProfileArn
+        SecurityGroupIds:
+        - !Ref WorkerSecurityGroupId
+        BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 120
+            VolumeType: gp3
+            DeleteOnTermination: true
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            set -o xtrace
+            /etc/eks/bootstrap.sh '${ClusterName}' \
+              --apiserver-endpoint '${ClusterEndpoint}' \
+              --b64-cluster-ca '${ClusterCertificateAuthority}'
+        TagSpecifications:
+        - ResourceType: instance
+          Tags:
+          - Key: Name
+            Value: !Join ["-", [!Ref InfrastructureName, "worker"]]
+          - Key: !Join ["", ["kubernetes.io/cluster/", !Ref ClusterName]]
+            Value: "owned"
+
+  WorkerAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Join ["-", [!Ref InfrastructureName, "worker-asg"]]
+      LaunchTemplate:
+        LaunchTemplateId: !Ref WorkerLaunchTemplate
+        Version: !GetAtt WorkerLaunchTemplate.LatestVersionNumber
+      VPCZoneIdentifier: !Ref SubnetIds
+      DesiredCapacity: !Ref DesiredCapacity
+      MinSize: !Ref MinSize
+      MaxSize: !Ref MaxSize
+      Tags:
+      - Key: Name
+        Value: !Join ["-", [!Ref InfrastructureName, "worker"]]
+        PropagateAtLaunch: false
+      - Key: !Join ["", ["kubernetes.io/cluster/", !Ref ClusterName]]
+        Value: "owned"
+        PropagateAtLaunch: true
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MaxBatchSize: 1
+        MinInstancesInService: !Ref MinSize
+        PauseTime: PT5M
+
+Outputs:
+  WorkerAutoScalingGroupName:
+    Description: Name of the worker Auto Scaling Group.
+    Value: !Ref WorkerAutoScalingGroup
+  WorkerLaunchTemplateId:
+    Description: ID of the worker Launch Template.
+    Value: !Ref WorkerLaunchTemplate
