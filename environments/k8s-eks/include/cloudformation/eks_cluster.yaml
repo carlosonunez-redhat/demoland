@@ -93,6 +93,3 @@ Outputs:
   OIDCIssuerUrl:
     Description: The OIDC issuer URL for the cluster (for IRSA).
     Value: !GetAtt EksCluster.OpenIdConnectIssuerUrl
-  ServiceCidr:
-    Description: Kubernetes service IPv4 CIDR for the cluster.
-    Value: !GetAtt EksCluster.KubernetesNetworkConfig.ServiceIpv4Cidr

@@ -243,7 +243,10 @@ create_worker_nodes() {
     "$(_get_param_from_aws_cfn_stack eks_cluster 'ClusterCertificateAuthority')" \
     "EKS cluster CA not found") || return 1
   cluster_cidr=$(fail_if_nil \
-    "$(_get_param_from_aws_cfn_stack eks_cluster 'ServiceCidr')" \
+    "$(_exec_aws eks describe-cluster \
+      --name "$cluster_name" \
+      --query 'cluster.kubernetesNetworkConfig.serviceIpv4Cidr' \
+      --output text)" \
     "EKS cluster service CIDR not found") || return 1
 
   quantity_per_zone=$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')
