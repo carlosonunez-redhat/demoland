@@ -85,6 +85,27 @@ environments:
         # ```
         components:
             - example
+    rhobs-multicluster-demo:
+        version: 20260402
+        alias_of: ""
+        depends_on:
+            # ACM hub, which will have one managed OCP cluster in AWS
+            - ocp-aws-sno
+            # Imported OpenShift Cluster
+            - rosa
+            # Imported EKS Cluster
+            - k8s-eks
+        common_options:
+            ignore_installconfig_check: false
+        deploy:
+            environment_vars:
+                - SOME_KEY=some value
+                - ANOTHER_KEY=another value
+            secrets: {}
+        cloud_credentials:
+            aws: {}
+        components:
+            - example
     rhobs-demo:
         version: 20260402
         depends_on:
@@ -353,30 +374,9 @@ environments:
                     name: ocp-aws-ssh-key
                     # encrypted
                     data: ENC[AES256_GCM,data:7Hg7z5FD+H1tuLSTAwDVLj/YN86emHUQlHcpKf3WNQwwrqe0WPbKgFLq9fecw82TqNNAd3ZT4pBLlpvPvuyyApoZ7QHkuqaNazqKEH5BHTK/IJpBUn9nwtIRfMIJ92ek1Xsy8NQ00L/k6rKKFqldea73taIhWJvRDkjF0qEz8eeft59dt1WOR7MYgpVKGgEXwN4AA7zGCV7WF+NBRjlcLJPeQHgTSrGCEDNiO8pBcC97ZTTk2SEU71ztyfTywe/TXaXgUe56vZ1um8kZXkeFn3Oy5h2plaG45KJCDjosjOD7a9hCCKEW8h6HO2kWr3swiC0F65LBY8wlI2zjmKZgRq6Vg750cMHZgK/a4tAUPAhe2KjJgZBiVY/zHgEDeauGUvaPzWUhscR3gc2/RVxyncOv4nQsnQYV3rkSj66RYpXhnl+UxbwhzObaTDHmmXJ+C4WfGS2MfWXbvbcmk13K4YF83bkksmihrPULFy7KO2h2TsXCzxSOwpf+LVkjY7yZGVZQvXyTLmPE22RG2FjJ7hUk2eNS+ERpLzs=,iv:w9Ji4EG4CgU98IbRSSKZvRcDlhAshE4NshABz3dAXFE=,tag:u/oIYWl6k44nMsGTNqOfNQ==,type:str]
-    rhobs-multicluster-demo:
-        version: 20260402
-        alias_of: ""
-        depends_on:
-            # ACM hub
-            - ocp-aws-sno
-            # Managed OpenShift Cluster
-            - rosa
-            # Managed EKS Cluster
-            - k8s-eks
-        common_options:
-            ignore_installconfig_check: false
-        deploy:
-            environment_vars:
-                - SOME_KEY=some value
-                - ANOTHER_KEY=another value
-            secrets: {}
-        cloud_credentials:
-            aws: {}
-        components:
-            - example
 sops:
-    lastmodified: "2026-09-15T02:15:01Z"
-    mac: ENC[AES256_GCM,data:ymK1kyT8DeZZaDc78aSIvdAcoRnjW0VOda3FcMehKU7f4oWl4U5m8V2SFkCFOGrSfmnKxWt3kAwuNTmfWOLFA3QEX+kuAtf5yO0Ij2eFa/teYi4tK7aPbu6s0PkQTebYN4FiljQPINNMA76clCsHuNDdGdfTEQdBlg0FRcur6TY=,iv:M9rF3rYXFUAPuTuzCR6YcOsh8dytYKK6xQ+vPN/Z0dQ=,tag:8D09xf6HZKEysohgHuSUWQ==,type:str]
+    lastmodified: "2026-09-15T15:51:56Z"
+    mac: ENC[AES256_GCM,data:nrKXImKOmI2b7lzcoE9/aWOmQSPUm6aMk8HhwFwJ04K+XLX3rLNLjRz3/QgRiovddOUv10b8qQfgoWeXh2Fff4dDr2d9clx+GuwqY/FpuK2KD7mTVOxF9GOv8PixetsZzULXhGXoToJZfBuspFhNacGD7THzvYvptv7DyBa1TxU=,iv:jK6AWO8PpGoxzdx21sL6ZDVgC5BZlRlpOwVjVHpmrSk=,tag:0Kvf+A3lR9RC6WYZLeBeTA==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
