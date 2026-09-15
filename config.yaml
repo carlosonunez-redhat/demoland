@@ -4,10 +4,10 @@ common:
             # aws.sts: AWS credentials for assuming into another role.
             # encrypted
             sts:
-                aws_access_key_id: ENC[AES256_GCM,data:c4HRs8TSLdk+9KRYAuO9I5GXngA=,iv:7ZHpzxzF6J7naPp5XagPflAeK8z5bA3zSBwBhdozkto=,tag:qbuEOf5tu3fjx4cw24ZvMQ==,type:str]
-                aws_secret_access_key: ENC[AES256_GCM,data:CAthNhLgY2Nh12FurKNcls72NHAKa54lpiv/75fCdvpYzNQwqa/PiQ==,iv:3o0WzGMzvEhzmHNUETSbbLZNhodnKjIHAUksa9qpdwg=,tag:kkxpP5hWOCcd9cwvsdnCfA==,type:str]
+                aws_access_key_id: ENC[AES256_GCM,data:uajlnCRvDGHQmueA3hh47rHl0KY=,iv:2fpFZ3za66ddNxKqFznyhLT7noz6QeptIWVgoJUwFQY=,tag:xfqux821ivIw8m0/Zolawg==,type:str]
+                aws_secret_access_key: ENC[AES256_GCM,data:+WYh8GyQghyG1nYrF7VgM4UPlF6ctq9RWKIXbpFKPVlORFC+MbNCdg==,iv:Dkjq94GHKtkoZ9jrVG1PFjtKtoD7Z/7NgRTrB2iEX1k=,tag:4iszLscvxYcc8N74vUmWHA==,type:str]
                 aws_default_region: ENC[AES256_GCM,data:yhbppXp4Emsv,iv:PoWpnhgYk18InCtqBcLK5yrI8vrHqTX9BDR2kQ0Kya0=,tag:7Jooayomp5o2DNnbqlvfFg==,type:str]
-                aws_role_arn: ENC[AES256_GCM,data:7YS3XkAYIQbFtbVPn0+CXhLcpQ0NaLkIBZ0jFZ08h+EbPcC+M1NpbbYQlibEB9mD,iv:LHn8j7oBIIhfxk/KvKT3YhzXYjU0ulcsRdf5fZaM8bQ=,tag:KvD+iBjeSDvct6rO2KaOiQ==,type:str]
+                aws_role_arn: ENC[AES256_GCM,data:qQYYJdAY7msfcVep4ZrPHHVS9bSKVyM8ZM1Jb6liZyGaS05uaEx9lruyXG1H71xL,iv:4WQ5SCdXNEKWQpy2HfRs5WBlY8WgA+GyrO3xq5XRz9w=,tag:6m/4vgpUBQXPFXXSbMBAGw==,type:str]
                 aws_role_external_id: ENC[AES256_GCM,data:b52sm/9ISC/Zlp1Nzok+rYpbprY=,iv:TqyA4AEsR7VzSrlPFj9DUKIYJSYuwT6opDiiU0mu2IE=,tag:BHJ52wiQ0E9AaP30sB+oaw==,type:str]
             # aws.iam_user: AWS credentials assigned to IAM users. Must set AWS_DISABLE_STS=1 in
             # your environment variables to take effect.
@@ -115,10 +115,10 @@ environments:
             aws:
                 # encrypted
                 iam_user:
-                    aws_access_key_id: ENC[AES256_GCM,data:U//gO/gpwsymBv8+5hgsXcBXCEI=,iv:Gh+O0clDQmfJoKIAvEimr8WA+aGyIIABTJMzY5++e7k=,tag:43o0R+MTxmrky1CZzS6ZVw==,type:str]
-                    aws_secret_access_key: ENC[AES256_GCM,data:Tvzq73IigFiKTb1LVu5yBQep/Rl/HJ9566+oSFMe8zID0p/nMeSqoA==,iv:KiXhAUuGLoJgvcovN98DX1DnSC9MN+SS5e1SWgADL6g=,tag:dVKXyAaGpflBw4GHy4vtnw==,type:str]
+                    aws_access_key_id: ENC[AES256_GCM,data:XduCxAaRqLRo4f8xCsb3KGJnUE4=,iv:lERypjrvbR1uCIUWh/scKVy+1yd48s0y+ZwRB0n+tmw=,tag:bqxA1iyisU2q+cZkzX4/uQ==,type:str]
+                    aws_secret_access_key: ENC[AES256_GCM,data:IVQ4hD1zaR9AUgfwynqQtuv2oaDMmm09duj2FLchjCNfhizUdl1RWQ==,iv:1+HX2flx2Pb/dCsq18K5l8rULiotSZzHY93mObFiBeo=,tag:IE9R9OLxzYoQRVVEdgmgVg==,type:str]
                     aws_default_region: ENC[AES256_GCM,data:lpeXPB0tymh6,iv:0jWk/hreDKLYSQHLLtMdD4IfrV3bKWLgbQihecUfUJA=,tag:XMCzYl4/swkA50596OvwdA==,type:str]
-                    aws_role_arn: ENC[AES256_GCM,data:1iDFNRbGcrcknP8jbr3T1mAAV+JZb+nuhEu8FlXXIs71AATf8g8geDij8q9vaWfC,iv:xMBbJWH/EpgykB/o+j5Kyp5NZf8Jv8VWvhrdF+Bn5e4=,tag:QH0wqJlABvhEwa0WR4A6RA==,type:str]
+                    aws_role_arn: ENC[AES256_GCM,data:LKsYY9zQ56c8PJ7yxi/Rgrk+uZzkPP6stPQS1tQ9GgSu8THeRMqmXq+8VMjkOagG,iv:JKDxi0VPVqTzTekwVhXzFywInFEXxdW9rr5MbI87NWc=,tag:/zKG9rdjPxkJX614EmPoUw==,type:str]
                     aws_role_external_id: ENC[AES256_GCM,data:82Pqnnd0NrTDp9hDChzvq5INspI=,iv:Mbhexv+qsQOVdP0ESTof4CysMV+g4bbgwVNXlXUopCU=,tag:QJPJwj5FeOJUp+aj+cvlGA==,type:str]
         deploy:
             environment_vars:
@@ -272,7 +272,7 @@ environments:
                 aws:
                     networking:
                         dns:
-                            domain_name: sandbox5159.opentlc.com
+                            domain_name: sandbox1650.opentlc.com
                         cidr_block: 10.0.0.0/16
                         region: us-east-2
                         availability_zones:
@@ -326,7 +326,7 @@ environments:
                 aws:
                     networking:
                         dns:
-                            domain_name: sandbox5159.opentlc.com
+                            domain_name: sandbox1650.opentlc.com
                         cidr_block: 10.0.0.0/16
                         region: us-east-2
                         availability_zones:
@@ -339,20 +339,20 @@ environments:
                             workers:
                                 - us-east-2a
                                 - us-east-2b
-                node_config:
-                    control_plane:
-                        quantity_per_zone: 3
-                        instance_type: c8i.2xlarge
-                        spot: false
-                    workers:
-                        quantity_per_zone: 3
-                        instance_type: c8i.2xlarge
-                        spot: false
-                secrets:
-                    ssh_key:
-                        name: ocp-aws-ssh-key
-                        # encrypted
-                        data: ENC[AES256_GCM,data:91VJcqxnqY2KP8tKPMxvw52wIZSF1OpdC6onmuw/nVqcapt4EkXkAUm8I8p3ZMgGXEG52n45djIxhCHVs4Dw2MP2doSKHQPZ55+hUDD/vE+bu4EZvgPrOSZuv8zuGemE+0Gc/QXk168aMENf0q2A52f6r62uPSE25CQGtTkZMkgTNllu+k+AQk3WIiCKr7gPhV7yV4Wp79uqZWLN1z7IX2+Sw6G2JPcDsU7gpauPajD77j4cQExH662Y39jBRySdBR+pk9XHjZVlIjfrLotc4Kdojcz/19nuRRWo9ChI7vi/nAxOrnVgx+6XoMcNtGEESF/NEs4AHvYXz+oQ4VRFjHf6om2zSAeNkReCUacBEtHve5wfUFlulBLQd84p4Am1uMbfKwJMcg1KUS4v9J9n4fA9NhY04il0YvcmiSp5S0HE5X9AQyTd+x1RvGvKxw+thkKYBuDAMRE+THC38D2PWQqw0yp/N12pzZsDc9jhBXLOZrwJgD5NmlJ4zA3NG+pMYGK7H09znh1JuXVKb1A7VhjImEwtZBIJbFc=,iv:OX2UAi111pvQPstsXYxrpQp5efa34V/c6v7FKWfYaD0=,tag:aNgrOAUxYVc0Is7PWtAB/w==,type:str]
+            node_config:
+                control_plane:
+                    quantity_per_zone: 3
+                    instance_type: c8i.2xlarge
+                    spot: false
+                workers:
+                    quantity_per_zone: 3
+                    instance_type: c8i.2xlarge
+                    spot: false
+            secrets:
+                ssh_key:
+                    name: ocp-aws-ssh-key
+                    # encrypted
+                    data: ENC[AES256_GCM,data:7Hg7z5FD+H1tuLSTAwDVLj/YN86emHUQlHcpKf3WNQwwrqe0WPbKgFLq9fecw82TqNNAd3ZT4pBLlpvPvuyyApoZ7QHkuqaNazqKEH5BHTK/IJpBUn9nwtIRfMIJ92ek1Xsy8NQ00L/k6rKKFqldea73taIhWJvRDkjF0qEz8eeft59dt1WOR7MYgpVKGgEXwN4AA7zGCV7WF+NBRjlcLJPeQHgTSrGCEDNiO8pBcC97ZTTk2SEU71ztyfTywe/TXaXgUe56vZ1um8kZXkeFn3Oy5h2plaG45KJCDjosjOD7a9hCCKEW8h6HO2kWr3swiC0F65LBY8wlI2zjmKZgRq6Vg750cMHZgK/a4tAUPAhe2KjJgZBiVY/zHgEDeauGUvaPzWUhscR3gc2/RVxyncOv4nQsnQYV3rkSj66RYpXhnl+UxbwhzObaTDHmmXJ+C4WfGS2MfWXbvbcmk13K4YF83bkksmihrPULFy7KO2h2TsXCzxSOwpf+LVkjY7yZGVZQvXyTLmPE22RG2FjJ7hUk2eNS+ERpLzs=,iv:w9Ji4EG4CgU98IbRSSKZvRcDlhAshE4NshABz3dAXFE=,tag:u/oIYWl6k44nMsGTNqOfNQ==,type:str]
     rhobs-multicluster-demo:
         version: 20260402
         alias_of: ""
@@ -375,8 +375,8 @@ environments:
         components:
             - example
 sops:
-    lastmodified: "2026-09-14T21:34:10Z"
-    mac: ENC[AES256_GCM,data:dwBtqXxRmJGPHjkmuJ5vzIkKHiiyJWmG/DNw3hQt419uWTyzgGLZWMy/IQ2PnrdoYOnfdlZV2JHNkQ455M7IqAvR7aR8xCZAL4rBcAy/R9cLlysjh4WdBOs94rnFlzt8ZQeILRcyMSoTXDIH8+aCPonIdBLmM7FCRDhxdR9/2ws=,iv:qXT0+bQpRKLveP34tx10NJFQxKnWBxveA6adC2ari2w=,tag:XghjWnFBIfwh5JhY5iqkAw==,type:str]
+    lastmodified: "2026-09-15T02:15:01Z"
+    mac: ENC[AES256_GCM,data:ymK1kyT8DeZZaDc78aSIvdAcoRnjW0VOda3FcMehKU7f4oWl4U5m8V2SFkCFOGrSfmnKxWt3kAwuNTmfWOLFA3QEX+kuAtf5yO0Ij2eFa/teYi4tK7aPbu6s0PkQTebYN4FiljQPINNMA76clCsHuNDdGdfTEQdBlg0FRcur6TY=,iv:M9rF3rYXFUAPuTuzCR6YcOsh8dytYKK6xQ+vPN/Z0dQ=,tag:8D09xf6HZKEysohgHuSUWQ==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
