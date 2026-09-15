@@ -18,6 +18,9 @@ Parameters:
   ClusterCertificateAuthority:
     Description: Base64-encoded certificate authority data for the EKS cluster.
     Type: String
+  ClusterServiceCidr:
+    Description: Kubernetes service IPv4 CIDR for the EKS cluster.
+    Type: String
   WorkerAmiId:
     Description: EKS-optimized AMI ID for worker nodes. Resolve via SSM parameter /aws/service/eks/optimized-ami/<version>/amazon-linux-2/recommended/image_id before stack creation.
     Type: AWS::EC2::Image::Id
@@ -60,6 +63,7 @@ Metadata:
       - ClusterName
       - ClusterEndpoint
       - ClusterCertificateAuthority
+      - ClusterServiceCidr
     - Label:
         default: "Host Information"
       Parameters:
@@ -87,6 +91,8 @@ Metadata:
         default: "EKS Cluster Endpoint"
       ClusterCertificateAuthority:
         default: "EKS Cluster CA"
+      ClusterServiceCidr:
+        default: "EKS Service CIDR"
       WorkerAmiId:
         default: "Worker AMI ID"
       WorkerInstanceType:
@@ -127,11 +133,23 @@ Resources:
             DeleteOnTermination: true
         UserData:
           Fn::Base64: !Sub |
-            #!/bin/bash
-            set -o xtrace
-            /etc/eks/bootstrap.sh '${ClusterName}' \
-              --apiserver-endpoint '${ClusterEndpoint}' \
-              --b64-cluster-ca '${ClusterCertificateAuthority}'
+            MIME-Version: 1.0
+            Content-Type: multipart/mixed; boundary="BOUNDARY"
+
+            --BOUNDARY
+            Content-Type: application/node.eks.aws
+
+            ---
+            apiVersion: node.eks.aws/v1alpha1
+            kind: NodeConfig
+            spec:
+              cluster:
+                name: ${ClusterName}
+                apiServerEndpoint: ${ClusterEndpoint}
+                certificateAuthority: ${ClusterCertificateAuthority}
+                cidr: ${ClusterServiceCidr}
+
+            --BOUNDARY--
         TagSpecifications:
         - ResourceType: instance
           Tags:

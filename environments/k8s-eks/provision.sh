@@ -214,7 +214,7 @@ EOF
 
 create_worker_nodes() {
   local arch ami_id worker_instance_type worker_sg_id worker_profile_arn
-  local private_subnets key_name cluster_name cluster_endpoint cluster_ca
+  local private_subnets key_name cluster_name cluster_endpoint cluster_ca cluster_cidr
   local num_worker_azs quantity_per_zone desired min max
   local params params_json
 
@@ -242,6 +242,9 @@ create_worker_nodes() {
   cluster_ca=$(fail_if_nil \
     "$(_get_param_from_aws_cfn_stack eks_cluster 'ClusterCertificateAuthority')" \
     "EKS cluster CA not found") || return 1
+  cluster_cidr=$(fail_if_nil \
+    "$(_get_param_from_aws_cfn_stack eks_cluster 'ServiceCidr')" \
+    "EKS cluster service CIDR not found") || return 1
 
   quantity_per_zone=$(_get_from_config '.deploy.node_config.workers.quantity_per_zone')
   num_worker_azs=$(_get_from_config '.deploy.cloud_config.aws.networking.availability_zones.workers[]' | wc -l)
@@ -254,6 +257,7 @@ create_worker_nodes() {
     'ClusterName' "$cluster_name"
     'ClusterEndpoint' "$cluster_endpoint"
     'ClusterCertificateAuthority' "$cluster_ca"
+    'ClusterServiceCidr' "$cluster_cidr"
     'WorkerAmiId' "$ami_id"
     'WorkerInstanceType' "$worker_instance_type"
     'WorkerInstanceProfileArn' "$worker_profile_arn"
