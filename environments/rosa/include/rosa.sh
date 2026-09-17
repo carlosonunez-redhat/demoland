@@ -13,7 +13,14 @@ _exec_rosa() {
   export $(log_into_aws)
   if test -n "$ROSA_CLIENT_ID" && test -n "$ROSA_CLIENT_SECRET"
   then >&2 _rosa login --client-id="$ROSA_CLIENT_ID" --client-secret="$ROSA_CLIENT_SECRET" || return 1
-  else >&2 _rosa login --token="$(_get_from_config '.deploy.rosa_config.auth.token')" || return 1
+  else
+    token=$(_get_from_config '.deploy.rosa_config.auth.token')
+    if test -z "$token"
+    then
+      >&2 echo "ERROR: ROSA token not found in config."
+      return 1
+    fi
+    >&2 _rosa login --token="$(_get_from_config '.deploy.rosa_config.auth.token')" || return 1
   fi
   _rosa "$@"
 }
