@@ -92,7 +92,7 @@ environments:
             # ACM hub, which will have one managed OCP cluster in AWS
             - ocp-aws-sno
             # Imported OpenShift Cluster
-            - rosa
+            - rosa-hcp
             # Imported EKS Cluster
             - k8s-eks
         common_options:
@@ -126,6 +126,16 @@ environments:
         cloud_credentials:
             aws: {}
         components: []
+    rosa-hcp:
+        version: 20260124
+        alias_of: rosa
+        common_options:
+            # common_options.ignore_installconfig_check: Ignores checking for an installconfig in this
+            # environment.
+            ignore_installconfig_check: true
+        deploy:
+            environment_vars:
+                - ROSA_DISABLE_CLUSTER_TYPE_CLASSIC=1
     rosa:
         version: 20260124
         common_options:
@@ -371,8 +381,8 @@ environments:
                     # encrypted
                     data: ENC[AES256_GCM,data:7Hg7z5FD+H1tuLSTAwDVLj/YN86emHUQlHcpKf3WNQwwrqe0WPbKgFLq9fecw82TqNNAd3ZT4pBLlpvPvuyyApoZ7QHkuqaNazqKEH5BHTK/IJpBUn9nwtIRfMIJ92ek1Xsy8NQ00L/k6rKKFqldea73taIhWJvRDkjF0qEz8eeft59dt1WOR7MYgpVKGgEXwN4AA7zGCV7WF+NBRjlcLJPeQHgTSrGCEDNiO8pBcC97ZTTk2SEU71ztyfTywe/TXaXgUe56vZ1um8kZXkeFn3Oy5h2plaG45KJCDjosjOD7a9hCCKEW8h6HO2kWr3swiC0F65LBY8wlI2zjmKZgRq6Vg750cMHZgK/a4tAUPAhe2KjJgZBiVY/zHgEDeauGUvaPzWUhscR3gc2/RVxyncOv4nQsnQYV3rkSj66RYpXhnl+UxbwhzObaTDHmmXJ+C4WfGS2MfWXbvbcmk13K4YF83bkksmihrPULFy7KO2h2TsXCzxSOwpf+LVkjY7yZGVZQvXyTLmPE22RG2FjJ7hUk2eNS+ERpLzs=,iv:w9Ji4EG4CgU98IbRSSKZvRcDlhAshE4NshABz3dAXFE=,tag:u/oIYWl6k44nMsGTNqOfNQ==,type:str]
 sops:
-    lastmodified: "2026-09-15T16:22:27Z"
-    mac: ENC[AES256_GCM,data:+jdq0qgsdWpxCEe4rFzjy9LfeaX/esv+vKExG9xibdx6myelL4aCE/HwsgQHnKgfSpyFJRRgW/vmKHYbwDo3w3xAq8JzYNi17/TumUIQTO+OICPxvXSMImwYzbFfIr9mTUbH/bbdDcT90spgcJgdJTO1rYYrkaAFgFC+PFPFX0U=,iv:bYbIBN6Z3RISrl7r6BeP5UUTFgrFByJKO2inJz58KAM=,tag:DATkqTuqhK6iJj99TeX+MQ==,type:str]
+    lastmodified: "2026-09-15T20:57:20Z"
+    mac: ENC[AES256_GCM,data:CjBGMs+5tFjMrhuLUB+bMRByWDUw9Qd3XUW87mDaN9n815+cxsusKdtPduu8W3Cc7bbD2YDg5XAsK314V3yvsV9aVmDQpnfqalB4xjGaSMwjJNs9vw8PkM5KdTTIoHG2y21eKWk9vH6Ui43byjpFo+xqM51YNqDx24oM0Cod5cw=,iv:j6oL65uigoHPDbSadvIH3Cc9WqUw6EyDnWkS7jegz20=,tag:fSVVixpvkFNjATZnYamJqQ==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
