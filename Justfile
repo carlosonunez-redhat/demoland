@@ -362,19 +362,18 @@ _merge_aliased_environment environment:
   target_env_data_enc=$(base64 -w 0 <<< $target_env_data); \
   yaml=$(just _do_yq_encoded_merge "$target_env_data_enc" "$env_data_enc"); \
   test -z "$yaml" && exit 1; \
-  set -x; \
   env_vars_this=$(yq -o=j -I=0 -r '.deploy.environment_vars' <<< "$env_data"); \
   if test "$env_vars_this" == '[]' || test "$env_vars_this" == null; \
   then \
     echo "$yaml"; \
     exit 0; \
-  fi;
+  fi; \
   env_vars_target=$(yq -o=j -I=0 -r '.deploy.environment_vars' <<< "$target_env_data"); \
   if test "$env_vars_target" == '[]' || test "$env_vars_target" == null; \
   then \
     echo "$yaml"; \
     exit 0; \
-  fi;
+  fi; \
   merged_env_vars=$(printf "[%s,%s]" "$env_vars_this" "$env_vars_target" | jq -cr flatten); \
   yq -r ".deploy.environment_vars = $merged_env_vars" <<< "$yaml"
 
