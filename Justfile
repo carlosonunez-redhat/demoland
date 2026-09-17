@@ -360,7 +360,14 @@ _merge_aliased_environment environment:
   q=$(printf '["environments"]["%s"]' "$alias"); \
   target_env_data=$(sops --decrypt --extract "$q" --output-type yaml "{{ config_file }}") || exit 1; \
   target_env_data_enc=$(base64 -w 0 <<< $target_env_data); \
-  just _do_yq_encoded_merge "$target_env_data_enc" "$env_data_enc"
+  yaml=$(just _do_yq_encoded_merge "$target_env_data_enc" "$env_data_enc"); \
+  test -z "$yaml" && exit 1; \
+  set -x; \
+  env_vars_this=$(yq -o=j -I=0 -r '.deploy.environment_vars' <<< "$env_data"); \
+  env_vars_target=$(yq -o=j -I=0 -r '.deploy.environment_vars' <<< "$target_env_data"); \
+  merged_env_vars=$(printf "[%s,%s]" "$env_vars_this" "$env_vars_target" | jq -cr flatten); \
+  yq -r ".deploy.environment_vars = $merged_env_vars" <<< "$yaml"
+
 
 _merge_cloud_creds environment:
   set +u; \
