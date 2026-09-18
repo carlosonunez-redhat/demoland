@@ -340,7 +340,7 @@ _execute_containerized environment file ignore_not_found='false' custom_message=
   while read var; \
   do command+=(-e "$var"); \
   done < <(just _run_yq \
-    "$(just _get_property_from_env_config {{ environment }} '.deploy.environment_vars')" \
+    "$(just _get_property_from_env_config_use_alias {{ environment }} '.deploy.environment_vars')" \
     '.[]'); \
   command+=($(just _container_image {{ environment }}) /app/environment/{{ file }}); \
   set +u; \
@@ -500,7 +500,7 @@ _ensure_container_image_exists environment:
   {{ container_bin }} images  | grep -q "$image_name" && \
     test -z "$REBUILD_IMAGE" && \
     exit 0; \
-  container_file=$(just _get_property_from_env_config \
+  container_file=$(just _get_property_from_env_config_use_alias \
     {{ environment }} \
     '.deploy.container_file'); \
   test -z "$container_file" && \
