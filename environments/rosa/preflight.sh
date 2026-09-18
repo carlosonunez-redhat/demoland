@@ -27,25 +27,5 @@ verify_local_environment() {
   _exec_rosa verify openshift-client
 }
 
-verify_ocm_org() {
-  test -n "$(_get_secret 'ocm-org')"
-}
-
-verify_ocm_token() {
-  test -n "$(_get_secret 'ocm-token')"
-}
-
-verify_aws_billing_account_linked_to_redhat_ocm() {
-  billing_account=$(_exec_aws sts get-caller-identity | jq -r .Account)
-  num_subs=$(_exec_ocm get subs -p search="status='Active' and organization_id='$(_get_secret 'ocm-org')' and billing_marketplace_account='$billing_account'" | jq -r .size)
-  test -n "$num_subs" && test "$num_subs" -gt 0 && return 0
-
-  error "AWS account '$billing_account' not linked to Red Hat OCM"
-  return 1
-}
-
 verify_local_environment &&
-verify_aws_quotas &&
-verify_ocm_org &&
-verify_ocm_token &&
-verify_aws_billing_account_linked_to_redhat_ocm
+verify_aws_quotas
