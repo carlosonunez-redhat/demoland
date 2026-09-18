@@ -45,7 +45,7 @@ destroy_oidc_configuration() {
 
   info "Deleting AWS OIDC config for ROSA"
   _exec_rosa delete oidc-config \
-    "$(_rosa_oidc_id)" \
+    --oidc-config-id "$(_rosa_oidc_id)" \
     --mode auto \
     --yes
 }
