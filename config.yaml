@@ -4,10 +4,10 @@ common:
             # aws.sts: AWS credentials for assuming into another role.
             # encrypted
             sts:
-                aws_access_key_id: ENC[AES256_GCM,data:uajlnCRvDGHQmueA3hh47rHl0KY=,iv:2fpFZ3za66ddNxKqFznyhLT7noz6QeptIWVgoJUwFQY=,tag:xfqux821ivIw8m0/Zolawg==,type:str]
-                aws_secret_access_key: ENC[AES256_GCM,data:+WYh8GyQghyG1nYrF7VgM4UPlF6ctq9RWKIXbpFKPVlORFC+MbNCdg==,iv:Dkjq94GHKtkoZ9jrVG1PFjtKtoD7Z/7NgRTrB2iEX1k=,tag:4iszLscvxYcc8N74vUmWHA==,type:str]
+                aws_access_key_id: ENC[AES256_GCM,data:8cEA0oBMZu8SoEmJYqrA7OT/3V0=,iv:vzKW3cvg/aameL56yH3pkdX2aokRnZvCJKSE+7imRrM=,tag:5Xf2sdsIdNY9MztcXME5nA==,type:str]
+                aws_secret_access_key: ENC[AES256_GCM,data:aB1QdgOeEah/PRKcJ/mt2PqjxerdiD7d0f2n/ufBq3DdMZKN8fhK9g==,iv:goy66OGgu/iInEVSnU9w1+ASubnjKenLLwJiW/osaVk=,tag:gFXGXXFab34t272oRzKGgg==,type:str]
                 aws_default_region: ENC[AES256_GCM,data:yhbppXp4Emsv,iv:PoWpnhgYk18InCtqBcLK5yrI8vrHqTX9BDR2kQ0Kya0=,tag:7Jooayomp5o2DNnbqlvfFg==,type:str]
-                aws_role_arn: ENC[AES256_GCM,data:qQYYJdAY7msfcVep4ZrPHHVS9bSKVyM8ZM1Jb6liZyGaS05uaEx9lruyXG1H71xL,iv:4WQ5SCdXNEKWQpy2HfRs5WBlY8WgA+GyrO3xq5XRz9w=,tag:6m/4vgpUBQXPFXXSbMBAGw==,type:str]
+                aws_role_arn: ENC[AES256_GCM,data:QgxZvgX7moyy22I3CN7H/GjlYOVbLlSBgYNsJks+O9gO5uht9GGMT8cbRsb78dUA,iv:XIbcUYWdL5f5CZpic5B7d5d7jSk5pUdHtuxjGzXS3l0=,tag:SeeKJxSeJDLR3u1sU7cpAQ==,type:str]
                 aws_role_external_id: ENC[AES256_GCM,data:b52sm/9ISC/Zlp1Nzok+rYpbprY=,iv:TqyA4AEsR7VzSrlPFj9DUKIYJSYuwT6opDiiU0mu2IE=,tag:BHJ52wiQ0E9AaP30sB+oaw==,type:str]
             # aws.iam_user: AWS credentials assigned to IAM users. Must set AWS_DISABLE_STS=1 in
             # your environment variables to take effect.
@@ -89,12 +89,13 @@ environments:
         version: 20260402
         alias_of: ""
         depends_on:
-            # ACM hub, which will have one managed OCP cluster in AWS
-            - ocp-aws-sno
             # Imported OpenShift Cluster
             - rosa-hcp
             # Imported EKS Cluster
             - k8s-eks
+            # ACM hub, which will have one managed OCP cluster in AWS, takes the longest to get
+            # going
+            - ocp-aws-sno
         common_options:
             ignore_installconfig_check: false
         deploy:
@@ -146,10 +147,10 @@ environments:
             aws:
                 # encrypted
                 iam_user:
-                    aws_access_key_id: ENC[AES256_GCM,data:XduCxAaRqLRo4f8xCsb3KGJnUE4=,iv:lERypjrvbR1uCIUWh/scKVy+1yd48s0y+ZwRB0n+tmw=,tag:bqxA1iyisU2q+cZkzX4/uQ==,type:str]
-                    aws_secret_access_key: ENC[AES256_GCM,data:IVQ4hD1zaR9AUgfwynqQtuv2oaDMmm09duj2FLchjCNfhizUdl1RWQ==,iv:1+HX2flx2Pb/dCsq18K5l8rULiotSZzHY93mObFiBeo=,tag:IE9R9OLxzYoQRVVEdgmgVg==,type:str]
+                    aws_access_key_id: ENC[AES256_GCM,data:qvFb/CYyZF9IKZjQkyjUwpYzXGw=,iv:u4zFMBAu21DdrkhqvoxY+rZiW+mGFuE0C6UtCuad59Y=,tag:wZtTGm5TMFkqJwlSoNFh3A==,type:str]
+                    aws_secret_access_key: ENC[AES256_GCM,data:UhJjKwguHWM6R3fq7dhFnHmrBXCeGxNFjTkXZL1Giqu878+LQYuJnw==,iv:YVjGuGGfIyVkJ18SWooZy4HnC7HacR+0EodKAgfeQ9I=,tag:R9acqow9mKw9ZG8pOU7qMw==,type:str]
                     aws_default_region: ENC[AES256_GCM,data:lpeXPB0tymh6,iv:0jWk/hreDKLYSQHLLtMdD4IfrV3bKWLgbQihecUfUJA=,tag:XMCzYl4/swkA50596OvwdA==,type:str]
-                    aws_role_arn: ENC[AES256_GCM,data:LKsYY9zQ56c8PJ7yxi/Rgrk+uZzkPP6stPQS1tQ9GgSu8THeRMqmXq+8VMjkOagG,iv:JKDxi0VPVqTzTekwVhXzFywInFEXxdW9rr5MbI87NWc=,tag:/zKG9rdjPxkJX614EmPoUw==,type:str]
+                    aws_role_arn: ENC[AES256_GCM,data:8Mmz5g60JWTjXy+wEDYVj2JFdWmq3hLp5luVbv0mdKV6FJx7FnNkYPlh1EjyU0k+,iv:kLZsJyPWr94Jocy8fBnzAhwg5uK0cs3nbEoKeMw6fq4=,tag:z7UWsLVA9NM0+tzlV7GHVw==,type:str]
                     aws_role_external_id: ENC[AES256_GCM,data:82Pqnnd0NrTDp9hDChzvq5INspI=,iv:Mbhexv+qsQOVdP0ESTof4CysMV+g4bbgwVNXlXUopCU=,tag:QJPJwj5FeOJUp+aj+cvlGA==,type:str]
         deploy:
             environment_vars:
@@ -391,8 +392,8 @@ environments:
                     # encrypted
                     data: ENC[AES256_GCM,data:7Hg7z5FD+H1tuLSTAwDVLj/YN86emHUQlHcpKf3WNQwwrqe0WPbKgFLq9fecw82TqNNAd3ZT4pBLlpvPvuyyApoZ7QHkuqaNazqKEH5BHTK/IJpBUn9nwtIRfMIJ92ek1Xsy8NQ00L/k6rKKFqldea73taIhWJvRDkjF0qEz8eeft59dt1WOR7MYgpVKGgEXwN4AA7zGCV7WF+NBRjlcLJPeQHgTSrGCEDNiO8pBcC97ZTTk2SEU71ztyfTywe/TXaXgUe56vZ1um8kZXkeFn3Oy5h2plaG45KJCDjosjOD7a9hCCKEW8h6HO2kWr3swiC0F65LBY8wlI2zjmKZgRq6Vg750cMHZgK/a4tAUPAhe2KjJgZBiVY/zHgEDeauGUvaPzWUhscR3gc2/RVxyncOv4nQsnQYV3rkSj66RYpXhnl+UxbwhzObaTDHmmXJ+C4WfGS2MfWXbvbcmk13K4YF83bkksmihrPULFy7KO2h2TsXCzxSOwpf+LVkjY7yZGVZQvXyTLmPE22RG2FjJ7hUk2eNS+ERpLzs=,iv:w9Ji4EG4CgU98IbRSSKZvRcDlhAshE4NshABz3dAXFE=,tag:u/oIYWl6k44nMsGTNqOfNQ==,type:str]
 sops:
-    lastmodified: "2026-09-18T15:46:49Z"
-    mac: ENC[AES256_GCM,data:TOodtJTDD1DNU6luqmI7G2G5n0WaIryjqxJjAxfpRffSwYrzrRsvZmP7qPp6R/uMV9VaA1LiPxTv1hiD2ftQPehwpqA0WjyQ/qWQ6LFJ9vkaecd25+RVnQS1L3Z0ELk60liOvnj6MnBo14RJafrY7fZ8xT3xAs2yLZrwm14aZjc=,iv:B9iMTrE2VLX7RMiLgSA+VYmiAUspvm8fOhaL0yYJTZg=,tag:DooWgThc0n2vqQahvvPJEQ==,type:str]
+    lastmodified: "2026-09-18T18:17:45Z"
+    mac: ENC[AES256_GCM,data:+2ToA1MXmYk9I78PBx78/tYXPNtEtuNrpu05haL0o/xaNUR5YZOfcaJd/O5aqv6jLSIUkF/9UhnE/uAvCsiXECAMRMcFkc/LD2Fxy30TW8kynKnQsz+zved3tw1g/HaP4J2laQJurIAbB9IR3HklpBudJ79dOjS9qe2Y4WComWQ=,iv:LLe5CYWKuZjEfeJ33MTrRw5cwwQBWtZuvd6OoUqkrGk=,tag:FZB512wOr2qjPOnBisON8A==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
