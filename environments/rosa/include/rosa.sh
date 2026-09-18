@@ -6,8 +6,7 @@ _rosa() {
   debug "Running ROSA command: 'rosa $*'"
   result=$(2>&1 rosa "$@")
   rc="$?"
-  messages=$(echo "$result"| grep -Ev '^WARN: The current version.*|^INFO: Logged in as.*|.*It is recommended.*' | cat)
-  test -n "$messages" && info "Messages from the rosa CLI: $messages"
+  echo "$result"| grep -Ev '^WARN: The current version.*|^INFO: Logged in as.*|.*It is recommended.*' | cat
   return "$rc"
 }
 
@@ -37,11 +36,15 @@ _rosa_cluster_name() {
 }
 
 _rosa_cluster_api_url() {
+  _rosa_cluster_type_disabled "$1" && return 0
+
   _exec_rosa describe cluster -c "$(_rosa_cluster_name)-$1" -o json |
     jq -r '.api.url'
 }
 
 _rosa_cluster_console_url() {
+  _rosa_cluster_type_disabled "$1" && return 0
+
   _exec_rosa describe cluster -c "$(_rosa_cluster_name)-$1" -o json |
     jq -r '.console.url'
 }

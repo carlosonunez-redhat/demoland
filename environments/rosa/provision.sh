@@ -137,6 +137,7 @@ set_up_google_idp() {
   type="$1"
 
   _rosa_cluster_type_disabled "$type" && return 0
+
   auths=$(_get_from_config '.deploy.cluster_config.cluster_auth.google_oauth.auths')
   for role in $(yq -r '.[].role' <<< "$auths" | sort -u)
   do

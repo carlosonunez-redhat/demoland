@@ -17,6 +17,8 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 # source "$ENVIRONMENT_INCLUDE_DIR/foo.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/rosa.sh"
 generate_kubeconfig() {
+  _rosa_cluster_type_disabled "$1" && return 0
+
   cluster_name="$(_rosa_cluster_name)-$1"
   temp_password="Temp$(date +%s)$(tr -dc '[:alnum:]' < /dev/urandom | head -c 16)"
 
@@ -26,13 +28,18 @@ generate_kubeconfig() {
   }
 
   _create_temp_admin_user() {
+    local attempts
+    attempts=0
+    max_attempts=120
     _exec_rosa list idp -c "$cluster_name" | grep -q cluster-admin && _delete_temp_admin_user
     while test "$attempts" -ne "$max_attempts"
     do
       _exec_rosa create admin -c "$cluster_name" -p "$temp_password" && return 0
       info "Waiting for cluster-admin to be deleted in cluster '$cluster_name' (attempt $attempts of $max_attempts)"
+      attempts=$((attempts+1))
       sleep 1
     done
+    return 1
   }
 
   _login() {
