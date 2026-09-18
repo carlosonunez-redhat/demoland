@@ -178,8 +178,40 @@ set_up_google_idp() {
     do
       info "Granting '$email' '$role' access"
       _exec_rosa grant user "$role" --user="$email" -c "$(_rosa_cluster_name)-$type"
-    done < <(jq -r '.[0].users[]' <<< "$auth_infos" | grep -iv null | cat)
+    done < <(jq -r '.[0].users[].name' <<< "$auth_infos" | grep -iv null | cat)
   done
+}
+
+wait_for_cluster_ready() {
+  _rosa_cluster_type_disabled "$1" && return 0
+
+  local want_status got_status attempts
+  want_status='ready'
+  got_status=""
+  attempts=0
+  max_attempts=600
+  while test "$attempts" -lt "$max_attempts"
+  do
+    clusters=$(_exec_rosa list clusters -o json)
+    if test -z "$clusters"
+    then
+      error "Unable to list ROSA clusters"
+      return 1
+    fi
+    got_status=$(jq --arg NAME "$(_rosa_cluster_name)-$1" \
+      -r \
+      '.[] | select(.name == $NAME) | .state' <<< "$clusters")
+    if test -z "$got_status"
+    then
+      error "Unable to get cluster status for cluster '$(_rosa_cluster_name "$1")'"
+      return 1
+    fi
+    test "${want_status,,}" == "${got_status,,}" && return 0
+    info "[$attempts/${max_attempts}] Waiting for cluster '$(_rosa_cluster_name "$1")' to be '$want_status' (currently: $got_status)"
+    attempts=$((attempts+1))
+  done
+  error "Timed out while waiting for cluster '$(_rosa_cluster_name "$1")' to become '$want_status'"
+  return 1
 }
 
 set -e
@@ -190,6 +222,8 @@ create_oidc_configuration
 create_operator_roles_classic
 create_operator_roles_hcp
 create_cluster_classic
+wait_for_cluster_ready classic
+wait_for_cluster_ready hcp
 set_up_google_idp classic
 create_cluster_hcp
 set_up_google_idp hcp
