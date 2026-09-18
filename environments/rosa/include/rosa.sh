@@ -3,9 +3,11 @@ export OCM_CONFIG="$(_get_file_from_secrets_dir 'ocm/ocm.json')"
 _rosa() {
   # There's no way to change the logging level that's shown.
   # https://github.com/openshift/rosa/blob/master/pkg/reporter/reporter.go#L114
+  debug "Running ROSA command: 'rosa $*'"
   result=$(2>&1 rosa "$@")
   rc="$?"
-  echo "$result"| grep -Ev '^WARN:|^INFO: Logged in as.*' | cat
+  messages=$(echo "$result"| grep -Ev '^WARN: The current version.*|^INFO: Logged in as.*|.*It is recommended.*' | cat)
+  test -n "$messages" && info "Messages from the rosa CLI: $messages"
   return "$rc"
 }
 

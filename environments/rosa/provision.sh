@@ -108,7 +108,7 @@ create_cluster_hcp() {
       return 1
     fi
     billing_account=$(_exec_aws sts get-caller-identity | jq -r .Account)
-    _exec_rosa create cluster \
+    response=$(_exec_rosa create cluster \
       --yes \
       --hosted-cp \
       --cluster-name "$(_rosa_cluster_name)-hcp" \
@@ -119,6 +119,10 @@ create_cluster_hcp() {
       --machine-cidr "$(_get_from_config '.deploy.cloud_config.aws.networking.cidr_block.hcp')" \
       --subnet-ids "$subnets" \
       --billing-account "$billing_account"
+    )
+    rc="$?"
+    test "$rc" -eq 0 && return 0
+    error "Failed to create the cluster: $response"
   fi
 
   _wait_for_cluster_created hcp
