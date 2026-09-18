@@ -197,6 +197,16 @@ environments:
                         cidr_block:
                             classic: 172.0.0.0/16
                             hcp: 10.0.0.0/16
+            secrets:
+                redhat_ocm_organization:
+                    name: ocm-org
+                    # encrypted
+                    data: ENC[AES256_GCM,data:yBm8/yPLoFA3WyGigTIf6L35UV1hZr1mMRaJ,iv:onEpwO/Q80aMNr5uQ/jUInwtP2+byabbTYOwt8rVCEA=,tag:D6yJyGw34Yk6oWfPmIsHag==,type:str]
+                # Generate a new OCM token here: https://console.redhat.com/openshift/token/show
+                ocm_token:
+                    name: ocm-token
+                    # encrypted
+                    data: ENC[AES256_GCM,data:aetg4tZDNxnL3JPJBdF8LpVysTuQ5qPq3VrfaPfVdNSTpjg8PjW9FCUH8p4gm7y5gDhYFPyKoBYLOux8zWjxBR8o7FYo43stMkfZYVw4W9xYjEx1NpYKQyqTlXg2NZj+EWjt0fsSKXeI4ztyGBovclKXqG0Yda8BAOqZ4Kv/Nj9UgqPsmlOYtytlk4fTdCdJyFGjQOqvQ2erX+0NukX5AkIBsHgLuPqziv6MIi+WfVWEU43l7k+gGbv1eFThFXw9e7xMdaGlxKPyVb7b/tXvnpmMREOnQovobp01hs1y3EOyCp1f5OOOggMWC5eQhtscSZsPpH5V9KMV3bw2zlVzWJDP+QFNQicCw8m95GwsA0uDeipMmLRliIf6grhU29WqvAcX4QMuTWxSdwDnlauJJXlhj+BqLocBTnUCsIHTSx+NoPefyPhEEsjwYDaxLAaWdjV+gkrrPuI4aGbRc2ofeChcF3PNL034I+CU1FaSzD82/a6b52x3NEas6knl/NQ6pB75WllyrviHdTRUc57u8yKjtHcpJCfYx1tXLLEhsZCqW5onQUbWfE3hbPnDU4mTYgmCAsBuaj71AJRDxYGCcLVl7mISvTTB1hJSwBTOTL5s9FSw95LPQmBe3KbKZixpMRezXd5c2p4x/ADutv/6B4jfXCIyspdt4LvRWeek40xQQxGA/jT+foLEPkTwWU1YJQYEktiSBlFgHBfZq9VzdYNFRfgihmwCA52X5CpzVChSfYZ1vdBpC+K0YJ1Sc+r/7rrdxI4NSGx1a4Wq518oXOiIuVHW9kYdVMOrnJnjICg7TC1eFgYq2I+pXs5iULD1odu0dM/TURlU+J/E0LOE1Lh9UFpEXqz+k8uXWVVeRszy9+kJmeHO8Si3ZwuB/3m64LowffryKH8Yqfpf3IkG5bwuvmER9O2+Z3VEzMfF0E97IOjW0z9FhXhZsVpT/WZEFWrJ0G7/sFsatqK6btuSaxj/GJK4u2f/YR8n7acYH33LyBv1eM9c/qeRVaIMQrWdIT4HhyAC5veWgw+xBZJCDaeOYt+x,iv:/5knT74q3rdIpGzsmTIQhJSPag5/a4+PX5ulM9RY3gs=,tag:d2S5eEz9wqXo2n2mRBUYrg==,type:str]
     ocp-aws-sno-rhobs:
         alias_of: ocp-aws-upi
         deploy:
@@ -381,8 +391,8 @@ environments:
                     # encrypted
                     data: ENC[AES256_GCM,data:7Hg7z5FD+H1tuLSTAwDVLj/YN86emHUQlHcpKf3WNQwwrqe0WPbKgFLq9fecw82TqNNAd3ZT4pBLlpvPvuyyApoZ7QHkuqaNazqKEH5BHTK/IJpBUn9nwtIRfMIJ92ek1Xsy8NQ00L/k6rKKFqldea73taIhWJvRDkjF0qEz8eeft59dt1WOR7MYgpVKGgEXwN4AA7zGCV7WF+NBRjlcLJPeQHgTSrGCEDNiO8pBcC97ZTTk2SEU71ztyfTywe/TXaXgUe56vZ1um8kZXkeFn3Oy5h2plaG45KJCDjosjOD7a9hCCKEW8h6HO2kWr3swiC0F65LBY8wlI2zjmKZgRq6Vg750cMHZgK/a4tAUPAhe2KjJgZBiVY/zHgEDeauGUvaPzWUhscR3gc2/RVxyncOv4nQsnQYV3rkSj66RYpXhnl+UxbwhzObaTDHmmXJ+C4WfGS2MfWXbvbcmk13K4YF83bkksmihrPULFy7KO2h2TsXCzxSOwpf+LVkjY7yZGVZQvXyTLmPE22RG2FjJ7hUk2eNS+ERpLzs=,iv:w9Ji4EG4CgU98IbRSSKZvRcDlhAshE4NshABz3dAXFE=,tag:u/oIYWl6k44nMsGTNqOfNQ==,type:str]
 sops:
-    lastmodified: "2026-09-15T20:57:20Z"
-    mac: ENC[AES256_GCM,data:CjBGMs+5tFjMrhuLUB+bMRByWDUw9Qd3XUW87mDaN9n815+cxsusKdtPduu8W3Cc7bbD2YDg5XAsK314V3yvsV9aVmDQpnfqalB4xjGaSMwjJNs9vw8PkM5KdTTIoHG2y21eKWk9vH6Ui43byjpFo+xqM51YNqDx24oM0Cod5cw=,iv:j6oL65uigoHPDbSadvIH3Cc9WqUw6EyDnWkS7jegz20=,tag:fSVVixpvkFNjATZnYamJqQ==,type:str]
+    lastmodified: "2026-09-18T15:46:49Z"
+    mac: ENC[AES256_GCM,data:TOodtJTDD1DNU6luqmI7G2G5n0WaIryjqxJjAxfpRffSwYrzrRsvZmP7qPp6R/uMV9VaA1LiPxTv1hiD2ftQPehwpqA0WjyQ/qWQ6LFJ9vkaecd25+RVnQS1L3Z0ELk60liOvnj6MnBo14RJafrY7fZ8xT3xAs2yLZrwm14aZjc=,iv:B9iMTrE2VLX7RMiLgSA+VYmiAUspvm8fOhaL0yYJTZg=,tag:DooWgThc0n2vqQahvvPJEQ==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
