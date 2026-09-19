@@ -77,7 +77,9 @@ print_oc_command() {
 # it in the toplevel environment volume.
 expose_kubeconfig() {
   local kubeconfig_ref kubeconfig_path
-  kubeconfig_ref="/environment_info/kubeconfigs/$(_get_this_environment_name)"
+  kubeconfig_ref_name="$(_get_this_environment_name)"
+  test "$(_get_top_level_environment_name)" == "$(_get_this_environment_name)" && kubeconfig_ref_name=self
+  kubeconfig_ref="/environment_info/kubeconfigs/$(_get_top_level_environment_name)/$kubeconfig_ref_name"
   test -d "$(dirname "$kubeconfig_ref")" || mkdir -p "$(dirname "$kubeconfig_ref")"
   if test -f "$kubeconfig_ref"
   then kubeconfig_path=$(cat "$kubeconfig_ref")

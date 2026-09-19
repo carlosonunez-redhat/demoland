@@ -185,15 +185,19 @@ _create_component_kustomization environment component:
       bash:5 -c "echo '$k_enc' | base64 -d > /vol/kustomization.yaml"
 
 _install_component environment component: (_ensure_demoland_base_image environment)
-  env=$(just _resolved_environment_name '{{ environment }}'); \
+  env="${ALIAS:-$(just _resolved_environment_name '{{ environment }}')}"; \
   just _log info "[postinstall] Installing component '{{ component }}' in environment '$env'"; \
+  set +u; \
+  test -n "$SHOW_CONTAINER_COMMANDS" && set -x; \
+  set -ue; \
   for kubeconfig in $(just _toplevel_environment_kubeconfigs '{{ environment }}'); \
   do \
     {{ container_bin }} run --rm \
       -v "$(just _container_postinstall_vol '{{ environment }}'):/vol" \
       -v "$(just _container_secrets_vol_shared):/shared/secrets" \
-      {{ demoland_base_container_image }} \
-      oc --kubeconfig "$kubeconfig" apply -k /vol; \
+      -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
+      -e KUBECONFIG="$(just _get_kubeconfig_path_for_environment '{{ environment }}')" \
+      {{ demoland_base_container_image }} oc apply -k /vol; \
   done
 
 
@@ -211,6 +215,29 @@ _ensure_demoland_base_image environment:
     just _log info "(re)building demoland environment base image [openshift version: $openshift_version]"; \
   {{ container_bin }} image build -t "{{ demoland_base_container_image }}" \
     --build-arg OPENSHIFT_VERSION="$openshift_version" - < "$PWD/include/containerfiles/base.Dockerfile"
+
+_get_kubeconfig_path_for_environment environment:
+  env="${ALIAS:-$(just _resolved_environment_name '{{ environment }}')}"; \
+  {{ container_bin }} run --rm \
+    -v "$(just _container_postinstall_vol '{{ environment }}'):/vol" \
+    -v "$(just _container_secrets_vol_shared):/shared/secrets" \
+    -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
+    {{ demoland_base_container_image }} \
+    sh -c "name=$env; \
+      test \$(cat /environment_info/root_environment_name) == \$name && name=self; \
+      echo \$(cat /environment_info/kubeconfigs/\$(cat /environment_info/root_environment_name)/\$name)";
+
+_ensure_environment_kubeconfig_exists environment component:
+  {{ container_bin }} run --rm \
+    -v "$(just _container_postinstall_vol '{{ environment }}'):/vol" \
+    -v "$(just _container_secrets_vol_shared):/shared/secrets" \
+    -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
+    {{ demoland_base_container_image }} \
+    test -f "$(just _get_kubeconfig_path_for_environment {{ environment }})" && exit 0; \
+  just _log error "Environment '{{ environment }}' does not a Kubeconfig associated with it. \
+  If this environment depends on other base environments and isn't supposed to have one, set \
+  '.common_options.skip_component_install' to true in 'config.yaml'"; \
+  exit 1
 
 _ensure_component_exists environment component:
   test -d "$PWD/components/{{ component }}" && exit 0; \
