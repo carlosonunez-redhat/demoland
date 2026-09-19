@@ -142,10 +142,21 @@ _destroy environment:
   ALIAS="$ALIAS" just _execute_containerized '{{ environment }}' 'destroy.sh';
 
 _install_components_into_environment environment:
+  skip_component_install=$(just _get_property_from_env_config_use_alias \
+    '{{ environment }}' '.common_options.skip_component_install'); \
+  if test "${skip_component_install,,}" == "true"; \
+  then \
+    just _log info "Component install skipped for environment '{{ environment }}'"; \
+    exit 0; \
+  fi; \
   just _get_environment_components '{{ environment }}' | \
     while read -r component; \
     do \
-      for stage in _ensure_component_exists _stage_component _create_component_kustomization _install_component; \
+      for stage in _ensure_environment_kubeconfig_exists \
+                   _ensure_component_exists \
+                   _stage_component \
+                   _create_component_kustomization \
+                   _install_component; \
       do just "$stage" '{{ environment }}' "$component" || exit 1; \
       done; \
     done

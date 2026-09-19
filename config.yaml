@@ -24,7 +24,7 @@ common:
             service_account: {}
 environments:
     example:
-        version: 20260402
+        version: 20260919
         # alias_of: Alias of an existing environment. Keys defined here will be
         # merged with that of the aliased environment.
         alias_of: ""
@@ -41,6 +41,11 @@ environments:
             # common_options.ignore_installconfig_check: Ignores checking for an installconfig in this
             # environment.
             ignore_installconfig_check: false
+            # common_options.skip_component_install: Skips installing components through the
+            # Demoland deployment process. Useful if you want to manage your base environment
+            # cluster entirely with GitOps or the 'postinstall.sh' script or if your demo
+            # environment does not deploy its own cluster.
+            skip_component_install: false
         deploy:
             # environment_vars: Set within the container that provisions/destroys the environment.
             environment_vars:
@@ -83,10 +88,15 @@ environments:
         # - openshift-gitops
         # - advanced-developer-suite
         # ```
+        #
+        # If you prefer to use GitOps to install components instead or if your
+        # demo environment does not deploy its own cluster, set
+        # 'common_options.skip_component_install' to 'true' to skip this step
+        # during deployment.
         components:
             - example
     rhobs-multicluster-demo:
-        version: 20260402
+        version: 20260919
         alias_of: ""
         depends_on:
             # Imported OpenShift Cluster
@@ -98,6 +108,7 @@ environments:
             - ocp-aws-sno
         common_options:
             ignore_installconfig_check: false
+            skip_component_install: true
         deploy:
             environment_vars:
                 - SOME_KEY=some value
@@ -314,7 +325,7 @@ environments:
                 aws:
                     networking:
                         dns:
-                            domain_name: sandbox1650.opentlc.com
+                            domain_name: sandbox582.opentlc.com
                         cidr_block: 10.0.0.0/16
                         region: us-east-2
                         availability_zones:
@@ -368,7 +379,7 @@ environments:
                 aws:
                     networking:
                         dns:
-                            domain_name: sandbox1650.opentlc.com
+                            domain_name: sandbox582.opentlc.com
                         cidr_block: 10.0.0.0/16
                         region: us-east-2
                         availability_zones:
@@ -392,8 +403,8 @@ environments:
                     # encrypted
                     data: ENC[AES256_GCM,data:7Hg7z5FD+H1tuLSTAwDVLj/YN86emHUQlHcpKf3WNQwwrqe0WPbKgFLq9fecw82TqNNAd3ZT4pBLlpvPvuyyApoZ7QHkuqaNazqKEH5BHTK/IJpBUn9nwtIRfMIJ92ek1Xsy8NQ00L/k6rKKFqldea73taIhWJvRDkjF0qEz8eeft59dt1WOR7MYgpVKGgEXwN4AA7zGCV7WF+NBRjlcLJPeQHgTSrGCEDNiO8pBcC97ZTTk2SEU71ztyfTywe/TXaXgUe56vZ1um8kZXkeFn3Oy5h2plaG45KJCDjosjOD7a9hCCKEW8h6HO2kWr3swiC0F65LBY8wlI2zjmKZgRq6Vg750cMHZgK/a4tAUPAhe2KjJgZBiVY/zHgEDeauGUvaPzWUhscR3gc2/RVxyncOv4nQsnQYV3rkSj66RYpXhnl+UxbwhzObaTDHmmXJ+C4WfGS2MfWXbvbcmk13K4YF83bkksmihrPULFy7KO2h2TsXCzxSOwpf+LVkjY7yZGVZQvXyTLmPE22RG2FjJ7hUk2eNS+ERpLzs=,iv:w9Ji4EG4CgU98IbRSSKZvRcDlhAshE4NshABz3dAXFE=,tag:u/oIYWl6k44nMsGTNqOfNQ==,type:str]
 sops:
-    lastmodified: "2026-09-18T18:17:45Z"
-    mac: ENC[AES256_GCM,data:+2ToA1MXmYk9I78PBx78/tYXPNtEtuNrpu05haL0o/xaNUR5YZOfcaJd/O5aqv6jLSIUkF/9UhnE/uAvCsiXECAMRMcFkc/LD2Fxy30TW8kynKnQsz+zved3tw1g/HaP4J2laQJurIAbB9IR3HklpBudJ79dOjS9qe2Y4WComWQ=,iv:LLe5CYWKuZjEfeJ33MTrRw5cwwQBWtZuvd6OoUqkrGk=,tag:FZB512wOr2qjPOnBisON8A==,type:str]
+    lastmodified: "2026-09-19T18:17:51Z"
+    mac: ENC[AES256_GCM,data:H7DCu8edPzrFYEgSlNDr6pqo+vncZ5vUA0U31DgKeGtgkFiRKTCGuD+Rd5KF678ZDv+0nQTR8LRgvsZvfdBCflnvEUNc2/ZgYv5ECZpqSDGM2HSL41IPW3BsdrexZ8MvFTN6fsf3oFJiIUAbTG8YPq+bGmMxuaNxbBW8yg/Entk=,iv:fLAER94WJvh3GukY5E8YxgRadPYxcJSxWNxmRtWzcwg=,tag:zwA9/KMNjtqV1GI/SFTfzw==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
