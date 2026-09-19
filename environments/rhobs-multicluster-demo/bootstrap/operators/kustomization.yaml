@@ -1,5 +1,5 @@
 resources:
-  - ../../../../components/advanced-cluster-management
+  - ../../../../components/advanced-cluster-management/operators/acm
 patches:
   - target:
       kind: Namespace
