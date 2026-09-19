@@ -1,4 +1,4 @@
-set shell := [ "bash", "-uc" ]
+set shell := [ "bash", "-c" ]
 set unstable := true
 set quiet := true
 
