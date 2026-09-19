@@ -111,8 +111,9 @@ environments:
             skip_component_install: true
         deploy:
             environment_vars:
-                - SOME_KEY=some value
-                - ANOTHER_KEY=another value
+                - ACM_HUB_ENV_NAME=ocp-aws-sno
+                - ROSA_CLUSTER_ENV_NAME=rosa-hcp
+                - EKS_CLUSTER_ENV_NAME=k8s-eks
             secrets: {}
         cloud_credentials:
             aws: {}
@@ -364,7 +365,7 @@ environments:
                     data: ssh://git@github.com:22/carlosonunez-redhat/demoland
                 gitops_branch:
                     name: gitops/branch
-                    data: main
+                    data: demo/multicluster-observability-acm
                 gitops_repo_key:
                     name: gitops/key
                     # encrypted
@@ -403,8 +404,8 @@ environments:
                     # encrypted
                     data: ENC[AES256_GCM,data:7Hg7z5FD+H1tuLSTAwDVLj/YN86emHUQlHcpKf3WNQwwrqe0WPbKgFLq9fecw82TqNNAd3ZT4pBLlpvPvuyyApoZ7QHkuqaNazqKEH5BHTK/IJpBUn9nwtIRfMIJ92ek1Xsy8NQ00L/k6rKKFqldea73taIhWJvRDkjF0qEz8eeft59dt1WOR7MYgpVKGgEXwN4AA7zGCV7WF+NBRjlcLJPeQHgTSrGCEDNiO8pBcC97ZTTk2SEU71ztyfTywe/TXaXgUe56vZ1um8kZXkeFn3Oy5h2plaG45KJCDjosjOD7a9hCCKEW8h6HO2kWr3swiC0F65LBY8wlI2zjmKZgRq6Vg750cMHZgK/a4tAUPAhe2KjJgZBiVY/zHgEDeauGUvaPzWUhscR3gc2/RVxyncOv4nQsnQYV3rkSj66RYpXhnl+UxbwhzObaTDHmmXJ+C4WfGS2MfWXbvbcmk13K4YF83bkksmihrPULFy7KO2h2TsXCzxSOwpf+LVkjY7yZGVZQvXyTLmPE22RG2FjJ7hUk2eNS+ERpLzs=,iv:w9Ji4EG4CgU98IbRSSKZvRcDlhAshE4NshABz3dAXFE=,tag:u/oIYWl6k44nMsGTNqOfNQ==,type:str]
 sops:
-    lastmodified: "2026-09-19T18:17:51Z"
-    mac: ENC[AES256_GCM,data:H7DCu8edPzrFYEgSlNDr6pqo+vncZ5vUA0U31DgKeGtgkFiRKTCGuD+Rd5KF678ZDv+0nQTR8LRgvsZvfdBCflnvEUNc2/ZgYv5ECZpqSDGM2HSL41IPW3BsdrexZ8MvFTN6fsf3oFJiIUAbTG8YPq+bGmMxuaNxbBW8yg/Entk=,iv:fLAER94WJvh3GukY5E8YxgRadPYxcJSxWNxmRtWzcwg=,tag:zwA9/KMNjtqV1GI/SFTfzw==,type:str]
+    lastmodified: "2026-09-19T19:41:41Z"
+    mac: ENC[AES256_GCM,data:RtS6WNf7UfJVZR15ve3q2QNmZOJywX1ly3an3PXH90IUvmYij9xYx0QF1H2CGsS86dKDzU73EAGXm7r0LLpQUBUhki553wRgQ14H5ZWkqqBpLp2Bhvgz5QG+T0KZL+Gl4z7Jwersk4MkqSli7E9ggKg6D8CpzrvXteQe6YtD0vw=,iv:iDAuGzxYgl6B8LNiBXV8MozjOjUJluZ+c+gaRgKGvQc=,tag:82vP1ZZq18+eYCiAZNuPKQ==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
