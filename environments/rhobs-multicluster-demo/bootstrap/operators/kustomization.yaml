@@ -59,4 +59,4 @@ patches:
         value: advanced-cluster-management-mce
       - op: replace
         path: /spec/channel
-        value: release-2.16
+        value: release-2.11
