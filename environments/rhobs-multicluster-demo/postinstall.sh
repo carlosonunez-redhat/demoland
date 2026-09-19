@@ -23,11 +23,12 @@ install_operators_into_acm_hub_cluster() {
 }
 
 install_acm_into_acm_hub_cluster() {
-  setup_gitops_into_base_environment "$ACM_HUB_ENV_NAME" bootstrap/resources/acm-hub cluster-operators
+  setup_gitops_into_base_environment "$ACM_HUB_ENV_NAME" bootstrap/resources/acm-hub acm
 }
 
 set -e
 install_operators_into_acm_hub_cluster
+install_acm_into_acm_hub_cluster
 # wait_for_acm_ready
 #install_acm_into_acm_hub_cluster
 #import_non_hub_clusters_into_acm_hub_cluster
