@@ -9,7 +9,7 @@ patches:
     patch: |-
       - op: replace
         path: /metadata/namespace
-        value: advanced-cluster-management
+        value: advanced-cluster-management-mce
   - target:
       kind: MultiClusterEngine
       name: multiclusterengine
@@ -17,4 +17,4 @@ patches:
     patch: |-
       - op: replace
         path: /metadata/namespace
-        value: advanced-cluster-management
+        value: advanced-cluster-management-mce
