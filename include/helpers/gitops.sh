@@ -3,19 +3,31 @@ source "$(dirname "$0")/../include/helpers/ocp.sh"
 
 _wait_for_gitops_ready() {
   _namespace_available() {
-    "$exec_oc_fn" get ns | grep -q 'openshift-gitops' && return 0
+    if test -n "$env_name"
+    then
+      "$exec_oc_fn" "$env_name" get ns | grep -q 'openshift-gitops' && return 0
+    else
+      "$exec_oc_fn" get ns | grep -q 'openshift-gitops' && return 0
+    fi
     warning "[gitops] readiness: namespace available"
     return 1
   }
 
   _application_crd_installed() {
-    "$exec_oc_fn" api-resources -o name | grep -q 'applications.argoproj.io' && return 0
+    if test -n "$env_name"
+    then
+      "$exec_oc_fn" "$env_name" api-resources -o name | grep -q 'applications.argoproj.io' && return 0
+    else
+      "$exec_oc_fn" api-resources -o name | grep -q 'applications.argoproj.io' && return 0
+    fi
     warning "[gitops] readiness: Application CRD unavailable"
     return 1
   }
   attempts=0
   max_attempts=180
   exec_oc_fn="$1"
+  env_name="$2"
+  test -n "$env_name" && exec_oc_fn=exec_oc_by_environment_name
   while test "$attempts" -lt "$max_attempts"
   do
     _namespace_available && _application_crd_installed && return 0
@@ -36,8 +48,9 @@ _setup_gitops() {
   gitops_dir="${2:-gitops}"
   app_name="${3:-$environment_name}"
   exec_oc_fn="$4"
-  set -e
-  if ! _wait_for_gitops_ready "$exec_oc_fn"
+  env_name="$5"
+  test -n "$env_name" && exec_oc_fn=exec_oc_by_environment_name
+  if ! _wait_for_gitops_ready "$exec_oc_fn" "$env_name"
   then
     error "[gitops] Failed to become ready"
     return 1
@@ -53,10 +66,16 @@ _setup_gitops() {
   secrets_f="/tmp/gitops_secret_$(date +%s)"
   app_f="/tmp/gitops_app_$(date +%s)"
   info "Setting up '$app_name' GitOps application (environment: $environment_name)"
-  render_include_yaml_template repo_credentials_secret "${values[@]}"  > "$secrets_f" &&
-    render_include_yaml_template gitops_application "${values[@]}" > "$app_f" &&
+  render_include_yaml_template repo_credentials_secret "${values[@]}"  > "$secrets_f" || return 1
+    render_include_yaml_template gitops_application "${values[@]}" > "$app_f"  || return 1
+  if test -n "$env_name"
+  then
+    "$exec_oc_fn" "$env_name" apply -f "$secrets_f" &&
+    "$exec_oc_fn" "$env_name" apply -f "$app_f"
+  else
     "$exec_oc_fn" apply -f "$secrets_f" &&
     "$exec_oc_fn" apply -f "$app_f"
+  fi
 }
 
 _configure_gitops_admins() {
@@ -97,6 +116,13 @@ _configure_gitops_admins() {
 # See also: https://docs.redhat.com/en/documentation/red_hat_openshift_gitops/1.20/html-single/managing_cluster_configuration/index#configuring-rbac_managing-openshift-cluster-configuration
 setup_gitops() {
   _setup_gitops "$1" "$2" "$3" 'exec_oc'
+}
+
+# setup_gitops_into_base_environment @BASE_ENVIRONMENT_NAME $GITOPS_FOLDER @APP_NAME:
+#
+# Same as 'setup_gitops' but allwos the base environment to be selected.
+setup_gitops_into_base_environment() {
+  _setup_gitops "$(_get_top_level_environment_name)" "$2" "$3" 'exec_oc_by_environment_name' "$1"
 }
 
 # setup_gitops_postinstall @ENVIRNOMENT_NAME @GITOPS_FOLDER @APP_NAME:

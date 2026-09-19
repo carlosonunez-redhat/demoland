@@ -43,7 +43,15 @@ _exec_oc() {
 
 _retrieve_env_kubeconfig() {
   kubeconfigs=$(list_env_kubeconfigs)
+  test -n "$1" && kubeconfigs=$(echo "$kubeconfigs" | grep -E "/${1}\$")
   num_kubeconfigs=$(wc -l <<< "$kubeconfigs")
+  if test "$num_kubeconfigs" -eq 0
+  then
+    errmsg="No kubeconfigs found for environment '$(_get_top_level_environment_name)'"
+    test -n "$1" && errmsg="$errmsg (base env requested: $1)"
+    error "$errmsg"
+    return 1
+  fi
   chosen_kubeconfig=$(head -1 <<< "$kubeconfigs")
   if test "$num_kubeconfigs" -gt 1
   then
@@ -60,6 +68,17 @@ list_env_kubeconfigs() {
 
 exec_oc() {
   _exec_oc "$(_retrieve_env_kubeconfig)" "$@"
+}
+
+exec_oc_by_environment_name() {
+  env_name="$1"
+  shift
+  if ! list_env_kubeconfigs | grep -q "$env_name"
+  then
+    error "Demo environment '$(_get_top_level_environment_name)' doesn't have a Kubeconfig for base environment '$env_name'"
+    return 1
+  fi
+  _exec_oc "$(_retrieve_env_kubeconfig "$env_name")" "$@"
 }
 
 exec_oc_postinstall() {
