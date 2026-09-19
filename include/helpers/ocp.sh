@@ -42,7 +42,7 @@ _exec_oc() {
 }
 
 _retrieve_env_kubeconfig() {
-  kubeconfigs=$(find /environment_info/kubeconfigs -mindepth 1 -type f | sort -u)
+  kubeconfigs=$(list_env_kubeconfigs)
   num_kubeconfigs=$(wc -l <<< "$kubeconfigs")
   chosen_kubeconfig=$(head -1 <<< "$kubeconfigs")
   if test "$num_kubeconfigs" -gt 1
@@ -52,6 +52,10 @@ choosing '$(basename "$chosen_kubeconfig")' (use 'exec_oc_by_environment_name' t
 an environment)"
   fi
   cat "$chosen_kubeconfig"
+}
+
+list_env_kubeconfigs() {
+  find "/environment_info/kubeconfigs/$(_get_top_level_environment_name)" -mindepth 1 -type f | sort -u
 }
 
 exec_oc() {
