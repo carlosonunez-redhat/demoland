@@ -16,6 +16,9 @@ patches:
       - op: replace
         path: /metadata/namespace
         value: advanced-cluster-management
+      - op: replace
+        path: /spec/targetNamespaces/0
+        value: advanced-cluster-management
   - target:
       kind: Subscription
       name: acm-operator-subscription
