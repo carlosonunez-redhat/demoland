@@ -19,12 +19,11 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 # source "$ENVIRONMENT_INCLUDE_DIR/foo.sh"
 
 install_operators_into_acm_hub_cluster() {
-  if test -z "$ACM_HUB_ENV_NAME"
-  then
-    error "ACM hub base environment name not defined."
-    return 1
-  fi
   setup_gitops_into_base_environment "$ACM_HUB_ENV_NAME" bootstrap/operators cluster-operators
+}
+
+install_acm_into_acm_hub_cluster() {
+  setup_gitops_into_base_environment "$ACM_HUB_ENV_NAME" bootstrap/resources/acm-hub cluster-operators
 }
 
 set -e
