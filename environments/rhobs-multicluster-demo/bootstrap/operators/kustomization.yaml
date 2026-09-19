@@ -19,7 +19,7 @@ patches:
   - target:
       kind: Subscription
       name: acm-operator-subscription
-      namespace: advanced-cluster-management
+      namespace: acm
     patch: |-
       - op: replace
         path: /metadata/namespace
