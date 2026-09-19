@@ -42,8 +42,16 @@ _exec_oc() {
 }
 
 _retrieve_env_kubeconfig() {
-  kubeconfigs=$(find /environment_info/kubeconfigs -mindepth 1 -type f | sort -u)
+  kubeconfigs=$(list_env_kubeconfigs)
+  test -n "$1" && kubeconfigs=$(echo "$kubeconfigs" | grep -E "/${1}\$")
   num_kubeconfigs=$(wc -l <<< "$kubeconfigs")
+  if test "$num_kubeconfigs" -eq 0
+  then
+    errmsg="No kubeconfigs found for environment '$(_get_top_level_environment_name)'"
+    test -n "$1" && errmsg="$errmsg (base env requested: $1)"
+    error "$errmsg"
+    return 1
+  fi
   chosen_kubeconfig=$(head -1 <<< "$kubeconfigs")
   if test "$num_kubeconfigs" -gt 1
   then
@@ -54,8 +62,23 @@ an environment)"
   cat "$chosen_kubeconfig"
 }
 
+list_env_kubeconfigs() {
+  find "/environment_info/kubeconfigs/$(_get_top_level_environment_name)" -mindepth 1 -type f | sort -u
+}
+
 exec_oc() {
   _exec_oc "$(_retrieve_env_kubeconfig)" "$@"
+}
+
+exec_oc_by_environment_name() {
+  env_name="$1"
+  shift
+  if ! list_env_kubeconfigs | grep -q "$env_name"
+  then
+    error "Demo environment '$(_get_top_level_environment_name)' doesn't have a Kubeconfig for base environment '$env_name'"
+    return 1
+  fi
+  _exec_oc "$(_retrieve_env_kubeconfig "$env_name")" "$@"
 }
 
 exec_oc_postinstall() {
@@ -77,7 +100,9 @@ print_oc_command() {
 # it in the toplevel environment volume.
 expose_kubeconfig() {
   local kubeconfig_ref kubeconfig_path
-  kubeconfig_ref="/environment_info/kubeconfigs/$(_get_this_environment_name)"
+  kubeconfig_ref_name="$(_get_this_environment_name)"
+  test "$(_get_top_level_environment_name)" == "$(_get_this_environment_name)" && kubeconfig_ref_name=self
+  kubeconfig_ref="/environment_info/kubeconfigs/$(_get_top_level_environment_name)/$kubeconfig_ref_name"
   test -d "$(dirname "$kubeconfig_ref")" || mkdir -p "$(dirname "$kubeconfig_ref")"
   if test -f "$kubeconfig_ref"
   then kubeconfig_path=$(cat "$kubeconfig_ref")

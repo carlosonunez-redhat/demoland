@@ -1,0 +1,177 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Template for EKS Security Groups
+
+Parameters:
+  InfrastructureName:
+    AllowedPattern: ^([a-zA-Z][a-zA-Z0-9\-]{0,26})$
+    MaxLength: 27
+    MinLength: 1
+    ConstraintDescription: Infrastructure name must be alphanumeric, start with a letter, and have a maximum of 27 characters.
+    Description: A short, unique cluster ID used to tag cloud resources and identify items owned or used by the cluster.
+    Type: String
+  VpcCidr:
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-4]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-24.
+    Default: 10.0.0.0/16
+    Description: CIDR block for VPC.
+    Type: String
+  VpcId:
+    Description: The VPC-scoped resources will belong to this VPC.
+    Type: AWS::EC2::VPC::Id
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: "Cluster Information"
+      Parameters:
+      - InfrastructureName
+    - Label:
+        default: "Network Configuration"
+      Parameters:
+      - VpcId
+      - VpcCidr
+    ParameterLabels:
+      InfrastructureName:
+        default: "Infrastructure Name"
+      VpcId:
+        default: "VPC ID"
+      VpcCidr:
+        default: "VPC CIDR"
+
+Resources:
+  ClusterSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: EKS Cluster Security Group
+      VpcId: !Ref VpcId
+      Tags:
+      - Key: Name
+        Value: !Join ["-", [!Ref InfrastructureName, "cluster-sg"]]
+
+  WorkerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: EKS Worker Node Security Group
+      VpcId: !Ref VpcId
+      Tags:
+      - Key: Name
+        Value: !Join ["-", [!Ref InfrastructureName, "worker-sg"]]
+      - Key: !Join ["", ["kubernetes.io/cluster/", !Ref InfrastructureName]]
+        Value: "owned"
+
+  ClusterIngressFromWorkerHttps:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt ClusterSecurityGroup.GroupId
+      SourceSecurityGroupId: !GetAtt WorkerSecurityGroup.GroupId
+      Description: Worker nodes to cluster API
+      FromPort: 443
+      ToPort: 443
+      IpProtocol: tcp
+
+  ClusterEgressToWorkerKubelet:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !GetAtt ClusterSecurityGroup.GroupId
+      DestinationSecurityGroupId: !GetAtt WorkerSecurityGroup.GroupId
+      Description: Cluster to worker kubelet
+      FromPort: 10250
+      ToPort: 10250
+      IpProtocol: tcp
+
+  ClusterEgressToWorkerHttps:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !GetAtt ClusterSecurityGroup.GroupId
+      DestinationSecurityGroupId: !GetAtt WorkerSecurityGroup.GroupId
+      Description: Cluster to worker HTTPS (webhooks, metrics)
+      FromPort: 443
+      ToPort: 443
+      IpProtocol: tcp
+
+  ClusterEgressToWorkerHighPorts:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !GetAtt ClusterSecurityGroup.GroupId
+      DestinationSecurityGroupId: !GetAtt WorkerSecurityGroup.GroupId
+      Description: Cluster to worker extension API and node ports
+      FromPort: 1025
+      ToPort: 65535
+      IpProtocol: tcp
+
+  WorkerIngressSelf:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt WorkerSecurityGroup.GroupId
+      SourceSecurityGroupId: !GetAtt WorkerSecurityGroup.GroupId
+      Description: Inter-node communication
+      IpProtocol: "-1"
+
+  WorkerIngressClusterKubelet:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt WorkerSecurityGroup.GroupId
+      SourceSecurityGroupId: !GetAtt ClusterSecurityGroup.GroupId
+      Description: Cluster to worker kubelet
+      FromPort: 10250
+      ToPort: 10250
+      IpProtocol: tcp
+
+  WorkerIngressClusterHttps:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt WorkerSecurityGroup.GroupId
+      SourceSecurityGroupId: !GetAtt ClusterSecurityGroup.GroupId
+      Description: Cluster to worker HTTPS (webhooks, metrics)
+      FromPort: 443
+      ToPort: 443
+      IpProtocol: tcp
+
+  WorkerIngressClusterHighPorts:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt WorkerSecurityGroup.GroupId
+      SourceSecurityGroupId: !GetAtt ClusterSecurityGroup.GroupId
+      Description: Cluster to worker extension API and node ports
+      FromPort: 1025
+      ToPort: 65535
+      IpProtocol: tcp
+
+  WorkerIngressClusterDnsTcp:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt WorkerSecurityGroup.GroupId
+      SourceSecurityGroupId: !GetAtt ClusterSecurityGroup.GroupId
+      Description: Cluster to worker DNS (TCP)
+      FromPort: 53
+      ToPort: 53
+      IpProtocol: tcp
+
+  WorkerIngressClusterDnsUdp:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt WorkerSecurityGroup.GroupId
+      SourceSecurityGroupId: !GetAtt ClusterSecurityGroup.GroupId
+      Description: Cluster to worker DNS (UDP)
+      FromPort: 53
+      ToPort: 53
+      IpProtocol: udp
+
+  WorkerIngressSsh:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt WorkerSecurityGroup.GroupId
+      CidrIp: !Ref VpcCidr
+      Description: SSH access from within VPC
+      FromPort: 22
+      ToPort: 22
+      IpProtocol: tcp
+
+Outputs:
+  ClusterSecurityGroupId:
+    Description: EKS Cluster Security Group ID
+    Value: !GetAtt ClusterSecurityGroup.GroupId
+  WorkerSecurityGroupId:
+    Description: Worker Node Security Group ID
+    Value: !GetAtt WorkerSecurityGroup.GroupId

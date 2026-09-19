@@ -1,4 +1,4 @@
-set shell := [ "bash", "-uc" ]
+set shell := [ "bash", "-c" ]
 set unstable := true
 set quiet := true
 
@@ -142,10 +142,21 @@ _destroy environment:
   ALIAS="$ALIAS" just _execute_containerized '{{ environment }}' 'destroy.sh';
 
 _install_components_into_environment environment:
+  skip_component_install=$(just _get_property_from_env_config_use_alias \
+    '{{ environment }}' '.common_options.skip_component_install'); \
+  if test "${skip_component_install,,}" == "true"; \
+  then \
+    just _log info "Component install skipped for environment '{{ environment }}'"; \
+    exit 0; \
+  fi; \
   just _get_environment_components '{{ environment }}' | \
     while read -r component; \
     do \
-      for stage in _ensure_component_exists _stage_component _create_component_kustomization _install_component; \
+      for stage in _ensure_environment_kubeconfig_exists \
+                   _ensure_component_exists \
+                   _stage_component \
+                   _create_component_kustomization \
+                   _install_component; \
       do just "$stage" '{{ environment }}' "$component" || exit 1; \
       done; \
     done
@@ -174,15 +185,19 @@ _create_component_kustomization environment component:
       bash:5 -c "echo '$k_enc' | base64 -d > /vol/kustomization.yaml"
 
 _install_component environment component: (_ensure_demoland_base_image environment)
-  env=$(just _resolved_environment_name '{{ environment }}'); \
+  env="${ALIAS:-$(just _resolved_environment_name '{{ environment }}')}"; \
   just _log info "[postinstall] Installing component '{{ component }}' in environment '$env'"; \
+  set +u; \
+  test -n "$SHOW_CONTAINER_COMMANDS" && set -x; \
+  set -ue; \
   for kubeconfig in $(just _toplevel_environment_kubeconfigs '{{ environment }}'); \
   do \
     {{ container_bin }} run --rm \
       -v "$(just _container_postinstall_vol '{{ environment }}'):/vol" \
       -v "$(just _container_secrets_vol_shared):/shared/secrets" \
-      {{ demoland_base_container_image }} \
-      oc --kubeconfig "$kubeconfig" apply -k /vol; \
+      -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
+      -e KUBECONFIG="$(just _get_kubeconfig_path_for_environment '{{ environment }}')" \
+      {{ demoland_base_container_image }} oc apply -k /vol; \
   done
 
 
@@ -200,6 +215,29 @@ _ensure_demoland_base_image environment:
     just _log info "(re)building demoland environment base image [openshift version: $openshift_version]"; \
   {{ container_bin }} image build -t "{{ demoland_base_container_image }}" \
     --build-arg OPENSHIFT_VERSION="$openshift_version" - < "$PWD/include/containerfiles/base.Dockerfile"
+
+_get_kubeconfig_path_for_environment environment:
+  env="${ALIAS:-$(just _resolved_environment_name '{{ environment }}')}"; \
+  {{ container_bin }} run --rm \
+    -v "$(just _container_postinstall_vol '{{ environment }}'):/vol" \
+    -v "$(just _container_secrets_vol_shared):/shared/secrets" \
+    -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
+    {{ demoland_base_container_image }} \
+    sh -c "name=$env; \
+      test \$(cat /environment_info/root_environment_name) == \$name && name=self; \
+      echo \$(cat /environment_info/kubeconfigs/\$(cat /environment_info/root_environment_name)/\$name)";
+
+_ensure_environment_kubeconfig_exists environment component:
+  {{ container_bin }} run --rm \
+    -v "$(just _container_postinstall_vol '{{ environment }}'):/vol" \
+    -v "$(just _container_secrets_vol_shared):/shared/secrets" \
+    -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
+    {{ demoland_base_container_image }} \
+    test -f "$(just _get_kubeconfig_path_for_environment {{ environment }})" && exit 0; \
+  just _log error "Environment '{{ environment }}' does not a Kubeconfig associated with it. \
+  If this environment depends on other base environments and isn't supposed to have one, set \
+  '.common_options.skip_component_install' to true in 'config.yaml'"; \
+  exit 1
 
 _ensure_component_exists environment component:
   test -d "$PWD/components/{{ component }}" && exit 0; \
@@ -340,7 +378,7 @@ _execute_containerized environment file ignore_not_found='false' custom_message=
   while read var; \
   do command+=(-e "$var"); \
   done < <(just _run_yq \
-    "$(just _get_property_from_env_config {{ environment }} '.deploy.environment_vars')" \
+    "$(just _get_property_from_env_config_use_alias {{ environment }} '.deploy.environment_vars')" \
     '.[]'); \
   command+=($(just _container_image {{ environment }}) /app/environment/{{ file }}); \
   set +u; \
@@ -360,7 +398,23 @@ _merge_aliased_environment environment:
   q=$(printf '["environments"]["%s"]' "$alias"); \
   target_env_data=$(sops --decrypt --extract "$q" --output-type yaml "{{ config_file }}") || exit 1; \
   target_env_data_enc=$(base64 -w 0 <<< $target_env_data); \
-  just _do_yq_encoded_merge "$target_env_data_enc" "$env_data_enc"
+  yaml=$(just _do_yq_encoded_merge "$target_env_data_enc" "$env_data_enc"); \
+  test -z "$yaml" && exit 1; \
+  env_vars_this=$(yq -o=j -I=0 -r '.deploy.environment_vars' <<< "$env_data"); \
+  if test "$env_vars_this" == '[]' || test "$env_vars_this" == null; \
+  then \
+    echo "$yaml"; \
+    exit 0; \
+  fi; \
+  env_vars_target=$(yq -o=j -I=0 -r '.deploy.environment_vars' <<< "$target_env_data"); \
+  if test "$env_vars_target" == '[]' || test "$env_vars_target" == null; \
+  then \
+    echo "$yaml"; \
+    exit 0; \
+  fi; \
+  merged_env_vars=$(printf "[%s,%s]" "$env_vars_this" "$env_vars_target" | jq -cr flatten); \
+  yq -r ".deploy.environment_vars = $merged_env_vars" <<< "$yaml"
+
 
 _merge_cloud_creds environment:
   set +u; \
@@ -484,7 +538,7 @@ _ensure_container_image_exists environment:
   {{ container_bin }} images  | grep -q "$image_name" && \
     test -z "$REBUILD_IMAGE" && \
     exit 0; \
-  container_file=$(just _get_property_from_env_config \
+  container_file=$(just _get_property_from_env_config_use_alias \
     {{ environment }} \
     '.deploy.container_file'); \
   test -z "$container_file" && \

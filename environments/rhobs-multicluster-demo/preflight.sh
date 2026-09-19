@@ -14,18 +14,15 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 # If this environment has includes of its own, use the $ENVIRONMENT_INCLUDE_DIR environment
 # variable, like shown in the comment below.
 #
-source "$ENVIRONMENT_INCLUDE_DIR/ocm.sh"
-source "$ENVIRONMENT_INCLUDE_DIR/rosa.sh"
-
-verify_aws_quotas() {
-  info "Checking that AWS quotas are sufficient for ROSA"
-  _exec_rosa verify quota
+# source "$ENVIRONMENT_INCLUDE_DIR/foo.sh"
+verify_environment_variables_defined() {
+  for k in ACM_HUB_ENV_NAME ROSA_CLUSTER_ENV_NAME EKS_CLUSTER_ENV_NAME
+  do
+    if test -z "${!k}"
+    then
+      error "Base environment '$k' is not defined; please define it as an environment variable in the config"
+      return 1
+    fi
+  done
 }
-
-verify_local_environment() {
-  info "Verifying that local environment is set up properly"
-  _exec_rosa verify openshift-client
-}
-
-verify_local_environment &&
-verify_aws_quotas
+verify_environment_variables_defined

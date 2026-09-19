@@ -1,0 +1,32 @@
+resources:
+  - ../../../../components/advanced-cluster-management/operators/acm
+patches:
+  - target:
+      kind: Namespace
+      name: acm
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: advanced-cluster-management
+  - target:
+      kind: OperatorGroup
+      name: rhacm-og
+      namespace: acm
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: advanced-cluster-management
+      - op: replace
+        path: /spec/targetNamespaces/0
+        value: advanced-cluster-management
+  - target:
+      kind: Subscription
+      name: acm-operator-subscription
+      namespace: acm
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: advanced-cluster-management
+      - op: replace
+        path: /spec/channel
+        value: release-2.16

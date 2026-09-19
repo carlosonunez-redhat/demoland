@@ -1,0 +1,131 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Template for EKS Essential Add-ons and OIDC Provider
+
+Parameters:
+  ClusterName:
+    Description: The name of the EKS cluster.
+    Type: String
+  OIDCIssuerHost:
+    Description: >-
+      OIDC issuer host for the EKS cluster (without https:// prefix).
+      Derive from the cluster's OpenIdConnectIssuerUrl output by stripping the
+      https:// prefix, e.g. oidc.eks.us-east-2.amazonaws.com/id/EXAMPLE.
+    Type: String
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: "Cluster Information"
+      Parameters:
+      - ClusterName
+      - OIDCIssuerHost
+    ParameterLabels:
+      ClusterName:
+        default: "EKS Cluster Name"
+      OIDCIssuerHost:
+        default: "OIDC Issuer Host"
+
+Resources:
+  OIDCProvider:
+    Type: AWS::IAM::OIDCProvider
+    Properties:
+      Url: !Sub "https://${OIDCIssuerHost}"
+      ClientIdList:
+      - "sts.amazonaws.com"
+      ThumbprintList:
+      - "9e99a48a9960b14926bb7f3b02e22da2b0ab7280"
+
+  EbsCsiDriverRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join ["-", [!Ref ClusterName, "ebs-csi-role"]]
+      AssumeRolePolicyDocument:
+        Fn::Sub:
+        - |
+          {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Principal": {
+                  "Federated": "${OIDCProviderArn}"
+                },
+                "Action": "sts:AssumeRoleWithWebIdentity",
+                "Condition": {
+                  "StringEquals": {
+                    "${OIDCHost}:sub": "system:serviceaccount:kube-system:ebs-csi-controller-sa",
+                    "${OIDCHost}:aud": "sts.amazonaws.com"
+                  }
+                }
+              }
+            ]
+          }
+        - OIDCProviderArn: !GetAtt OIDCProvider.Arn
+          OIDCHost: !Ref OIDCIssuerHost
+      ManagedPolicyArns:
+      - "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+
+  VpcCniAddon:
+    Type: AWS::EKS::Addon
+    Properties:
+      ClusterName: !Ref ClusterName
+      AddonName: vpc-cni
+      ResolveConflicts: OVERWRITE
+      PreserveOnDelete: true
+
+  CoreDnsAddon:
+    Type: AWS::EKS::Addon
+    Properties:
+      ClusterName: !Ref ClusterName
+      AddonName: coredns
+      ResolveConflicts: OVERWRITE
+      PreserveOnDelete: true
+
+  KubeProxyAddon:
+    Type: AWS::EKS::Addon
+    Properties:
+      ClusterName: !Ref ClusterName
+      AddonName: kube-proxy
+      ResolveConflicts: OVERWRITE
+      PreserveOnDelete: true
+
+  EbsCsiDriverAddon:
+    Type: AWS::EKS::Addon
+    Properties:
+      ClusterName: !Ref ClusterName
+      AddonName: aws-ebs-csi-driver
+      ServiceAccountRoleArn: !GetAtt EbsCsiDriverRole.Arn
+      ResolveConflicts: OVERWRITE
+      PreserveOnDelete: true
+
+  S3CsiDriverAddon:
+    Type: AWS::EKS::Addon
+    Properties:
+      ClusterName: !Ref ClusterName
+      AddonName: aws-mountpoint-s3-csi-driver
+      ResolveConflicts: OVERWRITE
+      PreserveOnDelete: true
+
+Outputs:
+  OIDCProviderArn:
+    Description: ARN of the IAM OIDC provider for IRSA.
+    Value: !GetAtt OIDCProvider.Arn
+  EbsCsiDriverRoleArn:
+    Description: ARN of the EBS CSI driver IAM role.
+    Value: !GetAtt EbsCsiDriverRole.Arn
+  VpcCniAddonArn:
+    Description: ARN of the VPC CNI add-on.
+    Value: !GetAtt VpcCniAddon.Arn
+  CoreDnsAddonArn:
+    Description: ARN of the CoreDNS add-on.
+    Value: !GetAtt CoreDnsAddon.Arn
+  KubeProxyAddonArn:
+    Description: ARN of the kube-proxy add-on.
+    Value: !GetAtt KubeProxyAddon.Arn
+  EbsCsiAddonArn:
+    Description: ARN of the EBS CSI driver add-on.
+    Value: !GetAtt EbsCsiDriverAddon.Arn
+  S3CsiAddonArn:
+    Description: ARN of the S3 CSI driver add-on.
+    Value: !GetAtt S3CsiDriverAddon.Arn
