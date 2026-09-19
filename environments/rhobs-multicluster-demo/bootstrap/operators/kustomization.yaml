@@ -40,7 +40,7 @@ patches:
         value: advanced-cluster-management-mce
   - target:
       kind: OperatorGroup
-      name: rhacm-eg
+      name: rhmce-eg
       namespace: openshift-multicluster-engine
     patch: |-
       - op: replace
