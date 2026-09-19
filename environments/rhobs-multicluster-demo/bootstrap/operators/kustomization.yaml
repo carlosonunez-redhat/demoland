@@ -9,6 +9,14 @@ patches:
         path: /metadata/name
         value: advanced-cluster-management
   - target:
+      kind: OperatorGroup
+      name: rhacm-og
+      namespace: acm
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: advanced-cluster-management
+  - target:
       kind: Subscription
       name: acm-operator-subscription
       namespace: acm
