@@ -36,7 +36,7 @@ generate_kubeconfig() {
     while test "$attempts" -ne "$max_attempts"
     do
       _exec_rosa create admin -c "$cluster_name" -p "$temp_password" && return 0
-      info "Waiting for cluster-admin to be deleted in cluster '$cluster_name' (attempt $attempts of $max_attempts)"
+      info "Waiting for cluster-admin to be created in cluster '$cluster_name' (attempt $attempts of $max_attempts)"
       attempts=$((attempts+1))
       sleep 1
     done
@@ -51,7 +51,7 @@ generate_kubeconfig() {
       oc login "$(_rosa_cluster_api_url "$1")" \
         --username cluster-admin \
         --password "$temp_password" && return 0
-      info "Waiting for cluster-admin to become available on cluster '$cluster_name' (attempt $attempts of $max_attempts)"
+      info "[${attempts}/${max_attempts}] Waiting for cluster-admin to become available on cluster '$cluster_name'"
       sleep 1
       attempts=$((attempts+1))
     done
@@ -64,8 +64,7 @@ generate_kubeconfig() {
 
   _create_temp_admin_user "$1" &&
     _login "$1" &&
-    _save_kubeconfig "$1" &&
-    _delete_temp_admin_user "$1"
+    _save_kubeconfig "$1"
 }
 
 yay_success() {
