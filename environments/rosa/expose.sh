@@ -9,6 +9,7 @@ source "$INCLUDE_DIR/helpers/data.sh"
 source "$INCLUDE_DIR/helpers/errors.sh"
 source "$INCLUDE_DIR/helpers/logging.sh"
 source "$INCLUDE_DIR/helpers/install_config.sh"
+source "$INCLUDE_DIR/helpers/ocp.sh"
 source "$INCLUDE_DIR/helpers/yaml.sh"
 
 # If this environment has includes of its own, use the $ENVIRONMENT_INCLUDE_DIR environment
@@ -58,8 +59,9 @@ generate_kubeconfig() {
   }
 
   _save_kubeconfig() {
-    cat $HOME/.kube/config > "$(_get_file_from_shared_secret_dir "kubeconfigs/$(_rosa_cluster_name "$1").kubeconfig")"
+    expose_kubeconfig "$(cat "$HOME/.kube/config")"
   }
+
   _create_temp_admin_user "$1" &&
     _login "$1" &&
     _save_kubeconfig "$1" &&
