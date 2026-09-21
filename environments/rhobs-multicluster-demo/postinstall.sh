@@ -39,7 +39,32 @@ import_clusters_into_acm_hub_cluster() {
   for cluster in eks rosa
   do
     k="${cluster^^}_CLUSTER_ENV_NAME"
-    setup_gitops_into_base_environment "${!k}" bootstrap/resources/imported-clusters/$cluster "imported-cluster-$cluster"
+    setup_gitops_into_base_environment "$ACM_HUB_ENV_NAME" bootstrap/resources/imported-clusters/$cluster "imported-cluster-$cluster"
+  done
+}
+
+wait_for_imported_cluster_namespaces_available() {
+  attempts=0
+  max_attempts=60
+  for cluster in eks rosa
+  do
+    cluster_name="imported-cluster-$cluster"
+    created=0
+    attempts=0
+    while test "$attempts" -lt "$max_attempts"
+    do
+      if test -n "$(exec_oc_acm_hub get ns "$cluster_name" -o name --ignore-not-found)"
+      then
+        created=1
+        break
+      fi
+      info "[${attempts}/${max_attempts}] Waiting for '$cluster_name' namespace to be created..."
+      attempts=$((attempts+1))
+      sleep 1
+    done
+    test "$created" -eq 1 && continue
+    error "Timed out waiting for '$cluster_name' namespace"
+    return 1
   done
 }
 
@@ -68,6 +93,7 @@ install_operators_into_acm_hub_cluster
 install_acm_into_acm_hub_cluster
 wait_for_acm_ready
 import_clusters_into_acm_hub_cluster
+wait_for_imported_cluster_namespaces_available
 generate_kubeconfig_secrets_for_imported_clusters
 #wait_for_imported_clusters_to_become_ready
 #install_acm_multicluster_observability_operator
