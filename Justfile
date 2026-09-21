@@ -56,8 +56,10 @@ deploy environment: clean \
     (_run_stage_with_dependencies environment "_precheck" "_poweron" "_provision" "_expose" "_postinstall")
 
 [doc("Destroys an environment")]
-destroy environment: clean \
-    (_run_stage_with_dependencies environment "_destroy")
+destroy environment: clean (_run_stage_with_dependencies environment "_destroy")
+
+[doc("Rebuild deployer images.")]
+rebuild_images environment: clean (_run_stage_with_dependencies environment "_rebuild")
 
 [doc("Performs post-install steps, like installing operators and such.")]
 postinstall environment: (_run_stage_with_dependencies environment "_precheck" "_postinstall")
@@ -68,6 +70,32 @@ poweroff environment: (_run_stage_with_dependencies environment "_poweroff")
 [doc("Powers on instances.")]
 poweron environment: (_run_stage_with_dependencies environment "_poweron")
 
+[doc("Launches a shell inside of the runner container for the environment.")]
+start_shell environment:
+  USE_SHELL=1 just _execute_containerized {{ environment }};
+
+[doc("Exports the kubeconfig generated for an environment, if available.")]
+export_kubeconfig environment:
+  EXPORT_KUBECONFIG=1 just _execute_containerized '{{ environment }}'
+
+# A word about the rebuild logic in this stage.
+#
+# Environments are deployed starting with their dependent environments. In other
+# words, given an environment `$X` which depends on environments `$A`, `$B` and `$C`,
+# deployment will happen in this order: `$A -> $B -> $C -> $X`.
+#
+# Destroys, thus, happen in the reverse order. However, this introduces an interesting
+# edge case when it comes to image rebuilds.
+#
+# OpenShift binaries like `openshift-install` are included in the `demoland-base` image.
+# These binaries take the version of OpenShift being installed into the cluster into account.
+# For our example environment `$X`, this means that the version of `openshift-install`
+# that gets installed into the base image is determined by the version information provided to
+# environments `$A`, `$B` or `$C`, in that order.
+#
+# Therefore, any environment destroys happening at the same time as an image rebuild need
+# to do an image rebuild run first in "deploy" order before destroying in "destroy" order.
+# That's what the "REBUILD" code in this stage does.
 _run_stage_with_dependencies environment +stages:\
     (_generate_toplevel_environment_info environment) \
     (_generate_container_vol environment ) \
@@ -76,8 +104,10 @@ _run_stage_with_dependencies environment +stages:\
   envs="{{ environment }}"; \
   if test -z "$SKIP_DEPENDENCIES"; \
   then \
-    if echo '{{ stages }}' | grep -q destroy; \
-    then envs="{{ environment }};$(just _get_dependent_environments {{ environment }})"; \
+    if test '{{ stages }}' == '_destroy'; \
+    then \
+      (test -n "$REBUILD" || test -n "REBUILD_IMAGES") && just rebuild_images '{{ environment }}'; \
+      envs="{{ environment }};$(just _get_dependent_environments {{ environment }})"; \
     else envs="$(just _get_dependent_environments {{ environment }});{{ environment }}"; \
     fi; \
   fi; \
@@ -100,6 +130,11 @@ _run_stage_with_dependencies environment +stages:\
       ALIAS="$alias" just "$stage" "$env"; \
     done; \
   done;
+
+_rebuild environment:
+  for stage in _rebuild_demoland_base_image _rebuild_environment_base_image; \
+  do just "$stage" "{{ environment }}"; \
+  done
 
 _precheck environment:
   set +u; \
@@ -202,19 +237,8 @@ _install_component environment component: (_ensure_demoland_base_image environme
 
 
 _ensure_demoland_base_image environment:
-  set +u; \
-  test -z "$REBUILD_DEMOLAND_BASE_IMAGE" && \
-    {{ container_bin }} image ls | grep -q "{{ demoland_base_container_image }}" && exit 0; \
-  set -u; \
-  openshift_version=$(just _get_property_from_env_config_use_alias \
-    {{ environment }} \
-    '.deploy.cluster_config.openshift_version'); \
-  test -z "$openshift_version" && openshift_version={{ default_openshift_version }}; \
-  just _log info "building demoland environment base image [openshift version: $openshift_version]"; \
-  test -n "${REBUILD_DEMOLAND_BASE_IMAGE:-}" && \
-    just _log info "(re)building demoland environment base image [openshift version: $openshift_version]"; \
-  {{ container_bin }} image build -t "{{ demoland_base_container_image }}" \
-    --build-arg OPENSHIFT_VERSION="$openshift_version" - < "$PWD/include/containerfiles/base.Dockerfile"
+  {{ container_bin }} image ls | grep -q "{{ demoland_base_container_image }}" && exit 0; \
+  just _rebuild_demoland_base_image "{{ environment }}"; 
 
 _get_kubeconfig_path_for_environment environment:
   env="${ALIAS:-$(just _resolved_environment_name '{{ environment }}')}"; \
@@ -261,6 +285,9 @@ _component_overlays environment component:
   overlays_dir="$(just _get_environment_directory '{{ environment }}')/overlays/{{ component }}"; \
   test -d "$overlays_dir" || exit 0; \
   find "$overlays_dir" -type f;
+
+_destroy environment:
+  just _execute_containerized '{{ environment }}' 'destroy.sh';
 
 _get_dependent_environments environment:
   set +u; \
@@ -342,24 +369,28 @@ _execute_containerized environment file ignore_not_found='false' custom_message=
     ( _ensure_container_secrets_vol_populated environment ) \
     ( _ensure_demoland_base_image environment )
   file=$(just _get_environment_directory_file {{ environment }} {{ file }}); \
-  if ! test -f "$file"; \
+  set +u; \
+  if test -z "$USE_SHELL" && test -z "$EXPORT_KUBECONFIG"; \
   then \
-    level=error; \
-    message="File not found in environment: {{ file }}"; \
-    test "{{ custom_message }}" != 'none' && message="{{ custom_message }}"; \
-    if test "{{ ignore_not_found }}" != 'false'; \
+    if ! test -f "$file"; \
     then \
-      level=warning; \
-      message="${message} (skipping)"; \
+      level=error; \
+      message="File not found in environment: {{ file }}"; \
+      test "{{ custom_message }}" != 'none' && message="{{ custom_message }}"; \
+      if test "{{ ignore_not_found }}" != 'false'; \
+      then \
+        level=warning; \
+        message="${message} (skipping)"; \
+      fi; \
+      just _log "$level" "$message"; \
+      test "{{ ignore_not_found }}" == 'false' && exit 1; \
     fi; \
-    just _log "$level" "$message"; \
-    test "{{ ignore_not_found }}" == 'false' && exit 1; \
-  fi; \
-  file_lines=$(grep -Ev '^#|source.*\.sh$' "$file" | grep -Ev '^$' | wc -l); \
-  if test "$file_lines" -eq 0; \
-  then \
-    just _log info "'$file' is empty. Go put some stuff into it!"; \
-    exit 0; \
+    file_lines=$(grep -Ev '^#|source.*\.sh$' "$file" | grep -Ev '^$' | wc -l); \
+    if test "$file_lines" -eq 0; \
+    then \
+      just _log info "'$file' is empty. Go put some stuff into it!"; \
+      exit 0; \
+    fi; \
   fi; \
   env_name="${ALIAS:-{{ environment }}}"; \
   command=({{ container_bin }} run --rm -it \
@@ -380,10 +411,15 @@ _execute_containerized environment file ignore_not_found='false' custom_message=
   done < <(just _run_yq \
     "$(just _get_property_from_env_config_use_alias {{ environment }} '.deploy.environment_vars')" \
     '.[]'); \
-  command+=($(just _container_image {{ environment }}) /app/environment/{{ file }}); \
-  set +u; \
+  if test -n "$USE_SHELL"; \
+  then \
+    command+=(-it); \
+    command+=($(just _container_image {{ environment }}) bash); \
+  elif test -n "$EXPORT_KUBECONFIG"; \
+  then command+=($(just _container_image {{ environment }}) sh -c 'test -f /environment_info/kubeconfig_path && cat $(cat /environment_info/kubeconfig_path)'); \
+  else command+=($(just _container_image {{ environment }}) /app/environment/{{ file }}); \
+  fi; \
   test -n "$SHOW_CONTAINER_COMMANDS" && just _log info "Running containerized command: ${command[@]}"; \
-  set -u; \
   "${command[@]}"
 
 _merge_aliased_environment environment:
@@ -470,7 +506,7 @@ _ensure_toplevel_environment_info_available environment:
   exit 1
 
 _ensure_toplevel_environment_has_kubeconfig environment:
-  test -n "$(just _toplevel_environment_kubeconfigs '{{ environment }}')" && exit 0; \
+  test -n "$(just _toplevel_environment_kubeconfig '{{ environment }}')" && exit 0; \
   just _log error "A kubeconfig isn't available yet for environment '$(just _toplevel_environment '{{ environment }}')'"; \
   exit 1
 
@@ -535,10 +571,19 @@ _generate_container_vol environment:
 _ensure_container_image_exists environment:
   set +u; \
   image_name="$(just _container_image {{ environment }})";  \
-  {{ container_bin }} images  | grep -q "$image_name" && \
-    test -z "$REBUILD_IMAGE" && \
-    exit 0; \
-  container_file=$(just _get_property_from_env_config_use_alias \
+  {{ container_bin }} images  | grep -q "$image_name" && exit 0; \
+  just _rebuild_environment_base_image "{{ environment }}";
+
+_rebuild_demoland_base_image environment:
+  openshift_version=$(just _get_property_from_env_config_use_alias \
+    {{ environment }} \
+    '.deploy.cluster_config.openshift_version'); \
+    just _log info "(re)building demoland environment base image [openshift version: $openshift_version]"; \
+  {{ container_bin }} image build -t "{{ demoland_base_container_image }}" \
+    --build-arg OPENSHIFT_VERSION="$openshift_version" - < "$PWD/include/containerfiles/base.Dockerfile"
+
+_rebuild_environment_base_image environment:
+  container_file=$(just _get_property_from_env_config \
     {{ environment }} \
     '.deploy.container_file'); \
   test -z "$container_file" && \
