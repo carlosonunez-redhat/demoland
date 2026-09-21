@@ -73,7 +73,7 @@ generate_kubeconfig_secrets_for_imported_clusters() {
   do
     k="${cluster^^}_CLUSTER_ENV_NAME"
     cluster_name="imported-cluster-$cluster"
-    test -n "$(exec_oc_acm_hub -n "$cluster_name" get secret auto-import-secret -o name)" && continue
+    test -n "$(exec_oc_acm_hub -n "$cluster_name" get secret auto-import-secret -o name --ignore-not-found)" && continue
 
     kubeconfig=$(retrieve_env_kubeconfig "${!k}") || return 1
     values=(
