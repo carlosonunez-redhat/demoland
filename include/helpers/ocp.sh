@@ -117,3 +117,8 @@ cluster_fqdn() {
   exec_oc get route console -n openshift-console -o jsonpath='{.status.ingress[0].host}' |
     sed -E 's/^console-openshift-console.//'
 }
+
+# retrieve_env_kubeconfig: Retrieves a kubeconfig for an environment.
+retrieve_env_kubeconfig() {
+  _retrieve_env_kubeconfig "$1"
+}

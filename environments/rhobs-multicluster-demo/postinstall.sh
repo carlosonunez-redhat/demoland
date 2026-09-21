@@ -35,12 +35,40 @@ wait_for_acm_ready() {
   done
 }
 
+import_clusters_into_acm_hub_cluster() {
+  for cluster in eks rosa
+  do
+    k="${cluster^^}_CLUSTER_ENV_NAME"
+    setup_gitops_into_base_environment "${!k}" bootstrap/resources/imported-clusters/$cluster "imported-cluster-$cluster"
+  done
+}
+
+generate_kubeconfig_secrets_for_imported_clusters() {
+  for cluster in eks rosa
+  do
+    k="${cluster^^}_CLUSTER_ENV_NAME"
+    cluster_name="imported-cluster-$cluster"
+    test -n "$(exec_oc_acm_hub -n "$cluster_name" get secret auto-import-secret -o name)" && continue
+
+    kubeconfig=$(retrieve_env_kubeconfig "${!k}") || return 1
+    values=(
+      cluster_name "$cluster_name"
+      cluster_kubeconfig_encoded "$(base64 -w 0 <<< "$kubeconfig")"
+    )
+    secret_file="$(mktemp "/tmp/${cluster}-kubeconfig_XXXXXXXX")"
+    info "Creating import cluster secret for cluster '$cluster'"
+    render_yaml_template cluster-importsecret "${values[@]}" > "$secret_file" || return 1
+    exec_oc_acm_hub apply -f "$secret_file" || return 1
+    rm -f "$secret_file"  || true
+  done
+}
+
 set -e
 install_operators_into_acm_hub_cluster
 install_acm_into_acm_hub_cluster
 wait_for_acm_ready
-#install_acm_into_acm_hub_cluster
-#import_non_hub_clusters_into_acm_hub_cluster
+import_clusters_into_acm_hub_cluster
+generate_kubeconfig_secrets_for_imported_clusters
 #wait_for_imported_clusters_to_become_ready
 #install_acm_multicluster_observability_operator
 #wait_for_grafana_to_become_ready

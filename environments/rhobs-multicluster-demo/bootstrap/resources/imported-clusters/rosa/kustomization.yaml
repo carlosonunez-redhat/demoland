@@ -1,0 +1,30 @@
+resources:
+  - ../../../../../components/advanced-cluster-management/resources/imported-cluster
+patches:
+  - target:
+      kind: Namespace
+      name: replace-me-imported
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: imported-cluster-rosa
+  - target:
+      kind: ManagedCluster
+      name: replace-me
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: imported-cluster-rosa
+      - op: replace
+        path: /metadata/labels/cluster.open-cluster-management.io~1clusterset
+        value: imported-clusters
+  - target:
+      kind: KlusterletAddonConfig
+      name: replace-me-imported
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: imported-cluster-rosa
+      - op: replace
+        path: /metadata/namespace
+        value: imported-cluster-rosa
