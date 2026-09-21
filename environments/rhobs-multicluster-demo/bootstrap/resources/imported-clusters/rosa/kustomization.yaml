@@ -1,5 +1,5 @@
 resources:
-  - ../../../../../components/advanced-cluster-management/resources/imported-cluster
+  - ../../../../../../components/advanced-cluster-management/resources/imported-cluster
 patches:
   - target:
       kind: Namespace
