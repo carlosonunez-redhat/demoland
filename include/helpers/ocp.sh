@@ -118,7 +118,13 @@ cluster_fqdn() {
     sed -E 's/^console-openshift-console.//'
 }
 
-# retrieve_env_kubeconfig: Retrieves a kubeconfig for an environment.
+# retrieve_env_kubeconfig: Retrieves a kubeconfig for a base or demo environment.
 retrieve_env_kubeconfig() {
   _retrieve_env_kubeconfig "$1"
+}
+
+# print_env_kubeconfig: Retrieves and prints a kubeconfig for a base or demo environment.
+print_env_kubeconfig() {
+  kp=$(retrieve_env_kubeconfig "$1") || return 1
+  cat "$kp"
 }
