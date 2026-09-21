@@ -36,6 +36,7 @@ wait_for_acm_ready() {
 }
 
 import_clusters_into_acm_hub_cluster() {
+  setup_gitops_into_base_environment "$ACM_HUB_ENV_NAME" bootstrap/resources/clustersets managed-cluster-sets
   for cluster in eks rosa
   do
     k="${cluster^^}_CLUSTER_ENV_NAME"
