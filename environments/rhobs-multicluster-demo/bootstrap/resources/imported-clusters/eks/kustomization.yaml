@@ -16,6 +16,9 @@ patches:
         path: /metadata/name
         value: imported-cluster-eks
       - op: replace
+        path: /metadata/labels/name
+        value: imported-cluster-eks
+      - op: replace
         path: /metadata/labels/cluster.open-cluster-management.io~1clusterset
         value: imported-clusters
   - target:
