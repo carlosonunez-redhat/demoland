@@ -55,6 +55,10 @@ precheck environment: \
 deploy environment: clean \
     (_run_stage_with_dependencies environment "_precheck" "_poweron" "_provision" "_expose" "_postinstall")
 
+[doc("Exposes Kubeconfigs for base environment clusters in a demo environment")]
+expose environment: clean \
+    (_run_stage_with_dependencies environment "_expose")
+
 [doc("Destroys an environment")]
 destroy environment: clean (_run_stage_with_dependencies environment "_destroy")
 
