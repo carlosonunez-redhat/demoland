@@ -1,0 +1,11 @@
+resources:
+  - ../../../../../components/advanced-cluster-management/resources/managed-cluster-set
+patches:
+  - target:
+      kind: ManagedClusterSet
+      name: clusters
+      namespace: openshift-cluster-management
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: imported-clusters
