@@ -79,8 +79,8 @@ start_shell environment:
   USE_SHELL=1 just _execute_containerized {{ environment }};
 
 [doc("Exports the kubeconfig generated for an environment, if available.")]
-export_kubeconfig environment:
-  EXPORT_KUBECONFIG=1 just _execute_containerized '{{ environment }}'
+export_kubeconfig environment base_environment='':
+  EXPORT_KUBECONFIG=1 BASE_ENVIRONMENT='{{ base_environment }}' just _execute_containerized '{{ environment }}'
 
 # A word about the rebuild logic in this stage.
 #
@@ -368,7 +368,7 @@ _container_image environment:
   env=$(just _resolved_environment_name '{{ environment }}'); \
   echo "{{ container_image }}-$env"
 
-_execute_containerized environment file ignore_not_found='false' custom_message='none': \
+_execute_containerized environment file='empty' ignore_not_found='false' custom_message='none': \
     ( _ensure_container_image_exists environment ) \
     ( _ensure_container_secrets_vol_populated environment ) \
     ( _ensure_demoland_base_image environment )
@@ -420,7 +420,27 @@ _execute_containerized environment file ignore_not_found='false' custom_message=
     command+=(-it); \
     command+=($(just _container_image {{ environment }}) bash); \
   elif test -n "$EXPORT_KUBECONFIG"; \
-  then command+=($(just _container_image {{ environment }}) sh -c 'test -f /environment_info/kubeconfig_path && cat $(cat /environment_info/kubeconfig_path)'); \
+  then \
+    base_env=self; \
+    test "${BASE_ENVIRONMENT,,}" != '{{ environment }}' && base_env="$BASE_ENVIRONMENT"; \
+    path="/environment_info/kubeconfigs/{{ environment }}/$base_env"; \
+    cmd_text="\
+  if ! test -f '$path'; then \
+    prev_path=\"$(dirname $path)\"; \
+    if test -n '$base_env'; then \
+      kubeconfigs=\$(find \"\$prev_path\" -type f -exec basename {} \\; |  tr '\\n' ',' | sed -E 's/,\$//' | sed 's/,/, /'); \
+      if test -n '\$kubeconfigs'; \
+      then >&2 echo \"ERROR: Demo environment '{{ environment }}' has multiple clusters; please specify: \$kubeconfigs\"; \
+      else >&2 echo 'ERROR: Demo environment '{{ environment }}' does not have a cluster associated with it.'; \
+      fi; \
+      exit 1; \
+    else \
+      >&2 echo 'ERROR: Kubeconfig not found or exported: $path'; \
+      exit 1; \
+    fi; \
+  fi; \
+  cat \$(cat '$path')"; \
+    command+=($(just _container_image {{ environment }}) sh -c "$cmd_text"); \
   else command+=($(just _container_image {{ environment }}) /app/environment/{{ file }}); \
   fi; \
   test -n "$SHOW_CONTAINER_COMMANDS" && just _log info "Running containerized command: ${command[@]}"; \
@@ -510,7 +530,7 @@ _ensure_toplevel_environment_info_available environment:
   exit 1
 
 _ensure_toplevel_environment_has_kubeconfig environment:
-  test -n "$(just _toplevel_environment_kubeconfig '{{ environment }}')" && exit 0; \
+  test -n "$(just _toplevel_environment_kubeconfigs '{{ environment }}')" && exit 0; \
   just _log error "A kubeconfig isn't available yet for environment '$(just _toplevel_environment '{{ environment }}')'"; \
   exit 1
 
