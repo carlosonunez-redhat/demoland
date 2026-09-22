@@ -172,6 +172,18 @@ create_rhmco_thanos_secret() {
   exec_oc_acm_hub apply -f "$secret_file" || return 1
 }
 
+create_rhmco_pull_secret() {
+  secret=multiclusterhub-operator-pull-secret
+  ns=open-cluster-management-observability
+  test -n "$(exec_oc_acm_hub get secret -n "$ns" "$secret" -o name --ignore-not-found)" &&
+    return 0
+
+  info "Creating Observability Endpoint pull secret"
+  exec_oc_acm_hub create secret generic "$secret" -n "$ns"  \
+    --from-literal=.dockerconfigjson="$(_get_secret pull-secret | yq -o=j -I=0)" \
+    --type=kubernetes.io/dockerconfigjson || true
+}
+
 install_rhmco() {
   setup_gitops_into_base_environment "$ACM_HUB_ENV_NAME" \
     bootstrap/resources/observability  \
@@ -217,6 +229,16 @@ wait_for_rhmco_ready() {
   done
 }
 
+# It can take a while for the addon-controller to ManifestWork everything that the cluster
+# needs for observability to run (Secrets can take an especially long time, especially after
+# failed installation attempts). Give it a LONG time for everything to get deployed.
+wait_for_rhmco_ready_eks() {
+  info "Waiting 10 minutes for the Observability Controller to become ready on EKS"
+  exec_oc_acm_hub wait -n imported-cluster-eks \
+    --for jsonpath='{.status.conditions[?(@.type=="Available")].status}=True' \
+    mca observability-controller --timeout=600s
+}
+
 set -e
 create_rhmco_s3_bucket
 install_operators_into_acm_hub_cluster
@@ -231,5 +253,11 @@ finish_importing_eks_cluster
 install_rhmco
 wait_for_rhmco_ns
 create_rhmco_thanos_secret
+create_rhmco_pull_secret
+patch_hub_kubeconfig_eks
 wait_for_rhmco_ready
-#wait_for_grafana_to_become_ready
+wait_for_rhmco_ready_eks
+# install_lightspeed_operators
+# add_lightspeed_secrets
+# create_lightspeed_resources
+# wait_for_lightspeed_ready
