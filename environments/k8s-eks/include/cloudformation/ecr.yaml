@@ -1,0 +1,32 @@
+Parameters:
+  InfrastructureName:
+    AllowedPattern: ^([a-zA-Z][a-zA-Z0-9\-]{0,26})$
+    MaxLength: 27
+    MinLength: 1
+    ConstraintDescription: Infrastructure name must be alphanumeric, start with a letter, and have a maximum of 27 characters.
+    Description: A short, unique cluster ID used to tag cloud resources and identify items owned or used by the cluster.
+    Type: String
+  EksClusterRoleArn:
+    Description: ARN of the EKS cluster IAM role.
+  EksWorkerNodeRoleArn:
+    Description: ARN of the EKS cluster worker node IAM role.
+Resources:
+  Repository:
+    RepositoryName: !Join ["-", [!Ref InfrastructureName, "repo"]]
+    RepositoryPolicyText:
+      Version: "2012-10-17"
+      Statement:
+        - Sid: AllowPushPull
+          Effect: Allow
+          Principal: 
+            AWS:
+              - !Ref EksClusterRoleArn
+              - !Ref EksWorkerNodeRoleArn
+          Action: 
+            - "ecr:GetDownloadUrlForLayer"
+            - "ecr:BatchGetImage"
+            - "ecr:BatchCheckLayerAvailability"
+            - "ecr:PutImage"
+            - "ecr:InitiateLayerUpload"
+            - "ecr:UploadLayerPart"
+            - "ecr:CompleteLayerUpload"

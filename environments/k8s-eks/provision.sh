@@ -97,6 +97,25 @@ create_eks_cluster() {
     "Creating EKS cluster (this may take 10-15 minutes)..."
 }
 
+create_ecr() {
+  local cluster_role_arn worker_node_role_arn
+  cluster_role_arn=$(fail_if_nil \
+    "$(_get_param_from_aws_cfn_stack iam 'EksClusterRoleArn')" \
+    "EKS cluster role ARN not found") || return 1
+  worker_node_role_arn=$(fail_if_nil \
+    "$(_get_param_from_aws_cfn_stack iam 'EksWorkerNodeRoleArn')" \
+    "EKS cluster worker node role ARN not found") || return 1
+  params=(
+    'InfrastructureName' "$(_eks_infra_name)"
+    'EksClusterRoleArn' "$cluster_role_arn"
+    'EksWorkerNodeRoleArn' "$worker_node_role_arn"
+  )
+  params_json=$(_create_aws_cf_params_json "${params[@]}") || return 1
+  _create_aws_resources_from_cfn_stack ecr \
+    "$params_json" \
+    "Creating ECR repository for EKS cluster..."
+}
+
 generate_kubeconfig() {
   local cluster_name kubeconfig bootstrap_kubeconfig
   local cluster_endpoint cluster_ca sa_token
@@ -347,6 +366,7 @@ create_vpc
 create_iam_roles
 create_security_groups
 create_eks_cluster
+create_ecr
 generate_kubeconfig
 apply_aws_auth_configmap
 create_worker_nodes
