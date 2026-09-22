@@ -6,5 +6,5 @@ spec:
   observabilityAddonSpec: {}
   storageConfig:
     metricObjectStorage:
-      name: thanos-config-secret
+      name: thanos-object-storage
       key: thanos.yaml
