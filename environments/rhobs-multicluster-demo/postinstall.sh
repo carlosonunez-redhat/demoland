@@ -17,7 +17,6 @@ source "$ENVIRONMENT_INCLUDE_DIR/helpers/rhobs.sh"
 # variable, like shown in the comment below.
 #
 # source "$ENVIRONMENT_INCLUDE_DIR/foo.sh"
-
 install_operators_into_acm_hub_cluster() {
   setup_gitops_into_base_environment "$ACM_HUB_ENV_NAME" bootstrap/operators cluster-operators
 }
@@ -35,6 +34,21 @@ wait_for_acm_ready() {
   done
 }
 
+generate_acm_pull_secret() {
+  test -n "$(exec_oc_acm_hub get secret -n advanced-cluster-management-mce rh-pull-secret -o name --ignore-not-found)" && return 0
+
+  if test -z "$(_get_file_from_secrets_dir pull-secret)"
+  then
+    error "pull-secret demoland secret not in config"
+    return 1
+  fi
+
+  info "Creating pull secret for non-OpenShift clusters"
+  exec_oc_acm_hub create secret -n advanced-cluster-management-mce generic rh-pull-secret \
+    --from-literal=.dockerconfigjson="$(_get_secret pull-secret | yq -o=j -I=0)" \
+    --type=kubernetes.io/dockerconfigjson
+
+}
 import_clusters_into_acm_hub_cluster() {
   setup_gitops_into_base_environment "$ACM_HUB_ENV_NAME" bootstrap/resources/clustersets managed-cluster-sets
   for cluster in eks rosa
@@ -69,23 +83,42 @@ wait_for_imported_cluster_namespaces_available() {
   done
 }
 
-generate_kubeconfig_secrets_for_imported_clusters() {
-  for cluster in eks rosa
-  do
-    k="${cluster^^}_CLUSTER_ENV_NAME"
-    cluster_name="imported-cluster-$cluster"
-    test -n "$(exec_oc_acm_hub -n "$cluster_name" get secret auto-import-secret -o name --ignore-not-found)" && continue
+generate_auto_import_secret_for_rosa_cluster() {
+  imported_cluster_joined "$cluster_name" && return 0
 
-    kubeconfig=$(print_env_kubeconfig "${!k}") || return 1
-    values=(
-      cluster_name "$cluster_name"
-      cluster_kubeconfig_encoded "$(base64 -w 0 <<< "$kubeconfig")"
-    )
-    secret_file="$(mktemp "/tmp/${cluster}-kubeconfig_XXXXXXXX")"
-    info "Creating import cluster secret for cluster '$cluster'"
-    render_yaml_template cluster-importsecret "${values[@]}" > "$secret_file" || return 1
-    exec_oc_acm_hub apply -f "$secret_file" || return 1
-    rm -f "$secret_file"  || true
+  cluster_name="imported-cluster-rosa"
+  test -n "$(exec_oc_acm_hub -n "$cluster_name" get secret auto-import-secret -o name --ignore-not-found)" && return 0
+
+  kubeconfig=$(print_env_kubeconfig "${!k}") || return 1
+  values=(
+    cluster_name "$cluster_name"
+    cluster_kubeconfig_encoded "$(base64 -w 0 <<< "$kubeconfig")"
+  )
+  secret_file="$(mktemp "/tmp/${cluster}-kubeconfig_XXXXXXXX")"
+  info "Creating import cluster secret for cluster '$cluster'"
+  render_yaml_template cluster-importsecret "${values[@]}" > "$secret_file" || return 1
+  debug "cluster '$cluster'"
+  cat "$secret_file"
+  exec_oc_acm_hub apply -f "$secret_file" || return 1
+  rm -f "$secret_file"  || true
+}
+
+# Non-OpenShift clusters don't have registry.redhat.io pull secrets; as a result
+# they cannot be auto-imported
+finish_importing_eks_cluster() {
+  cluster_name="imported-cluster-eks"
+  imported_cluster_joined "$cluster_name" && return 0
+
+  for t in crds import
+  do
+    tmpfile=$(mktemp /tmp/eks-${t}-XXXXXXX.yaml)
+    path="{.data.${t}\\.yaml}"
+    info "Installing Klusterlet '$t' resources into EKS cluster"
+    exec_oc_acm_hub get secret ${cluster_name}-import \
+      -n ${cluster_name} \
+      -o jsonpath="$path" | base64 --decode > "$tmpfile" &&
+      exec_oc_eks_cluster apply -f "$tmpfile" || return 1
+    rm -f "$tmpfile"
   done
 }
 
@@ -93,9 +126,11 @@ set -e
 install_operators_into_acm_hub_cluster
 install_acm_into_acm_hub_cluster
 wait_for_acm_ready
+generate_acm_pull_secret
 import_clusters_into_acm_hub_cluster
 wait_for_imported_cluster_namespaces_available
-generate_kubeconfig_secrets_for_imported_clusters
+generate_auto_import_secret_for_rosa_cluster
+finish_importing_eks_cluster
 #wait_for_imported_clusters_to_become_ready
 #install_acm_multicluster_observability_operator
 #wait_for_grafana_to_become_ready

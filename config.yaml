@@ -114,7 +114,24 @@ environments:
                 - ACM_HUB_ENV_NAME=ocp-aws-sno
                 - ROSA_CLUSTER_ENV_NAME=rosa-hcp
                 - EKS_CLUSTER_ENV_NAME=k8s-eks
-            secrets: {}
+            secrets:
+                pull_secret:
+                    name: pull-secret
+                    # encrypted
+                    data:
+                        auths:
+                            cloud.openshift.com:
+                                auth: ENC[AES256_GCM,data:VQTPGHIobTG+zxvBSr06K7mz0aIGLVjfjsxixRiQmkS3uZWWTc785kqSfyWxQmwv51n6hCz4jdRmgW5b1yFqipQtC8l9hLTvefn5cDFceDZHD/i2YSA3uwyiBte89UXI3E0pCd9L1T1S5ODB86GQfGAe9k87htHZBJJu131ZQxXm4oo06EAX892X2AFbw0PGrcfK67KUFN5v36YI6UzSu8aW4aUARtdXU9uORZNwlDo=,iv:RJopuVc8xske41cC6n8wvi8HvG9dod//PcEx/e2iYvY=,tag:6jqXXcsIbsprkcFMtkcEGA==,type:str]
+                                email: ENC[AES256_GCM,data:mbXOBKrX963eja1xOnkdbPw=,iv:0ajaregANYv0PUpNp9PBmT6jF5Za6AoBRW+wf8WzRpg=,tag:CuKYoYfAg5gf0sGxMg3oZw==,type:str]
+                            quay.io:
+                                auth: ENC[AES256_GCM,data:Xok1mN3L5YsHBKQMje8EIfBirkha1B9F1fT9GYBhVC8S34Bc3yEZxWWb8S1kIWcZ4KsSGCG8Bsdi6rYDJgNh5aDhMNwB8oLmoOqJsMDJzrAtPcqI3q//mwiUJxi565CroeJWXGklN3KyiLOy+DQqbEUGXVVUkSbWRz5Okuc+vZVO/NP3prFkWOJK9JQ/3k9P2XVtFmZ8+7RXgSPBLNofVLhLtwDsym1ki3r8bN0oEBY=,iv:2/I/AHCTMyxVHC2cmZUSXMHGSfn0akYlSyzOdpUJSQo=,tag:DTLRM41oq6qq8GzMRQPOMg==,type:str]
+                                email: ENC[AES256_GCM,data:Q/a0cLfIEdAmooxmZyZkmoc=,iv:Ptxu6i8RXgTm+clFwRtpqYVjHlLIDlnTdKIgWjpSfug=,tag:hHk4tlu9cgvrM6uUKdetrA==,type:str]
+                            registry.connect.redhat.com:
+                                auth: ENC[AES256_GCM,data:3OhgZlrJ8+hbjdbnJjr3QD9mPvUSApSd7RKpjNivlLo37MVMQfj96lx5UqH4xxXOflhoVhGW0kgUL6dXdfdUVQ8ulTAgLC2yTzCSTV2hA9lbMWEiDbpeNN6btt7LzrowNdXpvS0yP/VTbKJLnC9Vbs3k/1D7KRA+CC4DuIkpue+JMzixxArB6k8bPdv4kyKALJXETBc8ge36S7kL/LTcjaWB3PkAUsGTnh5/fxFG+ke+rOeBSuHhUGMVpUsxK+b96WTkGX1YyXduJgDNf9lnD/itZH34hZHKYNKXDejWzmV0lxbqPF2S+U6lR7nZFCrz0O9r0Hs0WqntEdeDzabDKZl13L40xRFdZW1WAWbnjgT4l00+JvF4QQawU9HsahQHyNlgUJbJvVcFPmzN5Ir0dYPhJQPu1kBM2Db7PAHgn6+xn9g8EOlWrJhGJeM/fHyeL2ZSLYjHbOWEaLbql6iRXtsxBwS/SS3ztMlxeoksgIPj/zY1A8DAuxjw9qEC/Z2nmHuoA4+kJcLKB/atkTq8hZ1DP05gy5zmZ+oRt4/DpQPQi846HIclh4KcRFte0XP0Zr2Vvw0QRgOOeqYaJPAG88Z0I5oGck+NCmDXolEt3PwQTEWIkBzKNI7nvtNcU3r9ka9gjqEbKr6Qb1ZOrEuAL9mgHGp+xpBkKwmG9/Gq/kN4KfOdz07ycEycie4/HVAU/37urYQV3l9uIFYgQF1vLzY9jB8ANiYxmJTVcIu4DPq8K+k830+jYKpiv40MRYKqUlKc5po9k5eHHPIcZbA0a4aSABVy95NiyL5xFDYvVI5xNqe13al2P0B0RA+V7jI15B++7w76t1RyHouXlBwxnQ1c09bD1Ym2P89j/0ivGRLSYA9DJ2j5GybEtLPpl6Xmfu6+PCtY/3ksdciYofyB0eAy2ykBIFuoBM7VAqn8ll8C7AOp9j0+FNbr4EFaq+SUGiif90lf+LLOPHffWYJ7BQJ0tjV4DTRNUaY6nB6MAco+AgZOfRSe7cGy2MzjX3FArm8ysf2A5maeg/a4M/Xge8Lp1QQ1JfLP+QBK21PuevWC70KkvETJC1E1H3dGEc9jfw1clnoTsyrasVNLabsdYZOeB4smg05Ux0KeJ2Rjk+6aFOfHIrJlhQDA+Q6yzWMVWRStSh+ZFTdJ6XAAmDjjCcPpeMUlQAYUZUtzMen2iy3Q3c9k67O4wSsbrm92gMvanDngsXFSCu79p2gl6Xp9dCEzz0pPFu+Ba60CZaCEFKGitL7y1205McDx56auFv6f3p83nqL43N0XOlVv0y7nTmBLlRBieJf0OS/HYjcbNsnyqMQFNyeXa/JF8MehXOkmX2/CWQ8lSrwASY5NaiCZvWX0Uwmj2YNs5n7bcil1uhV0Uv+oopNkUa6lcMBRnVGiNGVcQf6gTNEN5sGrVEccixAL2emDNd3S,iv:ilDW5zHNtD4SKbp7uWenpdqBzUAwSE3/k1Sl+5EIbI8=,tag:eYrZboaUYHiVm14K1Mk5LQ==,type:str]
+                                email: ENC[AES256_GCM,data:+T4akcK5Lt+6/nONp4EUl5M=,iv:OSED9SEKehxb/V+Ng2Qt6UUi0MEN5QIbvA5sPMEuFqQ=,tag:IdEfnkgQIs1a1JOdei1MKA==,type:str]
+                            registry.redhat.io:
+                                auth: ENC[AES256_GCM,data:Elt7Axq+prW5a3bhPoe6xIHhDvDMBBGCxlxZhakVkPIRcIP2jXjrpJT/+HT2ZjnhfTwyTeaiQ+j1LY6Iv8F85kigJkyyY/c7OYmwmuVAxLu6kLH5A3nyeVI9s9Au6k0Wcu6MMXbVhTDerrBts7rFqln+PYBXyD1enmzWY268iowmYSnzGPObOpX+LMkbLmt7SINN1Y48YqF988RnN3PU40A7Lu6S1DFM6nYQ3vrq8lHmesRzlOSW8GH+QMjDTSbyEUEce3oW8yYiV+8QUnW5ZywXdV1y7Pcdd4juPZRUNBnX2dDjMbUSsu1vyMsKlwDzepP6gYigGQXf05zusxTxB8FgpVgRH7BnK4Cde1FxCyXZWdcpt3W69ZUoyTBD8PadDR8OVDNB2b8iC1uihIlmTHOnO8L6Q4Fv0misyo7aiY7cxL7wTIE4t5dnxjlpbDl83RmT0xfT98d4Wju/CAs+wZ9nfKlc+NgxgoKwUb87qkUDlFU9vlmAm/G2elti/GEv5PqM4tfnl3U42d0URthgp2t2xzn1N3j/b5wUfX7aCa68qvHN5RyWBUPUy1nrTjXoNa3FIyLJ5iH/meiWPItiVfV+p1T9lWdNpikyh6S0Wys/9TOWje3ynFO50ywLonNh1P7xOF0Vkp8GXV8ZKprXK6EA3fx5o3jldCNwkm+K+V8aWdsO562pfPi3J4djEcXlfjoHVyw5K1iLsbzoqCsS3iOw2PEoTSBJd7T3170qikUT0M5V2pcjRJsQ2hvOt5E0MEt/wLuARsA9ISJlQXfY9jmBdEHFW5FtwrjPfFaD5xVpL8/iBJqsO5gCBfjemZITJJw+M+pQP3VahC4qn9JDIa4OmvDe5y8EBrcGvRAFLSbnPD2oXGDBLFmRC7Kzl9uxo9qd7kC1PqvRHVVUaHLhnuhbESpjAEb2KHvOcdjKbXpybPuE+dzFKDGfYg6GTkuv2ckz4btUTuVHOolohHMEkVlqO0jZoR8dkE60YmEJdKjpMzc1wt0XMPck30wp3bJoyxJ2U3Afe8HQUWTA4JSS1iwb9EyeBavInv6ob69JCTPn0wlzlpmbMjf0oBKhJSArqfkApl8y8sZZEC1uelKpX/PAMDV7hQhjCG1bZGk832UykQpKCqickOkXr9RouMi0RAoCULKBq9AesB+WbWkcs0uGUzQcgJrcDhmVuRPNGqFH2TIWjQO1hiv9q4tUHQ92z9iYLOJOhMedL5cGbpzcIRSbuXTDTYLRFz2ODZNONqJyJ+kjpVmxmVqExKM3wQcteKYh/D8TwYEeoLZoNDfBVWCuTuMP2+rKHsSPHnDUPyg0mSmdm5MnGo3R4oIJey7zGSA4Cq4k6oxZjalYB9+pLtcxVM30QSiGQy1UwYsqdu1HOqrBVmwq05IU8a0L20mpyXhr7dA2MtROmUtUsiegYfCzVo0Z7UPb,iv:ljbm+H0T+JBTbvD94kJcbexDvYt8jNhbPC/C0p8SeGk=,tag:yw8tvwUET+WXnE7vpzbehA==,type:str]
+                                email: ENC[AES256_GCM,data:Qpxa2O9X3YvTVo9KzSfyO0M=,iv:eSjOR/Fbm8VO1ssoFYx/BPgor+xxv1B2a/yS5gToKX8=,tag:s8/7b0p+hCl3ABUw3kj3ZA==,type:str]
         cloud_credentials:
             aws: {}
         components:
@@ -404,8 +421,8 @@ environments:
                     # encrypted
                     data: ENC[AES256_GCM,data:7Hg7z5FD+H1tuLSTAwDVLj/YN86emHUQlHcpKf3WNQwwrqe0WPbKgFLq9fecw82TqNNAd3ZT4pBLlpvPvuyyApoZ7QHkuqaNazqKEH5BHTK/IJpBUn9nwtIRfMIJ92ek1Xsy8NQ00L/k6rKKFqldea73taIhWJvRDkjF0qEz8eeft59dt1WOR7MYgpVKGgEXwN4AA7zGCV7WF+NBRjlcLJPeQHgTSrGCEDNiO8pBcC97ZTTk2SEU71ztyfTywe/TXaXgUe56vZ1um8kZXkeFn3Oy5h2plaG45KJCDjosjOD7a9hCCKEW8h6HO2kWr3swiC0F65LBY8wlI2zjmKZgRq6Vg750cMHZgK/a4tAUPAhe2KjJgZBiVY/zHgEDeauGUvaPzWUhscR3gc2/RVxyncOv4nQsnQYV3rkSj66RYpXhnl+UxbwhzObaTDHmmXJ+C4WfGS2MfWXbvbcmk13K4YF83bkksmihrPULFy7KO2h2TsXCzxSOwpf+LVkjY7yZGVZQvXyTLmPE22RG2FjJ7hUk2eNS+ERpLzs=,iv:w9Ji4EG4CgU98IbRSSKZvRcDlhAshE4NshABz3dAXFE=,tag:u/oIYWl6k44nMsGTNqOfNQ==,type:str]
 sops:
-    lastmodified: "2026-09-19T19:41:41Z"
-    mac: ENC[AES256_GCM,data:RtS6WNf7UfJVZR15ve3q2QNmZOJywX1ly3an3PXH90IUvmYij9xYx0QF1H2CGsS86dKDzU73EAGXm7r0LLpQUBUhki553wRgQ14H5ZWkqqBpLp2Bhvgz5QG+T0KZL+Gl4z7Jwersk4MkqSli7E9ggKg6D8CpzrvXteQe6YtD0vw=,iv:iDAuGzxYgl6B8LNiBXV8MozjOjUJluZ+c+gaRgKGvQc=,tag:82vP1ZZq18+eYCiAZNuPKQ==,type:str]
+    lastmodified: "2026-09-21T23:57:22Z"
+    mac: ENC[AES256_GCM,data:DzVZKjMa0ZChHOBOJhdWX63xL3bqHfbDj1AObiO2OIcpZDTBT8+OkNNrIwenFJOokvt9C5pXBr7EwBdhHO70INmRqpbu2cDaG5fkJ55iRBb6osJHeaTvZUAbKF5LLRvKzAsedbiMGr61rb0X+KXrVnNn/AMO93OFlsRuv2eQcZc=,iv:L1zPcdQtSAEHq66zEVrQFX1kE0PzBWBpoYQEcOkLIvI=,tag:6Ls5MY4XZzEJqtyKx0s+5A==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
