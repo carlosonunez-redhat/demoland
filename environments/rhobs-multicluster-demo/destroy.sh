@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Destroys resources created within this environment.
+# Destroys resources deleted within this environment.
 #
 # This adds some functions for working with cloud providers, the config file, and
 # other useful things.
@@ -16,3 +16,12 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 #
 # source "$ENVIRONMENT_INCLUDE_DIR/foo.sh"
 
+delete_rhmco_s3_bucket() {
+  _delete_aws_resources_from_cfn_stack_with_caps thanos_s3_bucket \
+    "{}" \
+    "CAPABILITY_NAMED_IAM" \
+    "Deleting Thanos S3 bucket for Multi-Cluster Observability"
+}
+
+set -e
+delete_rhmco_s3_bucket

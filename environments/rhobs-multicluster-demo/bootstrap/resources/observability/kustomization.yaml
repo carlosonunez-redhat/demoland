@@ -1,0 +1,11 @@
+resources:
+  - ../../../../../components/k8s-namespace
+  - ../../../../../components/advanced-cluster-management/resources/multicluster-observability/mco
+patches:
+  - target:
+      kind: Namespace
+      name: patch-me
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: open-cluster-management-observability

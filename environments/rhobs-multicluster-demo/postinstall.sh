@@ -97,8 +97,6 @@ generate_auto_import_secret_for_rosa_cluster() {
   secret_file="$(mktemp "/tmp/${cluster}-kubeconfig_XXXXXXXX")"
   info "Creating import cluster secret for cluster '$cluster'"
   render_yaml_template cluster-importsecret "${values[@]}" > "$secret_file" || return 1
-  debug "cluster '$cluster'"
-  cat "$secret_file"
   exec_oc_acm_hub apply -f "$secret_file" || return 1
   rm -f "$secret_file"  || true
 }
@@ -136,7 +134,62 @@ patch_image_pull_secret() {
     --type=kubernetes.io/dockerconfigjson || true
 }
 
+create_rhmco_s3_bucket() {
+  _create_aws_resources_from_cfn_stack_with_caps thanos_s3_bucket \
+    "{}" \
+    "CAPABILITY_NAMED_IAM" \
+    "Creating Thanos S3 bucket for Multi-Cluster Observability"
+}
+
+create_rhmco_thanos_secret() {
+  test -n "$(exec_oc_acm_hub get secret \
+    -n open-cluster-management-observability \
+    thanos-object-storage -o name --ignore-not-found)" && return 0
+
+  values=(
+    bucket "$(_get_param_from_aws_cfn_stack thanos_s3_bucket 'BucketName')"
+    endpoint "https://s3.$(_aws_region).amazonaws.com"
+    access_key_id "$(_get_param_from_aws_cfn_stack thanos_s3_bucket 'AccessKey')"
+    secret_access_key "$(_get_param_from_aws_cfn_stack thanos_s3_bucket 'SecretAccessKey')"
+  )
+  secret_file="$(mktemp "/tmp/mco-kubeconfig_XXXXXXXX")"
+  info "Creating Thanos storage secret"
+  render_yaml_template thanos-config-secret "${values[@]}" > "$secret_file" || return 1
+  exec_oc_acm_hub apply -f "$secret_file" || return 1
+}
+
+install_rhmco() {
+  setup_gitops_into_base_environment "$ACM_HUB_ENV_NAME" \
+    bootstrap/resources/observability  \
+    multicuster-observability
+}
+
+wait_for_rhmco_ns() {
+  attempts=0
+  ns="open-cluster-management-observability"
+  while test "$attempts" -lt 60
+  do
+    test -n "$(exec_oc_acm_hub get ns "$ns" -o name --ignore-not-found)" && return 0
+    attempts="$((attempts+1))"
+    info "[${attempts}/60] Waiting for Observability namespace to come up"
+    sleep 0.5
+  done
+  error "Observability namespace never became available"
+  return 1
+}
+
+wait_for_rhmco_ready() {
+  ns="open-cluster-management-observability"
+  for pod in $(exec_oc_acm_hub -n "$ns" get pod -o name | grep observability)
+  do
+    info "Waiting 180 seconds for ACM console Pod '$pod' to become ready..."
+    &>/dev/null exec_oc_acm_hub wait -n "$ns" --for=condition=Ready --timeout=180s "$pod" && continue
+    error "ACM console Pod '$pod' failed to become ready."
+  done
+}
+
 set -e
+create_rhmco_s3_bucket
 install_operators_into_acm_hub_cluster
 install_acm_into_acm_hub_cluster
 wait_for_acm_ready
@@ -146,6 +199,7 @@ wait_for_imported_cluster_namespaces_available
 generate_auto_import_secret_for_rosa_cluster
 patch_image_pull_secret
 finish_importing_eks_cluster
-#wait_for_imported_clusters_to_become_ready
-#install_acm_multicluster_observability_operator
+install_rhmco
+create_rhmco_thanos_secret
+wait_for_rhmco_ready
 #wait_for_grafana_to_become_ready

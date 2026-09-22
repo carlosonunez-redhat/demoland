@@ -25,4 +25,15 @@ verify_environment_variables_defined() {
     fi
   done
 }
+
+confirm_secrets_present() {
+  for secret in pull-secret
+  do
+    test -n "$(_get_secret "$secret")" && continue
+    error "Secret '$secret' is missing in the config. Please add it."
+    return 1
+  done
+}
+
 verify_environment_variables_defined
+confirm_secrets_present
