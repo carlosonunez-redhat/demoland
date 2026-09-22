@@ -1,0 +1,26 @@
+resources:
+  - ../base
+  - app.yaml
+patches:
+  - target:
+      kind: Deployment
+      name: simple-load-tester-web-server
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: simple-load-tester-web-server
+      - op: add
+        path: /metadata/annotations
+        value:
+          alpha.image.policy.openshift.io/resolve-names: '*'
+          image.openshift.io/triggers: |-
+            [
+              {
+                "from": {
+                  "kind": "ImageStreamTag",
+                  "name": "simple-load-tester-web-server"
+                },
+                "fieldPath": "spec.template.spec.containers[?(@.name==\"app\")].image"
+              }
+            ]
+
