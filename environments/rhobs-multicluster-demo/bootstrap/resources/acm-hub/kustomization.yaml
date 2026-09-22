@@ -18,6 +18,6 @@ patches:
       name: multiclusterengine
       namespace: openshift-cluster-management
     patch: |-
-      - op: replace
-        path: /metadata/namespace
-        value: advanced-cluster-management-mce
+      - op: add
+        path: /spec/imagePullSecret
+        value: image-pull-secret

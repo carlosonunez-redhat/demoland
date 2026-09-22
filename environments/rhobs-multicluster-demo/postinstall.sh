@@ -134,15 +134,6 @@ patch_image_pull_secret() {
     -n advanced-cluster-management \
     --from-literal=.dockerconfigjson="$(_get_secret pull-secret | yq -o=j -I=0)" \
     --type=kubernetes.io/dockerconfigjson || true
-
-  test "$(exec_oc_acm_hub get mch multiclusterhub \
-    -n advanced-cluster-management \
-    -o jsonpath='{.spec.imagePullSecret}')" == image-pull-secret && return 0
-  info "Updating ACM with image pull secret"
-  exec_oc_acm_hub patch multiclusterhub multiclusterhub \
-    -n advanced-cluster-management \
-    --type=json \
-    -p '[{"op":"add","path":"/spec/imagePullSecret","value":"image-pull-secret"}]'
 }
 
 set -e
