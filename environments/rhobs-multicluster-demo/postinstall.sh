@@ -40,7 +40,7 @@ wait_for_acm_ready() {
     error "ACM never started."
     return 1
   fi
-  for pod in "$pods"
+  for pod in $pods
   do
     info "Waiting 180 seconds for ACM console Pod '$pod' to become ready..."
     &>/dev/null exec_oc_acm_hub wait -n multicluster-engine --for=condition=Ready --timeout=180s "$pod" && continue
@@ -209,7 +209,7 @@ wait_for_rhmco_ready() {
     error "Observability Pods never started."
     return 1
   fi
-  for pod in "$pods"
+  for pod in $pods
   do
     info "Waiting 180 seconds for ACM console Pod '$pod' to become ready..."
     &>/dev/null exec_oc_acm_hub wait -n "$ns" --for=condition=Ready --timeout=180s "$pod" && continue
