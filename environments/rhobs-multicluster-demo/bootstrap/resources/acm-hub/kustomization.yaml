@@ -9,7 +9,7 @@ patches:
     patch: |-
       - op: replace
         path: /metadata/namespace
-        value: advanced-cluster-management-mce
+        value: advanced-cluster-management
       - op: add
         path: /spec/imagePullSecret
         value: image-pull-secret
