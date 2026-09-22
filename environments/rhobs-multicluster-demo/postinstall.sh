@@ -162,7 +162,7 @@ create_rhmco_thanos_secret() {
 
   values=(
     bucket "$(_get_param_from_aws_cfn_stack thanos_s3_bucket 'BucketName')"
-    endpoint "https://s3.$(_aws_region).amazonaws.com"
+    endpoint "s3.$(_aws_region).amazonaws.com"
     access_key_id "$(_get_param_from_aws_cfn_stack thanos_s3_bucket 'AccessKey')"
     secret_access_key "$(_get_param_from_aws_cfn_stack thanos_s3_bucket 'SecretAccessKey')"
   )
