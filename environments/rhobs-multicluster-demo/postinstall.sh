@@ -107,7 +107,6 @@ generate_auto_import_secret_for_rosa_cluster() {
 # they cannot be auto-imported
 finish_importing_eks_cluster() {
   cluster_name="imported-cluster-eks"
-  imported_cluster_joined "$cluster_name" && return 0
 
   for t in crds import
   do
@@ -122,6 +121,20 @@ finish_importing_eks_cluster() {
   done
 }
 
+patch_image_pull_secret() {
+  want=$(_get_secret pull-secret | yq -o=j -I=0)
+  got=$(exec_oc_acm_hub get secret -n advanced-cluster-management image-pull-secret \
+    --ignore-not-found \
+    -o jsonpath='{.data.\.dockerconfigjson}')
+  test "$want" == "$got" && return 0
+
+  info "Creating image pull secret for ACM"
+  exec_oc_acm_hub create secret generic image-pull-secret \
+    -n advanced-cluster-management \
+    --from-literal=.dockerconfigjson="$(_get_secret pull-secret | yq -o=j -I=0)" \
+    --type=kubernetes.io/dockerconfigjson
+}
+
 set -e
 install_operators_into_acm_hub_cluster
 install_acm_into_acm_hub_cluster
@@ -130,6 +143,7 @@ generate_acm_pull_secret
 import_clusters_into_acm_hub_cluster
 wait_for_imported_cluster_namespaces_available
 generate_auto_import_secret_for_rosa_cluster
+patch_image_pull_secret
 finish_importing_eks_cluster
 #wait_for_imported_clusters_to_become_ready
 #install_acm_multicluster_observability_operator

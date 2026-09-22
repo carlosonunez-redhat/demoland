@@ -11,9 +11,8 @@ patches:
         path: /metadata/namespace
         value: advanced-cluster-management-mce
       - op: add
-        path: /spec
-        value:
-          imagePullSecret: rh-pull-secret
+        path: /spec/imagePullSecret
+        value: image-pull-secret
   - target:
       kind: MultiClusterEngine
       name: multiclusterengine
