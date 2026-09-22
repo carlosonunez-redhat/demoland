@@ -26,7 +26,21 @@ install_acm_into_acm_hub_cluster() {
 }
 
 wait_for_acm_ready() {
-  for pod in $(exec_oc_acm_hub -n multicluster-engine get pod -l app=console-mce -o name)
+  pods=""
+  while test "$attempts" -lt 60
+  do
+    pods=$(exec_oc_acm_hub -n multicluster-engine get pod -l app=console-mce -o name)
+    test -n "$pods" && break
+    info "[${attempts}/60] Waiting for ACM Pods to be created..."
+    sleep 0.5
+    attempts=$((attempts+1))
+  done
+  if test -z "$pods"
+  then
+    error "ACM never started."
+    return 1
+  fi
+  for pod in "$pods"
   do
     info "Waiting 180 seconds for ACM console Pod '$pod' to become ready..."
     &>/dev/null exec_oc_acm_hub wait -n multicluster-engine --for=condition=Ready --timeout=180s "$pod" && continue
@@ -180,7 +194,22 @@ wait_for_rhmco_ns() {
 
 wait_for_rhmco_ready() {
   ns="open-cluster-management-observability"
-  for pod in $(exec_oc_acm_hub -n "$ns" get pod -o name | grep observability)
+  attempts=0
+  pods=""
+  while test "$attempts" -lt 60
+  do
+    pods=$(exec_oc_acm_hub -n "$ns" get pod -o name | grep observability)
+    test -n "$pods" && break
+    info "[${attempts}/60] Waiting for Observability Pods to be created..."
+    sleep 0.5
+    attempts=$((attempts+1))
+  done
+  if test -z "$pods"
+  then
+    error "Observability Pods never started."
+    return 1
+  fi
+  for pod in "$pods"
   do
     info "Waiting 180 seconds for ACM console Pod '$pod' to become ready..."
     &>/dev/null exec_oc_acm_hub wait -n "$ns" --for=condition=Ready --timeout=180s "$pod" && continue
@@ -200,6 +229,7 @@ generate_auto_import_secret_for_rosa_cluster
 patch_image_pull_secret
 finish_importing_eks_cluster
 install_rhmco
+wait_for_rhmco_ns
 create_rhmco_thanos_secret
 wait_for_rhmco_ready
 #wait_for_grafana_to_become_ready
