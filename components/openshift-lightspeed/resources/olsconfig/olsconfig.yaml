@@ -1,0 +1,19 @@
+apiVersion: ols.openshift.io/v1alpha1
+kind: OLSConfig
+metadata:
+  name: cluster
+spec:
+  llm:
+    # Go here for a reference on this schema:
+    # https://docs.redhat.com/en/documentation/red_hat_openshift_lightspeed/1.0/html/configure/ols-configuring-openshift-lightspeed#ols-creating-lightspeed-custom-resource-file-using-web-console_ols-configuring-openshift-lightspeed
+    providers:
+      - name: default
+        type: openai
+        credentialsSecretRef:
+          name: credentials
+        url: https://api.openai.com/v1
+        models:
+          - name: replace-me
+  ols:
+    defaultModel: replace-me
+    defaultProvider: default

@@ -184,6 +184,30 @@ create_rhmco_pull_secret() {
     --type=kubernetes.io/dockerconfigjson || true
 }
 
+create_lightspeed_secret_gcp_vertex() {
+  secret=lightspeed-secret
+  ns=openshift-lightspeed
+  test -n "$(exec_oc_acm_hub get secret -n "$ns" "$secret" -o name --ignore-not-found)" &&
+    return 0
+
+  gcp_service_account_json="$(_get_secret lightspeed-config-vertex |
+    yq -o=j -I=0 -r .data.credentials)"
+  if test -z "$gcp_service_account_json"
+  then
+    error "GCP Service Account not found in config"
+    return 1
+  fi
+  info "Creating Lightspeed Secret"
+  values=(
+    secret_name gcp-credentials
+    gcp_service_account_json "$(base64 -w 0 <<< "$gcp_service_account_json")"
+  )
+  secret_file="$(mktemp "/tmp/ls_XXXXXXXX")"
+  render_yaml_template lightspeed-secret "${values[@]}" > "$secret_file" || return 1
+  exec_oc_acm_hub apply -f "$secret_file" || return 1
+}
+
+
 install_rhmco() {
   setup_gitops_into_base_environment "$ACM_HUB_ENV_NAME" \
     bootstrap/resources/observability  \
@@ -315,6 +339,7 @@ EOF
 )"
 }
 
+
 set -e
 create_rhmco_s3_bucket
 install_operators_into_acm_hub_cluster
@@ -330,12 +355,14 @@ install_rhmco
 wait_for_rhmco_ns
 create_rhmco_thanos_secret
 create_rhmco_pull_secret
+create_lightspeed_secret_gcp_vertex
 wait_for_rhmco_ready
 wait_for_rhmco_ready_eks
 build_and_push_test_app_images
 patch_k8s_web_server_test_app_kustomization
 deploy_test_apps_into_non_hub rosa
 deploy_test_apps_into_non_hub eks
+deploy_acm_mcp_server_into_acm_hub
 # install_lightspeed_operators
 # add_lightspeed_secrets
 # create_lightspeed_resources

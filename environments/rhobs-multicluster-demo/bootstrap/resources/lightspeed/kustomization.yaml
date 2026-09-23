@@ -1,0 +1,30 @@
+resources:
+  - ../../../../../components/openshift-lightspeed/resources/olsconfig
+patches:
+  - target:
+      name: cluster
+      kind: OLSConfig
+    patch: |-
+      - op: replace
+        path: /spec/providers/0/credentialsSecretRef/name
+        value: lightspeed-secret
+      - op: replace
+        path: /spec/providers/0/models/0/name
+        value: replaced
+      - op: replace
+        path: /spec/providers/0/url
+        value: replaced
+      - op: add
+        path: /spec/featureGates
+        value:
+          - MCPServer
+      - op: add
+        path: /spec/mcpServers
+        value:
+          - headers:
+              - name: Authorization
+                valueFrom:
+                  type: kubernetes
+            name: acm
+            timeout: 30
+            url: 'http://acm-mcp-server.openshift-mcp-servers.svc.cluster.local/mcp'
