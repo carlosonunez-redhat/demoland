@@ -1,4 +1,8 @@
 FROM demoland-base AS final
+RUN arch=x86_64; uname -m | grep -Eiq 'arm|aarch' && arch=aarch64; \
+    curl -L "https://awscli.amazonaws.com/awscli-exe-linux-$arch.zip" | bsdtar -C /tmp -xf - && \
+    chmod -R +x /tmp/aws && \
+    /tmp/aws/install --update
 RUN arch=arm64; uname -m | grep -Eiq 'x86_64|amd64' && arch=amd64; \
     curl -LO "https://dl.k8s.io/release/v1.30.0/bin/linux/${arch}/kubectl" && \
     install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl && \
