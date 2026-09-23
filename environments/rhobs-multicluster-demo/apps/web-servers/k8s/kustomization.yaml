@@ -1,0 +1,29 @@
+resources:
+  - ./service-a
+  - ./service-b
+  - ./service-c
+patches:
+  - target:
+      name: simple-web-server
+      kind: Deployment
+      namespace: service-a
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: 865487941564.dkr.ecr.us-east-2.amazonaws.com/rhobsmulticlusterd-mtrmzjaw/example-apps/simple-web-server865487941564.dkr.ecr.us-east-2.amazonaws.com/rhobsmulticlusterd-mtrmzjaw/example-apps/simple-web-server865487941564.dkr.ecr.us-east-2.amazonaws.com/rhobsmulticlusterd-mtrmzjaw/example-apps/simple-web-server:latest
+  - target:
+      name: simple-web-server
+      kind: Deployment
+      namespace: service-b
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: 865487941564.dkr.ecr.us-east-2.amazonaws.com/rhobsmulticlusterd-mtrmzjaw/example-apps/simple-web-server865487941564.dkr.ecr.us-east-2.amazonaws.com/rhobsmulticlusterd-mtrmzjaw/example-apps/simple-web-server865487941564.dkr.ecr.us-east-2.amazonaws.com/rhobsmulticlusterd-mtrmzjaw/example-apps/simple-web-server:latest
+  - target:
+      name: simple-web-server
+      kind: Deployment
+      namespace: service-c
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: 865487941564.dkr.ecr.us-east-2.amazonaws.com/rhobsmulticlusterd-mtrmzjaw/example-apps/simple-web-server865487941564.dkr.ecr.us-east-2.amazonaws.com/rhobsmulticlusterd-mtrmzjaw/example-apps/simple-web-server865487941564.dkr.ecr.us-east-2.amazonaws.com/rhobsmulticlusterd-mtrmzjaw/example-apps/simple-web-server:latest

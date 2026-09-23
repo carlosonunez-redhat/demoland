@@ -1,0 +1,20 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: simple-web-server
+  namespace: replace-me
+  labels:
+    app: simple-web-server
+    component: web-server
+spec:
+  rules:
+  - host: simple-web-server
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: simple-web-server
+            port:
+              number: 8000

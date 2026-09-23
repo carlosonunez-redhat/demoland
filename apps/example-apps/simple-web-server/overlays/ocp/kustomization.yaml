@@ -1,6 +1,7 @@
 resources:
-  - ../base
-  - app.yaml
+  - ../../base
+  - ./app.yaml
+  - ./route.yaml
 patches:
   - target:
       kind: Deployment

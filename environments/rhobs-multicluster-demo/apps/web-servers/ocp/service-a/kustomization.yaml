@@ -1,6 +1,6 @@
 resources:
-  - ../../../../../../../apps/example-apps/simple-web-server/base
-  - ../../../../../../../components/k8s-namespace
+  - ../../../../../../apps/example-apps/simple-web-server/overlays/ocp
+  - ../../../../../../components/k8s-namespace
   - ../../../traffic-generator
 patches:
   - target:
@@ -9,97 +9,97 @@ patches:
     patch: |-
       - op: replace
         path: /metadata/name
-        value: app-service-c
+        value: service-a
   - target:
       kind: Deployment
       name: simple-web-server
     patch: |-
       - op: replace
         path: /metadata/namespace
-        value: service-c
+        value: service-a
       - op: replace
         path: /metadata/labels/app
         value: hello-everybody
       - op: add
         path: /metadata/labels/service
-        value: c
+        value: a
   - target:
       kind: ImageStream
       name: simple-web-server
     patch: |-
       - op: replace
         path: /metadata/namespace
-        value: service-c
+        value: service-a
       - op: replace
         path: /metadata/labels/app
         value: hello-everybody
       - op: add
         path: /metadata/labels/service
-        value: c
+        value: a
   - target:
       kind: BuildConfig
       name: simple-web-server
     patch: |-
       - op: replace
         path: /metadata/namespace
-        value: service-c
+        value: service-a
       - op: replace
         path: /metadata/labels/app
         value: hello-everybody
       - op: add
         path: /metadata/labels/service
-        value: c
+        value: a
   - target:
       kind: Service
       name: simple-web-server
     patch: |-
       - op: replace
         path: /metadata/namespace
-        value: service-c
+        value: service-a
       - op: replace
         path: /metadata/labels/app
         value: hello-everybody
       - op: add
         path: /metadata/labels/service
-        value: c
+        value: a
       - op: add
         path: /spec/selector/service
-        value: c
+        value: a
   - target:
       kind: Route
       name: simple-web-server
     patch: |-
       - op: replace
         path: /metadata/namespace
-        value: service-c
+        value: service-a
       - op: replace
         path: /metadata/labels/app
         value: hello-everybody
       - op: add
         path: /metadata/labels/service
-        value: c
+        value: a
   - target:
       kind: Deployment
       name: traffic-generator
     patch: |-
       - op: replace
         path: /metadata/namespace
-        value: service-c
+        value: service-a
       - op: add
         path: /metadata/labels/service
-        value: c
+        value: a
   - target:
       kind: ConfigMap
       name: traffic-generator-cm
     patch: |-
       - op: replace
         path: /metadata/namespace
-        value: service-c
+        value: service-a
       - op: add
         path: /metadata/labels/service
-        value: c
+        value: a
       - op: replace
         path: /data/services
         value: |-
-          simple-web-server.service-a.svc.cluster.local:8000
           simple-web-server.service-b.svc.cluster.local:8000
+          simple-web-server.service-c.svc.cluster.local:8000

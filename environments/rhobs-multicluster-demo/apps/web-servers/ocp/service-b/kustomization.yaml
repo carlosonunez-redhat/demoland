@@ -1,6 +1,6 @@
 resources:
-  - ../../../../../../../apps/example-apps/simple-web-server/imagestream
-  - ../../../../../../../components/k8s-namespace
+  - ../../../../../../apps/example-apps/simple-web-server/overlays/ocp
+  - ../../../../../../components/k8s-namespace
   - ../../../traffic-generator
 patches:
   - target:
@@ -9,7 +9,7 @@ patches:
     patch: |-
       - op: replace
         path: /metadata/name
-        value: app-service-b
+        value: service-b
   - target:
       kind: Deployment
       name: simple-web-server
