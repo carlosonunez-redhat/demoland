@@ -244,9 +244,25 @@ deploy_test_app_images() {
     repo_uri=$(_ecr_repository) || return 1
     repo_pw=$(_ecr_repository_password) || return 1
     echo "$repo_pw" |
-      podman login -u AWS --password-stdin "$repo_uri"
+      $CONTAINER_BIN login -u AWS --password-stdin "$repo_uri"
+  }
+  _build_and_push_into_ecr_repo() {
+    local app
+    app="$1"
+    app_ctx="/apps/example-apps/$app"
+    if ! test -d "$app_ctx"
+    then
+      error "Example app '$app' doesn't exist at '$app_ctx'"
+      return 1
+    fi
+    info "Building and pushing example app '$app' into ECR"
+    $CONTAINER_BIN build -t "$(_ecr_repository)/$app:latest" "$app_ctx" &&
+      $CONTAINER_BIN push "$(_ecr_repository)/$app:latest"
   }
   _log_into_ecr_repo
+  for app in simple-web-server
+  do _build_and_push_into_ecr_repo "$app"
+  done
 }
 
 set -e
