@@ -15,11 +15,14 @@ Parameters:
   EksWorkerNodeInstanceProfileArn:
     Description: ARN of the EKS cluster worker node IAM instance profile.
     Type: String
+  RepoName:
+    Description: The name of the repository.
+    Type: String
 Resources:
   Repository:
     Type: AWS::ECR::Repository
     Properties:
-      RepositoryName: !Join ["-", [!Ref InfrastructureName, "repo"]]
+      RepositoryName: !Join ["/", [!Ref InfrastructureName, !Ref RepoName]]
 Outputs:
   RepositoryUri:
     Description: URI of the ECR repo.

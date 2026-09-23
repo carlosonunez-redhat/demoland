@@ -240,28 +240,37 @@ wait_for_rhmco_ready_eks() {
 }
 
 deploy_test_app_images() {
+  _ecr_repo() {
+    cat "$(_get_file_from_shared_secret_dir "$(_aws_ecr_repository "example-apps/$1" "$EKS_CLUSTER_ENV_NAME")")"
+  }
+
+  _ecr_repo_password() {
+    cat "$(_get_file_from_shared_secret_dir "$(_aws_ecr_repository_password "example-apps/$1" "$EKS_CLUSTER_ENV_NAME")")"
+  }
+
   _log_into_ecr_repo() {
-    repo_uri=$(_ecr_repository) || return 1
-    repo_pw=$(_ecr_repository_password) || return 1
+    repo_uri=$(_ecr_repo "$1") || return 1
+    repo_pw=$(_ecr_repo_password "$1") || return 1
     echo "$repo_pw" |
       $CONTAINER_BIN login -u AWS --password-stdin "$repo_uri"
   }
   _build_and_push_into_ecr_repo() {
     local app
     app="$1"
-    app_ctx="/apps/example-apps/$app"
+    app_ctx="/apps/example-apps/$app/src"
     if ! test -d "$app_ctx"
     then
       error "Example app '$app' doesn't exist at '$app_ctx'"
       return 1
     fi
     info "Building and pushing example app '$app' into ECR"
-    $CONTAINER_BIN build -t "$(_ecr_repository)/$app:latest" "$app_ctx" &&
-      $CONTAINER_BIN push "$(_ecr_repository)/$app:latest"
+    $CONTAINER_BIN build -t "$(_ecr_repo "$app"):latest" "$app_ctx" &&
+      $CONTAINER_BIN push "$(_ecr_repo "$app"):latest"
   }
-  _log_into_ecr_repo
   for app in simple-web-server
-  do _build_and_push_into_ecr_repo "$app"
+  do
+    _log_into_ecr_repo "$app"
+    _build_and_push_into_ecr_repo "$app"
   done
 }
 

@@ -87,8 +87,15 @@ _all_availability_zones() {
 _get_param_from_aws_cfn_stack() {
   local stack_name stack_state param results
   stack_name="$1"
+  stack_template="$(cut -f1 -d ';' <<< "$stack_name")"
+  stack_file="$ENVIRONMENT_INCLUDE_DIR/cloudformation/${stack_template}.yaml"
+  if ! test -f "$stack_file"
+  then
+    error "Stack file not found: $stack_file"
+    return 1
+  fi
   param="$2"
-  resolved_stack_name="$(_aws_cf_stack_name "$1")"
+  resolved_stack_name="$(_aws_cf_stack_name "$stack_name")"
   results=$(_exec_aws cloudformation describe-stacks --stack-name "$resolved_stack_name" |
     jq -r '.Stacks[0]' |
     grep -v null |
@@ -126,7 +133,7 @@ _aws_cf_stack_name() {
   printf '%s-%s-cfn-%s' \
     "$(_get_top_level_environment_name)" \
     "$(_get_this_environment_name)" \
-    "$1" | tr -c '[:alnum:]' '-'
+    "$1" | tr -c '[:alnum:]' '-' | sed -E 's/-{2,}/-/g'
 }
 
 _wait_for_cf_stack_until_state() {
@@ -225,14 +232,15 @@ _delete_aws_resources_from_cfn_stack() {
       --stack-name "$(_aws_cf_stack_name "$1")")"
   }
   _run() {
-    local stack_file
-    stack_file="$ENVIRONMENT_INCLUDE_DIR/cloudformation/${1}.yaml"
+    stack_name="$1"
+    stack_template="$(cut -f1 -d ';' <<< "$stack_name")"
+    stack_file="$ENVIRONMENT_INCLUDE_DIR/cloudformation/${stack_template}.yaml"
     if ! test -f "$stack_file"
     then
       error "Stack file not found: $stack_file"
       return 1
     fi
-    _exec_aws cloudformation delete-stack --stack-name "$(_aws_cf_stack_name "$1")" >/dev/null
+    _exec_aws cloudformation delete-stack --stack-name "$(_aws_cf_stack_name "$stack_name")" >/dev/null
   }
   _wait() {
     _wait_for_cf_stack_until_state "$1" \
@@ -252,15 +260,17 @@ _create_cfn_stack() {
       --stack-name "$(_aws_cf_stack_name "$1")")"
   }
   _run() {
-    local stack_file
-    stack_file="$ENVIRONMENT_INCLUDE_DIR/cloudformation/${1}.yaml"
+    local stack_file stack_name stack_template
+    stack_name="$1"
+    stack_template="$(cut -f1 -d ';' <<< "$stack_name")"
+    stack_file="$ENVIRONMENT_INCLUDE_DIR/cloudformation/${stack_template}.yaml"
     if ! test -f "$stack_file"
     then
       error "Stack file not found: $stack_file"
       return 1
     fi
     cmd=(_exec_aws cloudformation create-stack
-      --stack-name "$(_aws_cf_stack_name "$1")"
+      --stack-name "$(_aws_cf_stack_name "$stack_name")"
       --template-body "file://$stack_file")
     test -n "$2" && cmd+=(--parameters "$2")
     test -n "$3" && cmd+=(--capabilities "$3")
@@ -300,4 +310,16 @@ _aws_get_arch_from_instance_type() {
   test "${res,,}" == x86_64 && res=amd64
   grep -Eiq '^(arm|aarch).*' <<< "$res" && res=arm64
   echo "$res"
+}
+
+_aws_ecr_get_property() {
+  echo "repositories/ecr/$3/$2/$1"
+}
+
+_aws_ecr_repository() {
+  _aws_ecr_get_property uri "$1" "$2"
+}
+
+_aws_ecr_repository_password() {
+  _aws_ecr_get_property password "$1" "$2"
 }

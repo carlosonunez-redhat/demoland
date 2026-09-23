@@ -98,35 +98,58 @@ create_eks_cluster() {
 }
 
 create_ecr() {
-  local cluster_role_arn worker_node_role_arn
-  cluster_role_arn=$(fail_if_nil \
-    "$(_get_param_from_aws_cfn_stack iam 'EksClusterRoleArn')" \
-    "EKS cluster role ARN not found") || return 1
-  worker_node_role_arn=$(fail_if_nil \
-    "$(_get_param_from_aws_cfn_stack iam 'WorkerNodeRoleArn')" \
-    "EKS cluster worker node role ARN not found") || return 1
-  instance_profile_arn=$(fail_if_nil \
-    "$(_get_param_from_aws_cfn_stack iam 'WorkerInstanceProfileArn')" \
-    "EKS cluster worker node instance profile role ARN not found") || return 1
-  params=(
-    'InfrastructureName' "$(_eks_infra_name)"
-    'EksClusterRoleArn' "$cluster_role_arn"
-    'EksWorkerNodeRoleArn' "$worker_node_role_arn"
-    'EksWorkerNodeInstanceProfileArn' "$instance_profile_arn"
-  )
-  params_json=$(_create_aws_cf_params_json "${params[@]}") || return 1
-  _create_aws_resources_from_cfn_stack ecr \
-    "$params_json" \
-    "Creating ECR repository for EKS cluster..."
+  repositories=$(_get_secret 'ecr-repositories')
+  if test -z "$repositories"
+  then
+    info "No ECR repositories defined in 'ecr-repositories' secret. Skipping ECR creation."
+    return 0
+  fi
+  yq -r '.[]' <<< "$repositories" |
+    while read -r repo
+    do
+      local cluster_role_arn worker_node_role_arn
+      cluster_role_arn=$(fail_if_nil \
+        "$(_get_param_from_aws_cfn_stack iam 'EksClusterRoleArn')" \
+        "EKS cluster role ARN not found") || return 1
+      worker_node_role_arn=$(fail_if_nil \
+        "$(_get_param_from_aws_cfn_stack iam 'WorkerNodeRoleArn')" \
+        "EKS cluster worker node role ARN not found") || return 1
+      instance_profile_arn=$(fail_if_nil \
+        "$(_get_param_from_aws_cfn_stack iam 'WorkerInstanceProfileArn')" \
+        "EKS cluster worker node instance profile role ARN not found") || return 1
+      params=(
+        'InfrastructureName' "$(_eks_infra_name)"
+        'EksClusterRoleArn' "$cluster_role_arn"
+        'EksWorkerNodeRoleArn' "$worker_node_role_arn"
+        'EksWorkerNodeInstanceProfileArn' "$instance_profile_arn"
+        'RepoName' "$repo"
+      )
+      stack_data="ecr;$(tr '/' '-' <<< "$repo")"
+      params_json=$(_create_aws_cf_params_json "${params[@]}") || return 1
+      _create_aws_resources_from_cfn_stack "$stack_data" \
+        "$params_json" \
+        "Creating ECR repository '$repo' for EKS cluster..."
+    done
 }
 
 write_ecr_secrets() {
-  repo_uri=$(fail_if_nil \
-    "$(_get_param_from_aws_cfn_stack ecr 'RepositoryUri')" \
-    "Repository URI not found.") || return 1
-  repo_pw="$(_exec_aws ecr get-login-password)" || return 1
-  _write_file_to_shared_secret_dir 'repositories/ecr/k8s-eks/uri' "$repo_uri"
-  _write_file_to_shared_secret_dir 'repositories/ecr/k8s-eks/password' "$repo_pw"
+  repositories=$(_get_secret 'ecr-repositories')
+  if test -z "$repositories"
+  then
+    info "No ECR repositories defined in 'ecr-repositories' secret. Skipping ECR creation."
+    return 0
+  fi
+  yq -r '.[]' <<< "$repositories" |
+    while read -r repo
+    do
+      stack_data="ecr;$(tr '/' '-' <<< "$repo")"
+      repo_uri=$(fail_if_nil \
+        "$(_get_param_from_aws_cfn_stack "$stack_data" 'RepositoryUri')" \
+        "Repository URI not found.") || return 1
+      repo_pw="$(_exec_aws ecr get-login-password)" || return 1
+      _write_file_to_shared_secret_dir "$(_aws_ecr_repository "$repo" 'k8s-eks')" "$repo_uri"
+      _write_file_to_shared_secret_dir "$(_aws_ecr_repository_password "$repo" 'k8s-eks')" "$repo_pw"
+    done
 }
 
 generate_kubeconfig() {
@@ -373,7 +396,6 @@ verify_cluster_access() {
   info "$node_output"
 }
 
-set -e
 save_ssh_key
 upload_key_into_ec2
 create_vpc

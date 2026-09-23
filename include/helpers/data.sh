@@ -43,6 +43,7 @@ _write_file_to_shared_secret_dir() {
   content="$2"
   dirname="$(dirname "$file")"
   test -d "$dirname" || mkdir -p "$dirname"
+  info "Creating shared secret '$file'"
   echo "$content"  > "$file"
 }
 
