@@ -254,9 +254,9 @@ install_rhmco
 wait_for_rhmco_ns
 create_rhmco_thanos_secret
 create_rhmco_pull_secret
-patch_hub_kubeconfig_eks
 wait_for_rhmco_ready
 wait_for_rhmco_ready_eks
+# deploy_test_apps
 # install_lightspeed_operators
 # add_lightspeed_secrets
 # create_lightspeed_resources
