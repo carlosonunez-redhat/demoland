@@ -239,7 +239,7 @@ wait_for_rhmco_ready_eks() {
     mca observability-controller --timeout=600s
 }
 
-deploy_test_app_images() {
+build_and_push_test_app_images() {
   _ecr_repo() {
     cat "$(_get_file_from_shared_secret_dir "$(_aws_ecr_repository "example-apps/$1" "$EKS_CLUSTER_ENV_NAME")")"
   }
@@ -267,25 +267,32 @@ deploy_test_app_images() {
     $CONTAINER_BIN build -t "$(_ecr_repo "$app"):latest" "$app_ctx" &&
       $CONTAINER_BIN push "$(_ecr_repo "$app"):latest"
   }
+  _app_pushed() {
+    repo_name="$(cat "$(_get_file_from_shared_secret_dir "$(_aws_ecr_repository "example-apps/$1")")" |
+      sed -E 's;.*\.amazonaws\.com/;;')"
+    test -n "$(2>/dev/null _exec_aws ecr list-images --repository-name "$repo_name")"
+  }
+
   for app in simple-web-server
   do
+    _app_pushed "$app" && continue
+
     _log_into_ecr_repo "$app"
     _build_and_push_into_ecr_repo "$app"
   done
 }
 
-deploy_test_apps_into_non_hubs() {
+deploy_test_apps_into_non_hub() {
   local kpath cmd
   kpath=""
   cmd=""
   case "${1,,}" in
     eks)
-      kpath="./apps/web-servers/k8s"
-
+      kpath="$ENVIRONMENT_DIR/bootstrap/apps/k8s"
       cmd=exec_oc_eks_cluster
       ;;
     rosa)
-      kpath="./apps/web-servers/ocp"
+      kpath="$ENVIRONMENT_DIR/bootstrap/apps/ocp"
       cmd=exec_oc_rosa_cluster
       ;;
     *)
@@ -295,16 +302,15 @@ deploy_test_apps_into_non_hubs() {
       return 1
       ;;
   esac
-  info "Deploying test app into '$1' cluster..."
+  info "Deploying test app into '$1' cluster (kpath: $kpath)..."
   "$cmd" apply -k "$kpath"
-
 }
 
 patch_k8s_web_server_test_app_kustomization() {
-      render_kustomization_patches "$(cat <<-EOF || return 1
+    >/dev/null render_kustomization_patches "$(cat <<-EOF || return 1
 - file: ./apps/web-servers/k8s/kustomization.yaml
   variables:
-    image: "$(_aws_ecr_repository "example-apps/simple-web-server"):latest"
+    image: "$(cat "$(_get_file_from_shared_secret_dir "$(_aws_ecr_repository "example-apps/simple-web-server" "$EKS_CLUSTER_ENV_NAME")")"):latest"
 EOF
 )"
 }
@@ -326,10 +332,10 @@ create_rhmco_thanos_secret
 create_rhmco_pull_secret
 wait_for_rhmco_ready
 wait_for_rhmco_ready_eks
-deploy_test_app_images
-patch_k8s_web_server_test_app_kustomization || return 1
-deploy_test_apps_into_cluster rosa
-deploy_test_apps_into_cluster eks
+build_and_push_test_app_images
+patch_k8s_web_server_test_app_kustomization
+deploy_test_apps_into_non_hub rosa
+deploy_test_apps_into_non_hub eks
 # install_lightspeed_operators
 # add_lightspeed_secrets
 # create_lightspeed_resources

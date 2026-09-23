@@ -23,5 +23,27 @@ delete_rhmco_s3_bucket() {
     "Deleting Thanos S3 bucket for Multi-Cluster Observability"
 }
 
+delete_example_app_images() {
+  _app_deleted() {
+    repo_name="$(cat "$(_get_file_from_shared_secret_dir "$(_aws_ecr_repository "example-apps/$1")")" |
+      sed -E 's;.*\.amazonaws\.com/;;')"
+    test -z "$(2>/dev/null _exec_aws ecr list-images --repository-name "$repo_name")"
+  }
+  _delete_app_from_repo() {
+    repo_name="$(cat "$(_get_file_from_shared_secret_dir "$(_aws_ecr_repository "example-apps/$1")")" |
+      sed -E 's;.*\.amazonaws\.com/;;')"
+    test -n "$(2>/dev/null _exec_aws ecr batch-delete-image \
+      --repository-name "$repo_name" \
+      --image-ids imageTag=latest
+  }
+  for app in simple-web-server
+  do
+    _app_deleted "$app" && continue
+
+    _delete_app_from_repo "$app"
+  done
+}
+
 set -e
+delete_example_app_images
 delete_rhmco_s3_bucket
