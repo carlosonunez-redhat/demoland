@@ -120,6 +120,15 @@ create_ecr() {
     "Creating ECR repository for EKS cluster..."
 }
 
+write_ecr_secrets() {
+  repo_uri=$(fail_if_nil \
+    "$(_get_param_from_aws_cfn_stack ecr 'RepositoryUri')" \
+    "Repository URI not found.") || return 1
+  repo_pw="$(_exec_aws ecr get-login-password)" || return 1
+  _write_file_to_shared_secret_dir 'repositories/ecr/k8s-eks/uri' "$repo_uri"
+  _write_file_to_shared_secret_dir 'repositories/ecr/k8s-eks/password' "$repo_pw"
+}
+
 generate_kubeconfig() {
   local cluster_name kubeconfig bootstrap_kubeconfig
   local cluster_endpoint cluster_ca sa_token
@@ -372,6 +381,7 @@ create_iam_roles
 create_security_groups
 create_eks_cluster
 create_ecr
+write_ecr_secrets
 generate_kubeconfig
 apply_aws_auth_configmap
 create_worker_nodes

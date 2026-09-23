@@ -239,6 +239,16 @@ wait_for_rhmco_ready_eks() {
     mca observability-controller --timeout=600s
 }
 
+deploy_test_app_images() {
+  _log_into_ecr_repo() {
+    repo_uri=$(_ecr_repository) || return 1
+    repo_pw=$(_ecr_repository_password) || return 1
+    echo "$repo_pw" |
+      podman login -u AWS --password-stdin "$repo_uri"
+  }
+  _log_into_ecr_repo
+}
+
 set -e
 create_rhmco_s3_bucket
 install_operators_into_acm_hub_cluster
@@ -256,6 +266,7 @@ create_rhmco_thanos_secret
 create_rhmco_pull_secret
 wait_for_rhmco_ready
 wait_for_rhmco_ready_eks
+deploy_test_app_images
 # deploy_test_apps
 # install_lightspeed_operators
 # add_lightspeed_secrets

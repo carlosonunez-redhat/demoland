@@ -20,3 +20,19 @@ imported_cluster_joined() {
     cat)" == True
 }
 
+_ecr_get_property() {
+  if ! test -f "$(_get_file_from_shared_secret_dir "repositories/ecr/$EKS_CLUSTER_ENV_NAME/$1")"
+  then
+    error "Repository not created or not found in shared secrets dir"
+    return 1
+  fi
+  cat "$(_get_file_from_shared_secret_dir "repositories/ecr/$EKS_CLUSTER_ENV_NAME/$1")"
+}
+
+_ecr_repository() {
+  _ecr_get_property uri
+}
+
+_ecr_repository_password() {
+  _ecr_get_property password
+}

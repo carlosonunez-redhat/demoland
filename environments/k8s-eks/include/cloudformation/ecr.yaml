@@ -20,3 +20,7 @@ Resources:
     Type: AWS::ECR::Repository
     Properties:
       RepositoryName: !Join ["-", [!Ref InfrastructureName, "repo"]]
+Outputs:
+  RepositoryUri:
+    Description: URI of the ECR repo.
+    Value: !GetAtt Repository.RepositoryUri
