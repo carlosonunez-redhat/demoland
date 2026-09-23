@@ -1,7 +1,7 @@
 resources:
   - ../../../../components/advanced-cluster-management/operators/acm
   - ../../../../components/advanced-cluster-management/operators/multiclusterengine
-  - ../../../../components/openshift-lightspeed/operators
+  - ../../../../components/openshift-lightspeed/operator
 patches:
   - target:
       kind: Namespace
