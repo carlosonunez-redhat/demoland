@@ -9,3 +9,4 @@ spec:
   channel: stable
   installPlanApproval: Automatic
   name: lightspeed-operator
+  startingCSV: lightspeed-operator.v1.1.3
