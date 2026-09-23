@@ -8,8 +8,13 @@ Parameters:
     Type: String
   EksClusterRoleArn:
     Description: ARN of the EKS cluster IAM role.
+    Type: String
   EksWorkerNodeRoleArn:
     Description: ARN of the EKS cluster worker node IAM role.
+    Type: String
+  EksWorkerNodeInstanceProfileArn:
+    Description: ARN of the EKS cluster worker node IAM instance profile.
+    Type: String
 Resources:
   Repository:
     RepositoryName: !Join ["-", [!Ref InfrastructureName, "repo"]]
@@ -22,6 +27,7 @@ Resources:
             AWS:
               - !Ref EksClusterRoleArn
               - !Ref EksWorkerNodeRoleArn
+              - !Ref EksWorkerNodeInstanceProfileArn
           Action: 
             - "ecr:GetDownloadUrlForLayer"
             - "ecr:BatchGetImage"
