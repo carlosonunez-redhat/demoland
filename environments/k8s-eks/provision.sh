@@ -103,12 +103,16 @@ create_ecr() {
     "$(_get_param_from_aws_cfn_stack iam 'EksClusterRoleArn')" \
     "EKS cluster role ARN not found") || return 1
   worker_node_role_arn=$(fail_if_nil \
-    "$(_get_param_from_aws_cfn_stack iam 'EksWorkerNodeRoleArn')" \
+    "$(_get_param_from_aws_cfn_stack iam 'WorkerNodeRoleArn')" \
     "EKS cluster worker node role ARN not found") || return 1
+  instance_profile_arn=$(fail_if_nil \
+    "$(_get_param_from_aws_cfn_stack iam 'WorkerInstanceProfileArn')" \
+    "EKS cluster worker node instance profile role ARN not found") || return 1
   params=(
     'InfrastructureName' "$(_eks_infra_name)"
     'EksClusterRoleArn' "$cluster_role_arn"
     'EksWorkerNodeRoleArn' "$worker_node_role_arn"
+    'EksWorkerNodeInstanceProfileArn' "$instance_profile_arn"
   )
   params_json=$(_create_aws_cf_params_json "${params[@]}") || return 1
   _create_aws_resources_from_cfn_stack ecr \
@@ -360,6 +364,7 @@ verify_cluster_access() {
   info "$node_output"
 }
 
+set -e
 save_ssh_key
 upload_key_into_ec2
 create_vpc
