@@ -407,10 +407,12 @@ _execute_containerized environment file='empty' ignore_not_found='false' custom_
     -v $PWD/include:/app/include \
     -v "$(just _get_environment_directory {{ environment }}):/app/environment" \
     -v "{{ source_dir() }}/components:/components" \
+    -v "{{ source_dir() }}/apps:/apps" \
     -v "${container_sock}:/var/run/{{ container_bin }}.sock" \
     -e INCLUDE_DIR=/app/include \
     -e ENVIRONMENT_INCLUDE_DIR=/app/environment/include \
     -e ENVIRONMENT_NAME="$env_name" \
+    -e CONTAINER_BIN='{{ container_bin }}' \
     -w /app); \
   while read var; \
   do command+=(-e "$var"); \
