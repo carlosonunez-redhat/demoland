@@ -274,6 +274,41 @@ deploy_test_app_images() {
   done
 }
 
+deploy_test_apps_into_non_hubs() {
+  local kpath cmd
+  kpath=""
+  cmd=""
+  case "${1,,}" in
+    eks)
+      kpath="./apps/web-servers/k8s"
+
+      cmd=exec_oc_eks_cluster
+      ;;
+    rosa)
+      kpath="./apps/web-servers/ocp"
+      cmd=exec_oc_rosa_cluster
+      ;;
+    *)
+      errmsg="Need to specify cluster type to deploy apps into"
+      test -z "$1" && errmsg="Cluster type can't be empty"
+      error "$errmsg"
+      return 1
+      ;;
+  esac
+  info "Deploying test app into '$1' cluster..."
+  "$cmd" apply -k "$kpath"
+
+}
+
+patch_k8s_web_server_test_app_kustomization() {
+      render_kustomization_patches "$(cat <<-EOF || return 1
+- file: ./apps/web-servers/k8s/kustomization.yaml
+  variables:
+    image: "$(_aws_ecr_repository "example-apps/simple-web-server"):latest"
+EOF
+)"
+}
+
 set -e
 create_rhmco_s3_bucket
 install_operators_into_acm_hub_cluster
@@ -292,7 +327,9 @@ create_rhmco_pull_secret
 wait_for_rhmco_ready
 wait_for_rhmco_ready_eks
 deploy_test_app_images
-# deploy_test_apps
+patch_k8s_web_server_test_app_kustomization || return 1
+deploy_test_apps_into_cluster rosa
+deploy_test_apps_into_cluster eks
 # install_lightspeed_operators
 # add_lightspeed_secrets
 # create_lightspeed_resources
