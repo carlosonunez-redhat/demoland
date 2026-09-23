@@ -4,11 +4,12 @@ resources:
 patches:
   - target:
       kind: Deployment
-      name: simple-load-tester-web-server
+      name: simple-web-server
+      namespace: replace-me
     patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/image
-        value: simple-load-tester-web-server
+        value: simple-web-server
       - op: add
         path: /metadata/annotations
         value:
@@ -18,7 +19,7 @@ patches:
               {
                 "from": {
                   "kind": "ImageStreamTag",
-                  "name": "simple-load-tester-web-server"
+                  "name": "simple-web-server"
                 },
                 "fieldPath": "spec.template.spec.containers[?(@.name==\"app\")].image"
               }

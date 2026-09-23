@@ -3,21 +3,21 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: simple-load-tester
+    app: simple-web-server
     component: web-server
-  name: simple-load-tester-web-server
+  name: simple-web-server
   namespace: replace-me
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: simple-load-tester
+      app: simple-web-server
       component: web-server
   strategy: {}
   template:
     metadata:
       labels:
-        app: simple-load-tester
+        app: simple-web-server
         component: web-server
     spec:
       containers:

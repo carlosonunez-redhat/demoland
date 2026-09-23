@@ -2,10 +2,10 @@
 apiVersion: image.openshift.io/v1
 kind: ImageStream
 metadata:
-  name: simple-load-tester-web-server
+  name: simple-web-server
   namespace: replace-me
   labels:
-    app: simple-load-tester
+    app: simple
     component: web-server
 spec:
   lookupPolicy:
@@ -14,10 +14,10 @@ spec:
 apiVersion: build.openshift.io/v1
 kind: BuildConfig
 metadata:
-  name: simple-load-tester-web-server
+  name: simple-web-server
   namespace: replace-me
   labels:
-    app: simple-load-tester
+    app: simple
     component: web-server
 spec:
   source:
@@ -33,6 +33,6 @@ spec:
   output:
     to:
       kind: ImageStreamTag
-      name: simple-load-tester-web-server:latest
+      name: simple-web-server:latest
   triggers:
     - type: ConfigChange

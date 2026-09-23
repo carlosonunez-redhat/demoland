@@ -1,12 +1,16 @@
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: simple-load-tester-web-server
+  name: simple-web-server
+  namespace: replace-me
+  labels:
+    app: simple-web-server
+    component: web-server
 spec:
-  host: simple-load-tester-web-server.replace-me
+  host: simple-web-server
   port:
     targetPort: 8000
   to:
     kind: Service
-    name: simple-load-tester-web-server
+    name: simple-web-server
 
