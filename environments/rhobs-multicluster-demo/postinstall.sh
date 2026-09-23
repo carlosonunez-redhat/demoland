@@ -210,7 +210,7 @@ wait_for_rhmco_ready() {
   pods=""
   while test "$attempts" -lt 60
   do
-    pods=$(exec_oc_acm_hub -n "$ns" get pod -o name | grep observability)
+    pods=$(exec_oc_acm_hub -n "$ns" get pod -o name | grep -E 'alertmanager|observatorium|grafana|thanos-query-frontend')
     test -n "$pods" && break
     info "[${attempts}/60] Waiting for Observability Pods to be created..."
     sleep 0.5
