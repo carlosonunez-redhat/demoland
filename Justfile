@@ -11,7 +11,6 @@ container_environment_info_vol := 'demo-environment-runner-env-info-vol'
 container_postinstall_vol := 'demo-environment-postinstall-vol'
 config_file := source_dir() + '/config.yaml'
 yq_image := 'mikefarah/yq'
-default_openshift_version := "4.19.27"
 
 [doc("Cleans temporary files and such unless another just operation is happening.")]
 clean:
@@ -605,7 +604,12 @@ _rebuild_demoland_base_image environment:
   openshift_version=$(just _get_property_from_env_config_use_alias \
     {{ environment }} \
     '.deploy.cluster_config.openshift_version'); \
-    just _log info "(re)building demoland environment base image [openshift version: $openshift_version]"; \
+  if test -z "$openshift_version"; \
+  then \
+    just _log warning "'{{ environment }}' doesn't have an OpenShift version specified; using default"; \
+    openshift_version=$(just _get_property_from_config '.common.defaults.openshift_version'); \
+  fi; \
+  just _log info "(re)building demoland environment base image [openshift version: $openshift_version]"; \
   {{ container_bin }} image build -t "{{ demoland_base_container_image }}" \
     --build-arg OPENSHIFT_VERSION="$openshift_version" - < "$PWD/include/containerfiles/base.Dockerfile"
 
@@ -629,7 +633,12 @@ _rebuild_environment_base_image environment:
   openshift_version=$(just _get_property_from_env_config_use_alias \
     {{ environment }} \
     '.deploy.cluster_config.openshift_version'); \
-  test -z "$openshift_version" && openshift_version={{ default_openshift_version }}; \
+  if test -z "$openshift_version"; \
+  then \
+    just _log warning "'{{ environment }}' doesn't have an OpenShift version specified; using default"; \
+    openshift_version=$(just _get_property_from_config '.common.defaults.openshift_version'); \
+  fi; \
+  image_name="$(just _container_image {{ environment }})";  \
   just _log info "(re)building deployer image '$image_name' [openshift version: $openshift_version]"; \
   {{ container_bin }} build -t "$image_name" \
     -f "$container_file" \
@@ -662,6 +671,9 @@ _confirm_environment_directory_exists environment:
   test -f "$(just _get_environment_directory_file '{{ environment }}' 'provision.sh')" && exit 0; \
   just _log error "Environment directory doesn't exist: {{ environment }}"; \
   exit 1
+
+_get_property_from_config key:
+  sops decrypt "{{ source_dir() }}/config.yaml" | yq -r '{{ key }}';
 
 _get_property_from_env_config environment key use_alias="false":
   if test "{{ use_alias }}" == 'true'; \
