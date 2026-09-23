@@ -168,6 +168,9 @@ _wait_for_cf_stack_until_state() {
       then
         info "[iteration #${iterations}] '$stack_name': $desired_state achieved!"
         return 0
+      else
+        error "'$stack_name': Failed to achieve '$desired_state' for stack '$stack_name'; see errors above"
+        return 1
       fi
     fi
     stack_state="$(jq -r '.StackStatus' <<< "$result" | tr '[:upper:]' '[:lower:]')"
