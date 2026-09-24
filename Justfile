@@ -146,7 +146,6 @@ _precheck environment:
     just _log info "Preflight checks skipped for environment '{{ environment }}' (alias: $ALIAS)"; \
     exit 0; \
   fi; \
-  set -u; \
   ALIAS="$ALIAS" just _execute_containerized '{{ environment }}' \
     'preflight.sh' \
     'true' \
