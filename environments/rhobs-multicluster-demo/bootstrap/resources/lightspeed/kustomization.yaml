@@ -1,19 +1,28 @@
 resources:
-  - ../../../../../components/openshift-lightspeed/resources/olsconfig
+  - ../../../../../components/openshift-lightspeed/resources/olsconfig/google_vertex_anthropic/
 patches:
   - target:
       name: cluster
       kind: OLSConfig
     patch: |-
       - op: replace
-        path: /spec/providers/0/credentialsSecretRef/name
-        value: lightspeed-secret
+        path: /spec/ols/defaultModel
+        value: replace
       - op: replace
-        path: /spec/providers/0/models/0/name
-        value: replaced
+        path: /spec/llm/providers/0/credentialsSecretRef/name
+        value: gcp-credentials
       - op: replace
-        path: /spec/providers/0/url
-        value: replaced
+        path: /spec/llm/providers/0/credentialKey
+        value: gcp-service-account.json
+      - op: replace
+        path: /spec/llm/providers/0/googleVertexConfig/projectID
+        value: replace
+      - op: replace
+        path: /spec/llm/providers/0/googleVertexConfig/location
+        value: replace
+      - op: replace
+        path: /spec/llm/providers/0/models/0/name
+        value: replace
       - op: add
         path: /spec/featureGates
         value:
@@ -28,3 +37,4 @@ patches:
             name: acm
             timeout: 30
             url: 'http://acm-mcp-server.openshift-mcp-servers.svc.cluster.local/mcp'
+

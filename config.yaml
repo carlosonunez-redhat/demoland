@@ -120,29 +120,25 @@ environments:
                 - EKS_CLUSTER_ENV_NAME=k8s-eks
                 - RHOBS_DEMO_CLUSTER_NAME=rhobsdemo
                 - RHOBS_DEMO_CLUSTER_API_FQDN=api.rhobsdemo-ntqwyzm3.sandbox582.opentlc.com
-                - LLM_SERVICE=claude
+                - LLM_SERVICE=vertex
             secrets:
                 lightspeed_vertex:
                     name: lightspeed-config-vertex
                     data:
-                        provider:
-                            name: google-vertex
-                            model:
-                                name: claude-opus-4.6
-                            config:
-                                googleVertexConfig:
-                                    location: us-central1
-                                    # encrypted
-                                    projectID: ENC[AES256_GCM,data:C8+qG1vzRT9btyQGWdxl+2p31pvxvg==,iv:PhFlLBq3Smu8xoVbQviHbT+U7WYwq8doy+zWC2YE/LA=,tag:6oG0uSQt9DoKClh2dB/bHA==,type:str]
-                            # encrypted
-                            credentials:
-                                account: ""
-                                client_id: ENC[AES256_GCM,data:6TbYjknSz/A9Gl2B7vX/EqDDDpWh4paBK1aOnewfIvwJAVdCG6y4r+AMAZFJzZdFscNXT90Y1TSfyJWK/BMO1BI8OqPsVSw2,iv:m9GX+BJsy5Woh+LuqGgpv/EXVm4NmKGWMJhFwfdHBm4=,tag:UBtm05cACYfdCEdsqNg2PA==,type:str]
-                                client_secret: ENC[AES256_GCM,data:XCuXJ/u0UUdHpCrBPYAm6UlJ7gtagvzC,iv:a8xWod5NArqDhqt4vHIO+Tv7G7Isc9W2Z5idA+PUT5A=,tag:mIvvdcZKdc5I2O4AHBoeUQ==,type:str]
-                                quota_project_id: ENC[AES256_GCM,data:NgiWnL+qPA7/i0pfsLDi5yROY9BRVQ==,iv:uwrKeZwq4RHUf+RT4+wLxTCzoiQba2sIA8k1uL9Xpy0=,tag:2vxgx5qdwv0tXee8/j7l1g==,type:str]
-                                refresh_token: ENC[AES256_GCM,data:dn8H+pAKAHzk+f7QivVQWlVa4KxSGS9V04zNwYYIf5YbAqByZDnQk1dcW6Nd3Hsm2nP7RpqJkzmALBadNYLyLBtyNrrHDHiwjNSSA/1ly4+TGgUGU8AmyrmW0KMcfYniYkcHf6FZhw==,iv:AkfpMf5HqMoI0bu5VZL1zF/SR87rg5NGoitdg0oV1ZI=,tag:penqF4vkJcyTXpq+1upEpw==,type:str]
-                                type: ENC[AES256_GCM,data:AchajeofI2KZNdqFJnQ0,iv:W6YImy5q3yWpuw323+kxEne5l/5uo9iU9RF28yYwjI4=,tag:byUvOkKwQtMJD2aclebr8A==,type:str]
-                                universe_domain: ENC[AES256_GCM,data:5HK3MDah0PevvfgF5qU=,iv:3M8Bv1MMOTIuNF/3TnNXDuCEe9pxJNjsb98eGXhweFo=,tag:PiGXE0XmC34/uumi1I867Q==,type:str]
+                        name: google-vertex
+                        location: us-central1
+                        model: claude-opus-4.6
+                        # encrypted
+                        projectID: ENC[AES256_GCM,data:qRRgvWKlu5UreROnzuQWpXtNjRnB5w==,iv:/fuGysMMZOibRI17QmOWtXfVGSXkVadSFr0a91wZX7E=,tag:xnetyd4ctySU88H8NkSdDw==,type:str]
+                        # encrypted
+                        credentials:
+                            account: ""
+                            client_id: ENC[AES256_GCM,data:1/JkNw+Xcxdg15Gz/i1fNNpIPPI288GRYx01H+YAQf7Or89XwBwFyByNq+V2L2l7mpqTZUSCoGrdL9GPR9VjdDpZrlX87hz1,iv:wzmLTwWp+8TOawoglFwe0gckBfuvUc6XdRs8BdE/Wgo=,tag:vpIvZGq3dsjn5/4EU6Tsrg==,type:str]
+                            client_secret: ENC[AES256_GCM,data:09oS0HjcASS8dU/u579Aksf7Qyuxye8r,iv:mf72Bl+n87l9a9+RwvPrCO0dLeZdJlTn7/xNSXsJOC8=,tag:dWqfTFZGXYtndYzVbIe97Q==,type:str]
+                            quota_project_id: ENC[AES256_GCM,data:+JV3ZhtiohvJ30kttosPMSNKYYfPZw==,iv:RzkOdBJkyfn1lIxtpVPKS9kV4B13M5tWaGe3jnkK6yQ=,tag:zD+ZKUyq202eVLqtx4QpXA==,type:str]
+                            refresh_token: ENC[AES256_GCM,data:Lxgre5d1QwJzkpdPBJQ+B5duVsLrZ4xWtAzONYHSJ8NdNnq4sYC55zw0loATb88cf+1mJDEhNhpRyqYo91S5jpNJSbJHEo/WmTWD+YAgdGcVMjpX/of5nG7DZRDuKn4voj8dhzu8kA==,iv:vmEbkuy108WTkM+OOrVhn9tlfooSyChKnTt1LGQ+oIM=,tag:5mj9EBZMJ94RW9pStBMa2g==,type:str]
+                            type: ENC[AES256_GCM,data:5ln+f8oLag/D/WmODF+a,iv:/5buyLoWCCGj6rU51SwVWaSLUKVA8MqL3W6kRfGTP8s=,tag:IW7PA0JHwDLG3QasOiA+hQ==,type:str]
+                            universe_domain: ENC[AES256_GCM,data:DdnwEETsIkrlz7KnClg=,iv:rQ+AQONGEuh2129H0K6nwg7qvR2cz5erLzxS7xTyLGw=,tag:458VVpOKbmUefUx1GLc/RQ==,type:str]
                 obs_s3_bucket:
                     name: rhobs/s3_bucket_name
                     data: 3qqaxq4w-rhobs-s3-bucket
@@ -455,8 +451,8 @@ environments:
                     name: ecr-repositories
                     data: '- example-apps/simple-web-server'
 sops:
-    lastmodified: "2026-09-24T16:18:32Z"
-    mac: ENC[AES256_GCM,data:SLJWOSM0gfWzRvXVGKlzPyC1ZVR10CrD07wkZSERqGQQiiH2fZnV0n8Trm7Her7dn3OzXFH1CM4IS0I0pHJj1EdxBVTg9QNxmAxoAF9/2rcz3cAM2eXWVgW0DljYqleJd4ObEI6vN1tNiKh9bmcuzxAeFH5CkcJ6nzdhtUc50B0=,iv:Kv6+cPdShOQnY9pm9ie9Gy0Vd0jyjH8ITExmGuVuWYs=,tag:b+2HeDBRafi0yt9owFo7kQ==,type:str]
+    lastmodified: "2026-09-24T17:52:21Z"
+    mac: ENC[AES256_GCM,data:gw+aSdAS9CbPnYqbCxxgOy3w/L0kDvHyg8VHwm4PlGgxTInfW+RSXdwyu2LDs8+uyBDWsoLIG6ty+SEkZCFgJFAsT4o+F9TgA/BTruPfAdMfUEqMdQiFSmALMheWe1lHXYW1oKKHEvUF/AL6ZVhmYlQIIEu5NlANyz6LR6gu3RM=,iv:fns+JtKnGsYFis1q7ZEZxI6fbrhVy6EB+6uo91tMXWE=,tag:IBHeOsKvDghAtChze9HhPw==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-

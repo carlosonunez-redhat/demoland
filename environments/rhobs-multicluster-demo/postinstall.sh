@@ -223,7 +223,7 @@ create_lightspeed_secret_gcp_vertex() {
     gcp_service_account_json "$(base64 -w 0 <<< "$gcp_service_account_json")"
   )
   secret_file="$(mktemp "/tmp/ls_XXXXXXXX")"
-  render_yaml_template lightspeed-secret "${values[@]}" > "$secret_file" || return 1
+  render_yaml_template lightspeed-secret-vertex "${values[@]}" > "$secret_file" || return 1
   exec_oc_acm_hub apply -f "$secret_file" || return 1
 }
 
@@ -232,6 +232,12 @@ install_rhmco() {
   setup_gitops_into_base_environment "$ACM_HUB_ENV_NAME" \
     bootstrap/resources/observability  \
     multicuster-observability
+}
+
+install_lightspeed() {
+  setup_gitops_into_base_environment "$ACM_HUB_ENV_NAME" \
+    bootstrap/resources/lightspeed  \
+    lightspeed
 }
 
 wait_for_rhmco_ns() {
@@ -281,6 +287,31 @@ wait_for_rhmco_ready_eks() {
   exec_oc_acm_hub wait -n imported-cluster-eks \
     --for jsonpath='{.status.conditions[?(@.type=="Available")].status}=True' \
     mca observability-controller --timeout=600s
+}
+
+wait_for_lightspeed_ready() {
+  ns="openshift-lightspeed"
+  attempts=0
+  pods=""
+  while test "$attempts" -lt 60
+  do
+    pods=$(exec_oc_acm_hub -n "$ns" get pod -o name)
+    test -n "$pods" && break
+    info "[${attempts}/60] Waiting for Lightspeed Pods to be created..."
+    sleep 0.5
+    attempts=$((attempts+1))
+  done
+  if test -z "$pods"
+  then
+    error "Observability Pods never started."
+    return 1
+  fi
+  for pod in $pods
+  do
+    info "Waiting 180 seconds for Lightspeed Pod '$pod' to become ready..."
+    &>/dev/null exec_oc_acm_hub wait -n "$ns" --for=condition=Ready --timeout=180s "$pod" && continue
+    error "Lightspeed Pod '$pod' failed to become ready."
+  done
 }
 
 build_and_push_test_app_images() {
@@ -351,10 +382,25 @@ deploy_test_apps_into_non_hub() {
 }
 
 patch_k8s_web_server_test_app_kustomization() {
-    >/dev/null render_kustomization_patches "$(cat <<-EOF || return 1
+  render_kustomization_patches "$(cat <<-EOF || return 1
 - file: ./apps/web-servers/k8s/kustomization.yaml
   variables:
     image: "$(cat "$(_get_file_from_shared_secret_dir "$(_aws_ecr_repository "example-apps/simple-web-server" "$EKS_CLUSTER_ENV_NAME")")"):latest"
+EOF
+)"
+}
+
+patch_lightspeed_config() {
+  config_data=$(_get_secret "lightspeed-config-$LLM_SERVICE") || return 1
+  render_kustomization_patches "$(cat <<-EOF || return 1
+- file: ./bootstrap/resources/lightspeed/kustomization.yaml
+  variables:
+  - key: '(defaultModel|models/0/name)'
+    value: "$(yq -r '.model' <<< "$config_data")"
+  - key: projectID
+    value: "$(yq -r '.projectID' <<< "$config_data")"
+  - key: location
+    value: "$(yq -r '.location' <<< "$config_data")"
 EOF
 )"
 }
@@ -379,12 +425,21 @@ create_rhmco_pull_secret
 create_lightspeed_secret_gcp_vertex
 wait_for_rhmco_ready
 wait_for_rhmco_ready_eks
+patches=$(patch_lightspeed_config)
+if test "$patches" -gt 1
+then
+  info "Lightspeed config patched. Please commit and push your changes, then run this step again"
+  return 0
+fi
+install_lightspeed
+wait_for_lightspeed_ready
 build_and_push_test_app_images
-patch_k8s_web_server_test_app_kustomization
+patches=$(patch_k8s_web_server_test_app_kustomization)
+if test "$patches" -gt 1
+then
+  info "Lightspeed config patched. Please commit and push your changes, then run this step again"
+  return 0
+fi
 deploy_test_apps_into_non_hub rosa
 deploy_test_apps_into_non_hub eks
 deploy_acm_mcp_server_into_acm_hub
-# install_lightspeed_operators
-# add_lightspeed_secrets
-# create_lightspeed_resources
-# wait_for_lightspeed_ready
