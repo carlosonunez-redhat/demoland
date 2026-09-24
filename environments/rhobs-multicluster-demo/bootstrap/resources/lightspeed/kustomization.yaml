@@ -16,7 +16,7 @@ patches:
         value: gcp-service-account.json
       - op: replace
         path: /spec/llm/providers/0/googleVertexAnthropicConfig/projectID
-        value: cloudability-it-gemini
+        value: itpc-gcp-global-revenue-claude
       - op: replace
         path: /spec/llm/providers/0/googleVertexAnthropicConfig/location
         value: us-central1
