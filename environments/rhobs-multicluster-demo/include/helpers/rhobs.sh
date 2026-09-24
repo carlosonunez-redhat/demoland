@@ -14,7 +14,7 @@ exec_oc_eks_cluster() {
 }
 
 exec_oc_rhobs_demo_cluster() {
-  exec_oc_external_demo_environment "$RHOBS_DEMO_CLUSTER_NAME" "$@"
+  exec_oc_external_demo_environment "$RHOBS_DEMO_CLUSTER_NAME" "$RHOBS_DEMO_CLUSTER_API_FQDN" "$@"
 }
 
 imported_cluster_joined() {

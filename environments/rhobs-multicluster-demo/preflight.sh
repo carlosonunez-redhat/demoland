@@ -20,7 +20,8 @@ verify_environment_variables_defined() {
            ROSA_CLUSTER_ENV_NAME \
            EKS_CLUSTER_ENV_NAME \
            RHOBS_DEMO_ENV_NAME \
-           RHOBS_DEMO_CLUSTER_NAME
+           RHOBS_DEMO_CLUSTER_NAME \
+           RHOBS_DEMO_CLUSTER_API_FQDN
   do
     if test -z "${!k}"
     then
