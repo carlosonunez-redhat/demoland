@@ -15,10 +15,10 @@ patches:
         path: /spec/llm/providers/0/credentialKey
         value: gcp-service-account.json
       - op: replace
-        path: /spec/llm/providers/0/googleVertexConfigAnthropic/projectID
+        path: /spec/llm/providers/0/googleVertexAnthropicConfig/projectID
         value: cloduability-it-gemini
       - op: replace
-        path: /spec/llm/providers/0/googleVertexConfigAnthropic/location
+        path: /spec/llm/providers/0/googleVertexAnthropicConfig/location
         value: us-central1
       - op: replace
         path: /spec/llm/providers/0/models/0/name
