@@ -17,6 +17,22 @@ exec_oc_rhobs_demo_cluster() {
   exec_oc_external_demo_environment "$RHOBS_DEMO_CLUSTER_NAME" "$RHOBS_DEMO_CLUSTER_API_FQDN" "$@"
 }
 
+exec_helm_acm_hub() {
+  exec_helm_by_environment_name "$ACM_HUB_ENV_NAME" "$@"
+}
+
+exec_helm_rosa_cluster() {
+  exec_helm_by_environment_name "$ROSA_CLUSTER_ENV_NAME" "$@"
+}
+
+exec_helm_eks_cluster() {
+  exec_helm_by_environment_name "$EKS_CLUSTER_ENV_NAME" "$@"
+}
+
+exec_helm_rhobs_demo_cluster() {
+  exec_helm_external_demo_environment "$RHOBS_DEMO_CLUSTER_NAME" "$RHOBS_DEMO_CLUSTER_API_FQDN" "$@"
+}
+
 imported_cluster_joined() {
   test "$(exec_oc_acm_hub get managedcluster "$1" -o yaml |
     yq -r '.status.conditions[] | select(.type == "ManagedClusterJoined") | .status' |

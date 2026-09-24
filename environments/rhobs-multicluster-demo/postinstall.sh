@@ -223,7 +223,7 @@ create_lightspeed_secret_gcp_vertex() {
     gcp_service_account_json "$(base64 -w 0 <<< "$gcp_service_account_json")"
   )
   secret_file="$(mktemp "/tmp/ls_XXXXXXXX")"
-  render_yaml_template lightspeed-secret-vertex "${values[@]}" > "$secret_file" || return 1
+  render_yaml_template lightspeed-secret-vertex "${values[@]}" | sed 's/null/""/g' > "$secret_file" || return 1
   exec_oc_acm_hub apply -f "$secret_file" || return 1
 }
 
@@ -401,6 +401,54 @@ patch_lightspeed_config() {
     location: "$(yq_strip_null -r '.location' <<< "$config_data")"
 EOF
 )"
+}
+
+# LOL.
+#
+# Me: Wait! Argo can deploy Helm apps! Let's add code to `include/helpers/gitops.sh` to make that
+# happen!
+#
+# _One hour later_
+#
+# Me: Helm apps via Argo are finally working! But, wait, the MCP server isn't starting. Am I missing
+# something?
+#
+# Me: The Secret created by this chart is empty. That's really odd...
+#
+# _15 minutes later_
+#
+# Me: This chart uses the `lookup` template to discover the ACM MultiClusterHub database. Can I
+# validate it locally with Helm?
+#
+# _5 minutes later_
+#
+# _Discovers https://github.com/argoproj/argo-cd/issues/5202_
+#
+# Me: WHY CAN'T ANYTHING EVER JUST BE EASY?!??!?
+#
+# ----
+#
+# Anyway, here's the code that you'll need to swap the below with once Argo gains
+# support for `lookup`:
+#
+#
+#
+#  setup_helm_into_base_environment "$ACM_HUB_ENV_NAME" \
+#    acm-mcp-server \
+#    "https://raw.githubusercontent.com/stolostron/search-mcp-server/main/charts" \
+#    '0.1.0' \
+#    main \
+#    acm-search
+deploy_acm_mcp_server_into_acm_hub() {
+  test -n "$(exec_helm_acm_hub ls -n openshift-mcp-servers -q)" && return 0
+
+  info "Installing the ACM MCP server"
+  test -z "$(exec_oc_acm_hub get ns openshift-mcp-servers -o name --ignore-not-found)"  &&
+    test -n "$(exec_oc_acm_hub create ns openshift-mcp-servers)"
+  exec_helm_acm_hub upgrade --install \
+    acm-mcp-server \
+    "https://raw.githubusercontent.com/stolostron/search-mcp-server/refs/heads/main/charts/acm-mcp-server-0.1.0.tgz" \
+    -n openshift-mcp-servers
 }
 
 
