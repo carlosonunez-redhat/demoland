@@ -453,8 +453,8 @@ environments:
                     name: ecr-repositories
                     data: '- example-apps/simple-web-server'
 sops:
-    lastmodified: "2026-09-23T23:06:33Z"
-    mac: ENC[AES256_GCM,data:GIFk0yvR4W/szgs2W3iZMncgECuIVz5hetd09lHJZfRfHU7TwWS/+AslRq6YN1aEKgL6fF/hJuVI/yCNM6xCr/PPtykqHqEOA1Pft32RPd5XAwktksWWhuE0Mo9UXS0iqfvNeExcw9DvCyFQwVIrGsDSA7pYqrx95HIUEz8eutk=,iv:3LzNrFU/W6kgp1jUaOIgUniFIzEgm29yjjD8cgyGvRY=,tag:aTSUQu9OvmWu8GUCKa4clw==,type:str]
+    lastmodified: "2026-09-24T03:47:34Z"
+    mac: ENC[AES256_GCM,data:uFs0UKiR5/hMCeNP2rJVJ1fsGJcEnQpOUlbu3/dCSWViwkNBpJ6ZYLG/G7FyjdXXs1wPTZpzou9JqG1OZNqonOAOifZH+BNJG4NKbZpR6LxoQm8G2cdTY8HUYP+VFmLQfGU3VYvPXTc4RftQ59KF+zmUetgj/KFckBlLKvJfCXk=,iv:mhqJ02j19Bu5brAu3FPRW7l1QyDZMotBmMVfHvrT/Ps=,tag:lFIwxlGByljXxJx4T0xCtQ==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
