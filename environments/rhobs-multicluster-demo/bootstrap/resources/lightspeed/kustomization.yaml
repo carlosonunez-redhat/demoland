@@ -1,5 +1,5 @@
 resources:
-  - ../../../../../components/openshift-lightspeed/resources/olsconfig/google_vertex_anthropic/
+  - ../../../../../components/openshift-lightspeed/resources/olsconfig/gcp_vertex_anthropic
 patches:
   - target:
       name: cluster
