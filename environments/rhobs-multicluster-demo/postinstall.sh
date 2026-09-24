@@ -59,7 +59,7 @@ generate_acm_pull_secret() {
 
   info "Creating pull secret for non-OpenShift clusters"
   exec_oc_acm_hub create secret -n advanced-cluster-management-mce generic rh-pull-secret \
-    --from-literal=.dockerconfigjson="$(_get_secret pull-secret | yq -o=j -I=0)" \
+    --from-literal=.dockerconfigjson="$(_get_secret pull-secret | yq_strip_null -o=j -I=0)" \
     --type=kubernetes.io/dockerconfigjson
 
 }
@@ -155,7 +155,7 @@ finish_importing_eks_cluster() {
 }
 
 patch_image_pull_secret() {
-  want=$(_get_secret pull-secret | yq -o=j -I=0)
+  want=$(_get_secret pull-secret | yq_strip_null -o=j -I=0)
   got=$(exec_oc_acm_hub get secret -n advanced-cluster-management image-pull-secret \
     --ignore-not-found \
     -o jsonpath='{.data.\.dockerconfigjson}')
@@ -164,7 +164,7 @@ patch_image_pull_secret() {
   info "Creating image pull secret for ACM"
   exec_oc_acm_hub create secret generic image-pull-secret \
     -n advanced-cluster-management \
-    --from-literal=.dockerconfigjson="$(_get_secret pull-secret | yq -o=j -I=0)" \
+    --from-literal=.dockerconfigjson="$(_get_secret pull-secret | yq_strip_null -o=j -I=0)" \
     --type=kubernetes.io/dockerconfigjson || true
 }
 
@@ -200,7 +200,7 @@ create_rhmco_pull_secret() {
 
   info "Creating Observability Endpoint pull secret"
   exec_oc_acm_hub create secret generic "$secret" -n "$ns"  \
-    --from-literal=.dockerconfigjson="$(_get_secret pull-secret | yq -o=j -I=0)" \
+    --from-literal=.dockerconfigjson="$(_get_secret pull-secret | yq_strip_null -o=j -I=0)" \
     --type=kubernetes.io/dockerconfigjson || true
 }
 
@@ -211,7 +211,7 @@ create_lightspeed_secret_gcp_vertex() {
     return 0
 
   gcp_service_account_json="$(_get_secret lightspeed-config-vertex |
-    yq -o=j -I=0 -r .data.credentials)"
+    yq_strip_null -o=j -I=0 -r .credentials)"
   if test -z "$gcp_service_account_json"
   then
     error "GCP Service Account not found in config"
@@ -395,12 +395,10 @@ patch_lightspeed_config() {
   render_kustomization_patches "$(cat <<-EOF || return 1
 - file: ./bootstrap/resources/lightspeed/kustomization.yaml
   variables:
-  - key: '(defaultModel|models/0/name)'
-    value: "$(yq -r '.model' <<< "$config_data")"
-  - key: projectID
-    value: "$(yq -r '.projectID' <<< "$config_data")"
-  - key: location
-    value: "$(yq -r '.location' <<< "$config_data")"
+    defaultModel: "$(yq_strip_null -r '.model' <<< "$config_data")"
+    'models/0/name': "$(yq_strip_null -r '.model' <<< "$config_data")"
+    projectID: "$(yq_strip_null -r '.projectID' <<< "$config_data")"
+    location: "$(yq_strip_null -r '.location' <<< "$config_data")"
 EOF
 )"
 }
@@ -426,19 +424,19 @@ create_lightspeed_secret_gcp_vertex
 wait_for_rhmco_ready
 wait_for_rhmco_ready_eks
 patches=$(patch_lightspeed_config)
-if test "$patches" -gt 1
+if test "$patches" -ge 1
 then
   info "Lightspeed config patched. Please commit and push your changes, then run this step again"
-  return 0
+  exit 0
 fi
 install_lightspeed
 wait_for_lightspeed_ready
 build_and_push_test_app_images
 patches=$(patch_k8s_web_server_test_app_kustomization)
-if test "$patches" -gt 1
+if test "$patches" -ge 1
 then
   info "Lightspeed config patched. Please commit and push your changes, then run this step again"
-  return 0
+  exit 0
 fi
 deploy_test_apps_into_non_hub rosa
 deploy_test_apps_into_non_hub eks

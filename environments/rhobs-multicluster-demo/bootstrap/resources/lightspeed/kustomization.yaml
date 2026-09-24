@@ -4,10 +4,10 @@ patches:
   - target:
       name: cluster
       kind: OLSConfig
-    patch: |-
+    patch: |
       - op: replace
         path: /spec/ols/defaultModel
-        value: replace
+        value: claude-opus-4.6
       - op: replace
         path: /spec/llm/providers/0/credentialsSecretRef/name
         value: gcp-credentials
@@ -16,13 +16,13 @@ patches:
         value: gcp-service-account.json
       - op: replace
         path: /spec/llm/providers/0/googleVertexConfig/projectID
-        value: replace
+        value: cloduability-it-gemini
       - op: replace
         path: /spec/llm/providers/0/googleVertexConfig/location
-        value: replace
+        value: us-central1
       - op: replace
         path: /spec/llm/providers/0/models/0/name
-        value: replace
+        value: claude-opus-4.6
       - op: add
         path: /spec/featureGates
         value:
@@ -36,5 +36,4 @@ patches:
                   type: kubernetes
             name: acm
             timeout: 30
-            url: 'http://acm-mcp-server.openshift-mcp-servers.svc.cluster.local/mcp'
-
+            url: http://acm-mcp-server.openshift-mcp-servers.svc.cluster.local/mcp
