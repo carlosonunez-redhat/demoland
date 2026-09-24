@@ -69,7 +69,7 @@ import_clusters_into_acm_hub_cluster() {
   do setup_gitops_into_base_environment "$ACM_HUB_ENV_NAME" \
     "bootstrap/resources/imported-clusters/$cluster" \
     "imported-cluster-$cluster"
-  done < <(find bootstrap/resources/imported-clusters -mindepth 1 -maxdepth 1 -type d -printf '%f\n')
+  done < <(find "$ENVIRONMENT_DIR/bootstrap/resources/imported-clusters" -mindepth 1 -maxdepth 1 -type d -printf '%f\n')
 }
 
 wait_for_imported_cluster_namespaces_available() {
@@ -94,7 +94,7 @@ wait_for_imported_cluster_namespaces_available() {
     test "$created" -eq 1 && continue
     error "Timed out waiting for '$cluster_name' namespace"
     return 1
-  done < <(find bootstrap/resources/imported-clusters -mindepth 1 -maxdepth 1 -type d -printf '%f\n')
+  done < <(find "$ENVIRONMENT_DIR/bootstrap/resources/imported-clusters" -mindepth 1 -maxdepth 1 -type d -printf '%f\n')
 }
 
 _generate_auto_import_secret() {
