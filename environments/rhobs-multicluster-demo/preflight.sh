@@ -16,7 +16,11 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 #
 # source "$ENVIRONMENT_INCLUDE_DIR/foo.sh"
 verify_environment_variables_defined() {
-  for k in ACM_HUB_ENV_NAME ROSA_CLUSTER_ENV_NAME EKS_CLUSTER_ENV_NAME
+  for k in ACM_HUB_ENV_NAME \
+           ROSA_CLUSTER_ENV_NAME \
+           EKS_CLUSTER_ENV_NAME \
+           RHOBS_DEMO_ENV_NAME \
+           RHOBS_DEMO_BASE_ENV_NAME
   do
     if test -z "${!k}"
     then

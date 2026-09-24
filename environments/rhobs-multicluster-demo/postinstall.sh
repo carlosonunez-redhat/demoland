@@ -65,7 +65,7 @@ generate_acm_pull_secret() {
 }
 import_clusters_into_acm_hub_cluster() {
   setup_gitops_into_base_environment "$ACM_HUB_ENV_NAME" bootstrap/resources/clustersets managed-cluster-sets
-  for cluster in eks rosa
+  for cluster in eks rosa rhobs-demo
   do
     k="${cluster^^}_CLUSTER_ENV_NAME"
     setup_gitops_into_base_environment "$ACM_HUB_ENV_NAME" bootstrap/resources/imported-clusters/$cluster "imported-cluster-$cluster"
@@ -97,13 +97,22 @@ wait_for_imported_cluster_namespaces_available() {
   done
 }
 
-generate_auto_import_secret_for_rosa_cluster() {
+_generate_auto_import_secret() {
+  local cluster_name kubeconfig
+  cluster_name="$1"
   imported_cluster_joined "$cluster_name" && return 0
 
-  cluster_name="imported-cluster-rosa"
   test -n "$(exec_oc_acm_hub -n "$cluster_name" get secret auto-import-secret -o name --ignore-not-found)" && return 0
-
-  kubeconfig=$(print_env_kubeconfig "${!k}") || return 1
+  if test -n "$2"
+  then
+    if test -z "$3"
+    then
+      error "Base environment needed for external demo env '$2'"
+      return 1
+    fi
+    kubeconfig=$(print_external_demo_env_kubeconfig "$2" "$3")
+  else kubeconfig=$(print_env_kubeconfig "${!k}") || return 1
+  fi
   values=(
     cluster_name "$cluster_name"
     cluster_kubeconfig_encoded "$(base64 -w 0 <<< "$kubeconfig")"
@@ -113,6 +122,14 @@ generate_auto_import_secret_for_rosa_cluster() {
   render_yaml_template cluster-importsecret "${values[@]}" > "$secret_file" || return 1
   exec_oc_acm_hub apply -f "$secret_file" || return 1
   rm -f "$secret_file"  || true
+}
+
+generate_auto_import_secret_for_rosa_cluster() {
+  _generate_auto_import_secret imported-cluster-rosa
+}
+
+generate_auto_import_secret_for_rhobs_demo_cluster() {
+  _generate_auto_import_secret imported-cluster-rhobs-demo
 }
 
 # Non-OpenShift clusters don't have registry.redhat.io pull secrets; as a result
@@ -349,6 +366,7 @@ generate_acm_pull_secret
 import_clusters_into_acm_hub_cluster
 wait_for_imported_cluster_namespaces_available
 generate_auto_import_secret_for_rosa_cluster
+generate_auto_import_secret_for_rhobs_demo_cluster
 patch_image_pull_secret
 finish_importing_eks_cluster
 install_rhmco

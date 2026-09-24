@@ -118,6 +118,8 @@ environments:
                 - ACM_HUB_ENV_NAME=ocp-aws-sno
                 - ROSA_CLUSTER_ENV_NAME=rosa-hcp
                 - EKS_CLUSTER_ENV_NAME=k8s-eks
+                - RHOBS_DEMO_ENV_NAME=rhobs-demo
+                - RHOBS_DEMO_BASE_ENV_NAME=ocp-aws-sno-rhobs
                 - LLM_SERVICE=claude
             secrets:
                 lightspeed_vertex:
@@ -453,8 +455,8 @@ environments:
                     name: ecr-repositories
                     data: '- example-apps/simple-web-server'
 sops:
-    lastmodified: "2026-09-24T03:47:34Z"
-    mac: ENC[AES256_GCM,data:uFs0UKiR5/hMCeNP2rJVJ1fsGJcEnQpOUlbu3/dCSWViwkNBpJ6ZYLG/G7FyjdXXs1wPTZpzou9JqG1OZNqonOAOifZH+BNJG4NKbZpR6LxoQm8G2cdTY8HUYP+VFmLQfGU3VYvPXTc4RftQ59KF+zmUetgj/KFckBlLKvJfCXk=,iv:mhqJ02j19Bu5brAu3FPRW7l1QyDZMotBmMVfHvrT/Ps=,tag:lFIwxlGByljXxJx4T0xCtQ==,type:str]
+    lastmodified: "2026-09-24T14:41:00Z"
+    mac: ENC[AES256_GCM,data:9eNTiWs0BpPOK3jyhjhI28bgt7FdtQgWZx5tZHwklmJ7G+Pzv0SWLS+kflkCYMrNZXYmqfvQw3AwMX6a+ayoPdAisp3VJP8HfFF1errgjYVcwWDQYXuTHsTjVjN9DRWmkVE9FwaCWRXyfCzYdlLE2dvxygSZ3wys0dPxf+HxLQs=,iv:eTcXcVSZzAASpd+jmO0cSrsOOiqabwzVyqrmRkwMZpU=,tag:9FfYYE3SBvFsyPqKmHRpjg==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
