@@ -1,0 +1,21 @@
+#@ load("@ytt:data", "data")
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: #@ data.values.chart_name
+  namespace: openshift-gitops
+spec:
+  project: default
+  source:
+    chart: #@ data.values.chart_name
+    repoURL: #@ data.values.repo_url
+    ref: #@ data.values.repo_branch
+    targetRevision: #@ data.values.target_rev
+    helm:
+      releaseName: #@ data.values.chart_name
+      #@ if data.values.value_file != ""
+      valueFiles:
+        - #@ data.values.value_file
+    destination:
+      name: in-cluster
+      namespace: #@ data.values.namespace

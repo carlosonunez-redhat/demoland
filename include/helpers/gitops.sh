@@ -49,9 +49,9 @@ _setup_gitops() {
   gitops_dir="${2:-gitops}"
   app_name="${3:-$environment_name}"
   exec_oc_fn="$4"
-  env_name="$5"
-  test -n "$env_name" && exec_oc_fn=exec_oc_by_environment_name
-  if ! _wait_for_gitops_ready "$exec_oc_fn" "$env_name"
+  base_env_name="$5"
+  test -n "$base_env_name" && exec_oc_fn=exec_oc_by_environment_name
+  if ! _wait_for_gitops_ready "$exec_oc_fn" "$base_env_name"
   then
     error "[gitops] Failed to become ready"
     return 1
@@ -69,13 +69,50 @@ _setup_gitops() {
   info "Setting up '$app_name' GitOps application (environment: $environment_name)"
   render_include_yaml_template repo_credentials_secret "${values[@]}"  > "$secrets_f" || return 1
     render_include_yaml_template gitops_application "${values[@]}" > "$app_f"  || return 1
-  if test -n "$env_name"
+  if test -n "$base_env_name"
   then
-    "$exec_oc_fn" "$env_name" apply -f "$secrets_f" &&
-    "$exec_oc_fn" "$env_name" apply -f "$app_f"
+    "$exec_oc_fn" "$base_env_name" apply -f "$secrets_f" &&
+    "$exec_oc_fn" "$base_env_name" apply -f "$app_f"
   else
     "$exec_oc_fn" apply -f "$secrets_f" &&
     "$exec_oc_fn" apply -f "$app_f"
+  fi
+}
+
+_setup_gitops_helm() {
+  local environment_name chart_name chart_url chart_branch chart_version values_file exec_oc_fn base_env_name
+  environment_name="$1"
+  if test -z "$environment_name"
+  then
+    error "GitOps environment name missing."
+    return 1
+  fi
+  chart_name="$2"
+  chart_url="$3"
+  chart_version="$4"
+  chart_branch="$5"
+  values_file="$6"
+  exec_oc_fn="$7"
+  base_env_name="$8"
+  test -n "$base_env_name" && exec_oc_fn=exec_oc_by_environment_name
+  if ! _wait_for_gitops_ready "$exec_oc_fn" "$env_name"
+  then
+    error "[gitops] Failed to become ready"
+    return 1
+  fi
+  values=(
+    chart_name "$chart_name"
+    repo_url "$chart_url"
+    repo_branch "$chart_branch"
+    target_rev "$chart_version"
+  )
+  test -n "$values_file" && values+=(values_file "$values_file")
+  app_f="/tmp/gitops_app_$(date +%s)"
+  info "Setting up '$chart_name' Helm application (environment: $environment_name)"
+    render_include_yaml_template helm_application "${values[@]}" > "$app_f"  || return 1
+  if test -n "$base_env_name"
+  then "$exec_oc_fn" "$base_env_name" apply -f "$app_f"
+  else "$exec_oc_fn" apply -f "$app_f"
   fi
 }
 
@@ -99,6 +136,21 @@ _configure_gitops_admins() {
     "$exec_oc_fn" adm groups add-users cluster-admins "$user"
   done
 }
+# setup_helm @ENVIRONMENT_NAME @CHART_NAME @CHART_URL @CHART_VERSION @CHART_BRANCH @VALUES_FILE
+#
+# Creates an ArgoCD Helm Application for an environment. Add values files to the end;
+# as many as you need to configure the chart.
+setup_helm() {
+  _setup_gitops_helm "$1" "$2" "$3" "$4" "$5" "$6" 'exec_oc'
+}
+
+# setup_helm_into_base_environment @BASE_ENVIRONMENT_NAME @CHART_NAME @CHART_URL @CHART_VERSION @CHART_BRANCH @VALUES_FILE
+#
+# Same as `setup_helm` but allows the base environment to be selected.
+setup_helm_into_base_environment() {
+  _setup_gitops_helm "$(_get_top_level_environment_name)" "$2" "$3" "$4" "$5" "$6" 'exec_oc_by_environment_name' "$1"
+}
+
 # setup_gitops @ENVIRONMENT_NAME @GITOPS_FOLDER @APP_NAME:
 #
 # Creates an ArgoCD Application for an environment assuming
