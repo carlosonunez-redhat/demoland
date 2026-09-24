@@ -80,7 +80,21 @@ _setup_gitops() {
 }
 
 _setup_gitops_helm() {
-  local environment_name chart_name chart_url chart_branch chart_version values_file exec_oc_fn base_env_name
+  # I couldn't get 'CreateNamespace=true' to work in the Application manifest.
+  # Every time I added it, Argo (or something) would remove it.
+  # I couldn't easily find anyone who asked about this on the web, but
+  # I _could_ hack my way into a solution!
+  _create_namespace_if_missing() {
+    test -n "$("$1" get ns "$2" -o name --ignore-not-found)" && return 0
+    info "[gitops] Creating namespace '$2'"
+    "$1" create ns "$2"
+  }
+  _create_namespace_if_missing_with_base_env() {
+    test -n "$("$1" "$2" get ns "$3" -o name --ignore-not-found)" && return 0
+    info "[gitops] Creating namespace '$3'"
+    "$1" "$2" create ns "$3"
+  }
+  local environment_name chart_name chart_url chart_branch chart_version values_file exec_oc_fn base_env_name namespace
   environment_name="$1"
   if test -z "$environment_name"
   then
@@ -91,11 +105,12 @@ _setup_gitops_helm() {
   chart_url="$3"
   chart_version="$4"
   chart_branch="$5"
-  values_file="$6"
-  exec_oc_fn="$7"
-  base_env_name="$8"
+  namespace="$6"
+  values_file="$7"
+  exec_oc_fn="$8"
+  base_env_name="$9"
   test -n "$base_env_name" && exec_oc_fn=exec_oc_by_environment_name
-  if ! _wait_for_gitops_ready "$exec_oc_fn" "$env_name"
+  if ! _wait_for_gitops_ready "$exec_oc_fn" "$base_env_name"
   then
     error "[gitops] Failed to become ready"
     return 1
@@ -105,14 +120,19 @@ _setup_gitops_helm() {
     repo_url "$chart_url"
     repo_branch "$chart_branch"
     target_rev "$chart_version"
+    namespace "$namespace"
   )
   test -n "$values_file" && values+=(values_file "$values_file")
   app_f="/tmp/gitops_app_$(date +%s)"
   info "Setting up '$chart_name' Helm application (environment: $environment_name)"
     render_include_yaml_template helm_application "${values[@]}" > "$app_f"  || return 1
   if test -n "$base_env_name"
-  then "$exec_oc_fn" "$base_env_name" apply -f "$app_f"
-  else "$exec_oc_fn" apply -f "$app_f"
+  then
+    _create_namespace_if_missing_with_base_env "$exec_oc_fn" "$base_env_name" "$namespace" &&
+      "$exec_oc_fn" "$base_env_name" apply -f "$app_f"
+  else
+    _create_namespace_if_missing "$exec_oc_fn" "$namespace" &&
+      "$exec_oc_fn" apply -f "$app_f"
   fi
 }
 
@@ -136,19 +156,19 @@ _configure_gitops_admins() {
     "$exec_oc_fn" adm groups add-users cluster-admins "$user"
   done
 }
-# setup_helm @ENVIRONMENT_NAME @CHART_NAME @CHART_URL @CHART_VERSION @CHART_BRANCH @VALUES_FILE
+# setup_helm @ENVIRONMENT_NAME @CHART_NAME @CHART_URL @CHART_VERSION @CHART_BRANCH @NAMESPACE @VALUES_FILE
 #
 # Creates an ArgoCD Helm Application for an environment. Add values files to the end;
 # as many as you need to configure the chart.
 setup_helm() {
-  _setup_gitops_helm "$1" "$2" "$3" "$4" "$5" "$6" 'exec_oc'
+  _setup_gitops_helm "$1" "$2" "$3" "$4" "$5" "$6" "$7" 'exec_oc'
 }
 
-# setup_helm_into_base_environment @BASE_ENVIRONMENT_NAME @CHART_NAME @CHART_URL @CHART_VERSION @CHART_BRANCH @VALUES_FILE
+# setup_helm_into_base_environment @BASE_ENVIRONMENT_NAME @CHART_NAME @CHART_URL @CHART_VERSION @CHART_BRANCH @NAMESPACE @VALUES_FILE
 #
 # Same as `setup_helm` but allows the base environment to be selected.
 setup_helm_into_base_environment() {
-  _setup_gitops_helm "$(_get_top_level_environment_name)" "$2" "$3" "$4" "$5" "$6" 'exec_oc_by_environment_name' "$1"
+  _setup_gitops_helm "$(_get_top_level_environment_name)" "$2" "$3" "$4" "$5" "$6" "$7" 'exec_oc_by_environment_name' "$1"
 }
 
 # setup_gitops @ENVIRONMENT_NAME @GITOPS_FOLDER @APP_NAME:

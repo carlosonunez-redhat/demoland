@@ -37,8 +37,19 @@ _oc_cmd() {
   echo "${cmd[@]}"
 }
 
+_helm_cmd() {
+  local helm_bin
+  helm_bin="${HELM_BIN:-/usr/sbin/helm}"
+  cmd=("$helm_bin" --kubeconfig "$1" "${@:2}")
+  echo "${cmd[@]}"
+}
+
 _exec_oc() {
   command -- $(_oc_cmd "$1" "${@:2}")
+}
+
+_exec_helm() {
+  command -- $(_helm_cmd "$1" "${@:2}")
 }
 
 _retrieve_env_kubeconfig() {
@@ -103,6 +114,18 @@ exec_oc_by_environment_name() {
 
 exec_oc_external_demo_environment() {
   _exec_oc "$(_retrieve_external_env_kubeconfig "$1" "$2")" "${@:3}"
+}
+
+exec_helm() {
+  _exec_helm "$(_retrieve_env_kubeconfig)" "$@"
+}
+
+exec_helm_by_environment_name() {
+  _exec_helm "$(_retrieve_env_kubeconfig "$1")" "${@:2}"
+}
+
+exec_helm_external_demo_environment() {
+  _exec_helm "$(_retrieve_external_env_kubeconfig "$1" "$2")" "${@:3}"
 }
 
 exec_oc_postinstall() {

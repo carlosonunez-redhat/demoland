@@ -6,6 +6,11 @@ metadata:
   namespace: openshift-gitops
 spec:
   project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: #@ data.values.namespace
+  syncPolicy:
+    automated: {}
   source:
     chart: #@ data.values.chart_name
     repoURL: #@ data.values.repo_url
@@ -13,9 +18,7 @@ spec:
     targetRevision: #@ data.values.target_rev
     helm:
       releaseName: #@ data.values.chart_name
-      #@ if data.values.value_file != ""
+      #@ if hasattr(data.values, 'value_file') and data.values.value_file != "":
       valueFiles:
         - #@ data.values.value_file
-    destination:
-      name: in-cluster
-      namespace: #@ data.values.namespace
+      #@ end
