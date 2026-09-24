@@ -127,9 +127,9 @@ environments:
                     data:
                         name: google-vertex
                         location: us-central1
-                        model: gemini-3.6-flash
+                        model: claude-opus-4-6
                         # encrypted
-                        projectID: ENC[AES256_GCM,data:qRRgvWKlu5UreROnzuQWpXtNjRnB5w==,iv:/fuGysMMZOibRI17QmOWtXfVGSXkVadSFr0a91wZX7E=,tag:xnetyd4ctySU88H8NkSdDw==,type:str]
+                        projectID: ENC[AES256_GCM,data:x2j8pu/cuAgxWgJgl9Am4vAGeOAerQ==,iv:ZcxCbgxpBNEmPeRtIwWZmU0crgE8/ra4cmhhKlX58vw=,tag:Ln+IL32a8O9+3ISHoEQM4g==,type:str]
                         # encrypted
                         credentials:
                             account: ""
@@ -451,8 +451,8 @@ environments:
                     name: ecr-repositories
                     data: '- example-apps/simple-web-server'
 sops:
-    lastmodified: "2026-09-24T22:43:57Z"
-    mac: ENC[AES256_GCM,data:CifkutNiThHfCPfghb0vb+UzGD8/hgHejIVY7F86avrtnALFLDkvQyMW9qXX0hOnuHymLG9ELuZ3QLv/u1Bk9W34k+Zq0GXwe1z0Ojyl0vjFOhgZDyZGNgl7nbrJ0rBpq7HkEPqY/hpZYEwO8/142rOgmJH8fQwU4eUuu9IMq2s=,iv:r7tRy+mvcsLBPyOCMSDMtPEfiCMIvc7XhVIfK2v7nb4=,tag:I5m+LUMHnbF6heNHe+DUHQ==,type:str]
+    lastmodified: "2026-09-24T22:49:28Z"
+    mac: ENC[AES256_GCM,data:cbTvYhObBrPQ+zXQlmmS/xJbGuJawCbvr+ljRufMd4lUfaz8OHcIa6sr75WxfZTOfiUZZhug8kiTKo+vjVvqfE3wFP+5zpS+oeXCQp461eJANvWxNSm9qWeNhXBd8yH4w1sjGNaVyKR/H7RRWFEQQ6TEvUEyaQ4ZTS7yoSeYeVI=,iv:6G3fDkiEFy50/f6tQnq5L+6jKZwp8UYYszmjqM/nNp4=,tag:5YelH+zG6PA9HRCWqFysfA==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
