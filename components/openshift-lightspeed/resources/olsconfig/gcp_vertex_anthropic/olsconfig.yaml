@@ -8,10 +8,13 @@ spec:
     # https://docs.redhat.com/en/documentation/red_hat_openshift_lightspeed/1.0/html/configure/ols-configuring-openshift-lightspeed#ols-creating-lightspeed-custom-resource-file-using-web-console_ols-configuring-openshift-lightspeed
     providers:
       - name: default
-        type: openai
+        type: google_vertex_anthropic
         credentialsSecretRef:
           name: credentials
-        url: https://api.openai.com/v1
+        credentialKey: replace-me
+        googleVertexConfig:
+          projectID: replace-me
+          location: replace-me
         models:
           - name: replace-me
   ols:
