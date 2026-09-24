@@ -89,11 +89,11 @@ exec_oc() {
 }
 
 exec_oc_by_environment_name() {
-  _exec_oc "$(_retrieve_env_kubeconfig "$1")" "$@"
+  _exec_oc "$(_retrieve_env_kubeconfig "$1")" "${@:2}"
 }
 
 exec_oc_external_demo_environment() {
-  _exec_oc "$(_retrieve_external_env_kubeconfig "$1")" "$@"
+  _exec_oc "$(_retrieve_external_env_kubeconfig "$1")" "${@:2}"
 }
 
 exec_oc_postinstall() {
@@ -135,12 +135,12 @@ cluster_fqdn() {
 
 # print_env_kubeconfig: Retrieves and prints a kubeconfig for a base or demo environment.
 print_env_kubeconfig() {
-  kp=$(retrieve_env_kubeconfig "$1") || return 1
+  kp=$(_retrieve_env_kubeconfig "$1") || return 1
   cat "$kp"
 }
 
 # print_external_demo_env_kubeconfig: Like `print_env_kubeconfig`, but for external demo denvs.
 print_external_demo_env_kubeconfig() {
-  kp=$(retrieve_external_env_kubeconfig "$1") || return 1
+  kp=$(_retrieve_external_env_kubeconfig "$1") || return 1
   cat "$kp"
 }
