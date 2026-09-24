@@ -17,7 +17,7 @@ clean:
   just_processes=$(ps -ef | grep just | grep -v grep | wc -l); \
   test "$just_processes" -gt 1 && exit 0; \
   just _log info "Cleaning up temp files."; \
-  rm -rf /tmp/*demoland_temp*;
+  rm -rf /tmp/demoland_temp*;
 
 
 [doc("Creates a new environment")]
@@ -330,13 +330,14 @@ _delete_env_from_config environment:
 _print_container_vol_name_for_environment environment vol_name:
   set +u; \
   sentinel_f=$(just _sentinel_file '{{ vol_name }}'); \
-  if test -f "$sentinel_f" ; \
+  if test -f "$sentinel_f"; \
   then \
     cat "$sentinel_f"; \
     exit 0; \
   fi; \
   set -u; \
   env=$(echo "{{ environment }}" | \
+        md5sum | awk '{print $1}' | \
         base64 -w 0 | \
         tr -d '=' | \
         head -c 8); \
