@@ -12,7 +12,7 @@ spec:
         credentialsSecretRef:
           name: credentials
         credentialKey: replace-me
-        googleVertexConfig:
+        googleVertexConfigAnthropic:
           projectID: replace-me
           location: replace-me
         models:
