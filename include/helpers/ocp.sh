@@ -66,6 +66,9 @@ list_env_kubeconfigs() {
   find "/environment_info/kubeconfigs/$(_get_top_level_environment_name)" -mindepth 1 -type f | sort -u
 }
 
+list_external_kubeconfigs() {
+  find "/environment_info/kubeconfigs/$1" -mindepth 1 -type f | sort -u
+}
 exec_oc() {
   _exec_oc "$(_retrieve_env_kubeconfig)" "$@"
 }
@@ -79,6 +82,20 @@ exec_oc_by_environment_name() {
     return 1
   fi
   _exec_oc "$(_retrieve_env_kubeconfig "$env_name")" "$@"
+}
+
+exec_oc_external_demo_environment() {
+  demo_environment="$1"
+  shift
+  env_name="$1"
+  shift
+  kc=$(cat "/environment_info/kubeconfigs/$demo_environment/$env_name")
+  if ! test -f "$kc"
+  then
+    error "External demo environment '$demo_environment' doesn't have a Kubeconfig for base environment '$env_name'"
+    return 1
+  fi
+  _exec_oc "$kc" "$@"
 }
 
 exec_oc_postinstall() {
@@ -126,5 +143,16 @@ retrieve_env_kubeconfig() {
 # print_env_kubeconfig: Retrieves and prints a kubeconfig for a base or demo environment.
 print_env_kubeconfig() {
   kp=$(retrieve_env_kubeconfig "$1") || return 1
+  cat "$kp"
+}
+
+# print_external_demo_env_kubeconfig: Like `print_env_kubeconfig`, but for external demo denvs.
+print_external_demo_env_kubeconfig() {
+  kp="/environment_info/kubeconfigs/$1/$2"
+  if ! test -f "$kp"
+  then
+    error "Kubeconfig not found for external env '$1' and base env '$2'"
+    return 1
+  fi
   cat "$kp"
 }
