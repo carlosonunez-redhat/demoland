@@ -7,7 +7,7 @@ patches:
     patch: |
       - op: replace
         path: /spec/ols/defaultModel
-        value: claude-opus-4.6
+        value: claude-opus-4-6
       - op: replace
         path: /spec/llm/providers/0/credentialsSecretRef/name
         value: gcp-credentials
@@ -22,7 +22,7 @@ patches:
         value: us-central1
       - op: replace
         path: /spec/llm/providers/0/models/0/name
-        value: claude-opus-4.6
+        value: claude-opus-4-6
       - op: add
         path: /spec/featureGates
         value:

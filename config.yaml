@@ -127,7 +127,7 @@ environments:
                     data:
                         name: google-vertex
                         location: us-central1
-                        model: claude-opus-4.6
+                        model: claude-opus-4-6
                         # encrypted
                         projectID: ENC[AES256_GCM,data:qRRgvWKlu5UreROnzuQWpXtNjRnB5w==,iv:/fuGysMMZOibRI17QmOWtXfVGSXkVadSFr0a91wZX7E=,tag:xnetyd4ctySU88H8NkSdDw==,type:str]
                         # encrypted
@@ -451,8 +451,8 @@ environments:
                     name: ecr-repositories
                     data: '- example-apps/simple-web-server'
 sops:
-    lastmodified: "2026-09-24T17:52:21Z"
-    mac: ENC[AES256_GCM,data:gw+aSdAS9CbPnYqbCxxgOy3w/L0kDvHyg8VHwm4PlGgxTInfW+RSXdwyu2LDs8+uyBDWsoLIG6ty+SEkZCFgJFAsT4o+F9TgA/BTruPfAdMfUEqMdQiFSmALMheWe1lHXYW1oKKHEvUF/AL6ZVhmYlQIIEu5NlANyz6LR6gu3RM=,iv:fns+JtKnGsYFis1q7ZEZxI6fbrhVy6EB+6uo91tMXWE=,tag:IBHeOsKvDghAtChze9HhPw==,type:str]
+    lastmodified: "2026-09-24T22:33:46Z"
+    mac: ENC[AES256_GCM,data:86wWLWUcn3LbgBvPH4+euLGYL1byNGn7QeQ0r0hwKyrdI4iUbU4/QjVWgXnhbQQeUcmldumLH/J/pwzknEI90AzztDy1vzt4e4LPqHZx+EwFvAmxLwbZoraonfcRP2PDJGdELNFbg1Ajv664RGF7KD+AIgqSh3PCqxNqFW4qH2E=,iv:Y2Yu93bW5OZ+2ZqrjbQ/zQtaRJq+a9vqdMKQjfeA/9I=,tag:A8vFq8SCzEx9LW3/On8MqQ==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
