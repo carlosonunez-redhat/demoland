@@ -7,17 +7,17 @@ patches:
     patch: |-
       - op: replace
         path: /metadata/name
-        value: imported-cluster-rhobs-demo
+        value: imported-cluster-rhobsdemo
   - target:
       kind: ManagedCluster
       name: replace-me
     patch: |-
       - op: replace
         path: /metadata/name
-        value: imported-cluster-rhobs-demo
+        value: imported-cluster-rhobsdemo
       - op: replace
         path: /metadata/labels/name
-        value: imported-cluster-rhobs-demo
+        value: imported-cluster-rhobsdemo
       - op: replace
         path: /metadata/labels/cluster.open-cluster-management.io~1clusterset
         value: imported-clusters
@@ -27,7 +27,7 @@ patches:
     patch: |-
       - op: replace
         path: /metadata/name
-        value: imported-cluster-rhobs-demo
+        value: imported-cluster-rhobsdemo
       - op: replace
         path: /metadata/namespace
-        value: imported-cluster-rhobs-demo
+        value: imported-cluster-rhobsdemo

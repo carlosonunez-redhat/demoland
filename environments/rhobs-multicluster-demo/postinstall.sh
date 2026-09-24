@@ -65,17 +65,17 @@ generate_acm_pull_secret() {
 }
 import_clusters_into_acm_hub_cluster() {
   setup_gitops_into_base_environment "$ACM_HUB_ENV_NAME" bootstrap/resources/clustersets managed-cluster-sets
-  for cluster in eks rosa rhobs-demo
-  do
-    k="${cluster^^}_CLUSTER_ENV_NAME"
-    setup_gitops_into_base_environment "$ACM_HUB_ENV_NAME" bootstrap/resources/imported-clusters/$cluster "imported-cluster-$cluster"
-  done
+  while read -r cluster
+  do setup_gitops_into_base_environment "$ACM_HUB_ENV_NAME" \
+    "bootstrap/resources/imported-clusters/$cluster" \
+    "imported-cluster-$cluster"
+  done < <(find bootstrap/resources/imported-clusters -mindepth 1 -maxdepth 1 -type d -printf '%f\n')
 }
 
 wait_for_imported_cluster_namespaces_available() {
   attempts=0
   max_attempts=60
-  for cluster in eks rosa
+  while read -r cluster
   do
     cluster_name="imported-cluster-$cluster"
     created=0
@@ -94,7 +94,7 @@ wait_for_imported_cluster_namespaces_available() {
     test "$created" -eq 1 && continue
     error "Timed out waiting for '$cluster_name' namespace"
     return 1
-  done
+  done < <(find bootstrap/resources/imported-clusters -mindepth 1 -maxdepth 1 -type d -printf '%f\n')
 }
 
 _generate_auto_import_secret() {
@@ -103,15 +103,9 @@ _generate_auto_import_secret() {
   imported_cluster_joined "$cluster_name" && return 0
 
   test -n "$(exec_oc_acm_hub -n "$cluster_name" get secret auto-import-secret -o name --ignore-not-found)" && return 0
-  if test -n "$2"
-  then
-    if test -z "$3"
-    then
-      error "Base environment needed for external demo env '$2'"
-      return 1
-    fi
-    kubeconfig=$(print_external_demo_env_kubeconfig "$2" "$3")
-  else kubeconfig=$(print_env_kubeconfig "${!k}") || return 1
+  if test "$2" == external
+  then kubeconfig=$(print_external_demo_env_kubeconfig "${cluster_name//imported-cluster-/}")
+  else kubeconfig=$(print_env_kubeconfig "${cluster_name//imported-cluster-/}") || return 1
   fi
   values=(
     cluster_name "$cluster_name"
@@ -124,12 +118,16 @@ _generate_auto_import_secret() {
   rm -f "$secret_file"  || true
 }
 
+_generate_auto_import_secret_external_demo_environment() {
+  _generate_auto_import_secret "$1" external
+}
+
 generate_auto_import_secret_for_rosa_cluster() {
   _generate_auto_import_secret imported-cluster-rosa
 }
 
 generate_auto_import_secret_for_rhobs_demo_cluster() {
-  _generate_auto_import_secret imported-cluster-rhobs-demo
+  _generate_auto_import_secret_external_demo_environment imported-cluster-rhobsdemo
 }
 
 # Non-OpenShift clusters don't have registry.redhat.io pull secrets; as a result
