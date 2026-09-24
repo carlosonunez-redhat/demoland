@@ -14,12 +14,11 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 # If this environment has includes of its own, use the $ENVIRONMENT_INCLUDE_DIR environment
 # variable, like shown in the comment below.
 #
-# source "$ENVIRONMENT_INCLUDE_DIR/foo.sh"
+source "$ENVIRONMENT_INCLUDE_DIR/helpers/rhobs.sh"
 verify_environment_variables_defined() {
   for k in ACM_HUB_ENV_NAME \
            ROSA_CLUSTER_ENV_NAME \
            EKS_CLUSTER_ENV_NAME \
-           RHOBS_DEMO_ENV_NAME \
            RHOBS_DEMO_CLUSTER_NAME \
            RHOBS_DEMO_CLUSTER_API_FQDN
   do
@@ -40,5 +39,16 @@ confirm_secrets_present() {
   done
 }
 
+confirm_rhobs_demo_env_deployed() {
+  if ! &>/dev/null exec_oc_rhobs_demo_cluster get nodes
+  then
+    error "Single cluster Observability demo environment '$RHOBS_DEMO_CLUSTER_NAME' not up at \
+'$RHOBS_DEMO_CLUSTER_API_FQDN'. Run 'just deploy rhobs-demo' before deploying this demo."
+    return 1
+  fi
+}
+
+set -e
 verify_environment_variables_defined
 confirm_secrets_present
+confirm_rhobs_demo_env_deployed
