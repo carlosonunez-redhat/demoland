@@ -42,24 +42,38 @@ _exec_oc() {
 }
 
 _retrieve_env_kubeconfig() {
-  kubeconfigs=$(list_env_kubeconfigs)
-  test -n "$1" && kubeconfigs=$(echo "$kubeconfigs" | grep -E "/${1}\$")
+  if test "${2,,}" == external
+  then kubeconfigs=$(list_external_kubeconfigs "$1")
+  else
+    kubeconfigs=$(list_env_kubeconfigs)
+    test -n "$1" && kubeconfigs=$(echo "$kubeconfigs" | grep -E "/${1}\$")
+  fi
   num_kubeconfigs=$(wc -l <<< "$kubeconfigs")
   if test "$num_kubeconfigs" -eq 0
   then
     errmsg="No kubeconfigs found for environment '$(_get_top_level_environment_name)'"
     test -n "$1" && errmsg="$errmsg (base env requested: $1)"
+    test "${2,,}" == external && errmsg="$errmsg (external demo env: $2)"
     error "$errmsg"
     return 1
   fi
   chosen_kubeconfig=$(head -1 <<< "$kubeconfigs")
   if test "$num_kubeconfigs" -gt 1
   then
-    warning "Multiple kubeconfigs written for environment $(_get_top_level_environment_name); \
+    if test "${2,,}" == external
+    then warnmsg="Multiple kubeconfigs match external demo environment '$1'; \
+choosing '$(basename "$chosen_kubeconfig")'"
+    else warnmsg="Multiple kubeconfigs written for environment $(_get_top_level_environment_name); \
 choosing '$(basename "$chosen_kubeconfig")' (use 'exec_oc_by_environment_name' to select \
 an environment)"
+    fi
+    warn "$warnmsg"
   fi
   cat "$chosen_kubeconfig"
+}
+
+_retrieve_external_env_kubeconfig() {
+  _retrieve_env_kubeconfig "$1" external
 }
 
 list_env_kubeconfigs() {
@@ -67,35 +81,19 @@ list_env_kubeconfigs() {
 }
 
 list_external_kubeconfigs() {
-  find "/environment_info/kubeconfigs/$1" -mindepth 1 -type f | sort -u
+  grep -Elr "cluster: $1\$" /shared/secrets/kubeconfigs | sort -u
 }
+
 exec_oc() {
   _exec_oc "$(_retrieve_env_kubeconfig)" "$@"
 }
 
 exec_oc_by_environment_name() {
-  env_name="$1"
-  shift
-  if ! list_env_kubeconfigs | grep -q "$env_name"
-  then
-    error "Demo environment '$(_get_top_level_environment_name)' doesn't have a Kubeconfig for base environment '$env_name'"
-    return 1
-  fi
-  _exec_oc "$(_retrieve_env_kubeconfig "$env_name")" "$@"
+  _exec_oc "$(_retrieve_env_kubeconfig "$1")" "$@"
 }
 
 exec_oc_external_demo_environment() {
-  demo_environment="$1"
-  shift
-  env_name="$1"
-  shift
-  kc=$(cat "/environment_info/kubeconfigs/$demo_environment/$env_name")
-  if ! test -f "$kc"
-  then
-    error "External demo environment '$demo_environment' doesn't have a Kubeconfig for base environment '$env_name'"
-    return 1
-  fi
-  _exec_oc "$kc" "$@"
+  _exec_oc "$(_retrieve_external_env_kubeconfig "$1")" "$@"
 }
 
 exec_oc_postinstall() {
@@ -135,11 +133,6 @@ cluster_fqdn() {
     sed -E 's/^console-openshift-console.//'
 }
 
-# retrieve_env_kubeconfig: Retrieves a kubeconfig for a base or demo environment.
-retrieve_env_kubeconfig() {
-  _retrieve_env_kubeconfig "$1"
-}
-
 # print_env_kubeconfig: Retrieves and prints a kubeconfig for a base or demo environment.
 print_env_kubeconfig() {
   kp=$(retrieve_env_kubeconfig "$1") || return 1
@@ -148,11 +141,6 @@ print_env_kubeconfig() {
 
 # print_external_demo_env_kubeconfig: Like `print_env_kubeconfig`, but for external demo denvs.
 print_external_demo_env_kubeconfig() {
-  kp="/environment_info/kubeconfigs/$1/$2"
-  if ! test -f "$kp"
-  then
-    error "Kubeconfig not found for external env '$1' and base env '$2'"
-    return 1
-  fi
+  kp=$(retrieve_external_env_kubeconfig "$1") || return 1
   cat "$kp"
 }
