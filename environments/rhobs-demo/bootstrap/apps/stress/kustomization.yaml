@@ -17,3 +17,5 @@ patches:
           - "8"
           - --vm
           - "4"
+          - --temp-path
+          - /tmp
