@@ -9,13 +9,3 @@ patches:
       - op: replace
         path: /metadata/name
         value: open-cluster-management-observability
-  - target:
-      kind: MultiClusterObservability
-      name: observability
-    patch: |-
-      - op: add
-        path: /spec/capabilities
-        value:
-          platform:
-            ui:
-              enabled: true
