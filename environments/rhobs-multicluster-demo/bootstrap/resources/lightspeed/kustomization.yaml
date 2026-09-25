@@ -8,6 +8,9 @@ patches:
       - op: replace
         path: /spec/ols/defaultModel
         value: claude-opus-4-6
+      - op: add
+        path: /spec/ols/maxIterations
+        value: 1000
       - op: replace
         path: /spec/llm/providers/0/credentialsSecretRef/name
         value: gcp-credentials
