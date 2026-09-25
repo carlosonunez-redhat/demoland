@@ -383,16 +383,6 @@ deploy_test_apps_into_non_hub() {
   "$cmd" apply -k "$ENVIRONMENT_DIR/bootstrap/apps"
 }
 
-patch_k8s_web_server_test_app_kustomization() {
-    arch=$(exec_oc_eks_cluster get node -o jsonpath='{.items[0].status.nodeInfo.architecture}')
-  render_kustomization_patches "$(cat <<-EOF || return 1
-- file: ./apps/web-servers/k8s/kustomization.yaml
-  variables:
-    image: "$(cat "$(_get_file_from_shared_secret_dir "$(_aws_ecr_repository "example-apps/simple-web-server" "$EKS_CLUSTER_ENV_NAME")")"):latest-$arch"
-EOF
-)"
-}
-
 patch_lightspeed_config() {
   config_data=$(_get_secret "lightspeed-config-$LLM_SERVICE") || return 1
   render_kustomization_patches "$(cat <<-EOF || return 1
@@ -474,12 +464,6 @@ create_rhmco_pull_secret
 create_lightspeed_secret_gcp_vertex
 wait_for_rhmco_ready
 wait_for_rhmco_ready_eks
-patches=$(patch_k8s_web_server_test_app_kustomization)
-if test "$patches" -ge 1
-then
-  info "Web server app configuration updated. Please commit and push your changes, then run this step again"
-  exit 0
-fi
 patches=$(patch_lightspeed_config)
 if test "$patches" -ge 1
 then
