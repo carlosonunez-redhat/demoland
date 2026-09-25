@@ -27,3 +27,13 @@ patches:
         path: /spec/featureGates
         value:
           - MCPServer
+      - op: add
+        path: /spec/mcpServers
+        value:
+          - headers:
+              - name: Authorization
+                valueFrom:
+                  type: kubernetes
+            name: acm
+            timeout: 30
+            url: http://acm-mcp-server.openshift-mcp-servers.svc.cluster.local/mcp

@@ -200,6 +200,12 @@ EOF
 )"
 }
 
+install_cluster_health_analyzer_mcp_server() {
+  for m in 01_service_account 02_deployment 03_mcp_service
+  do exec_oc apply -f "https://raw.githubusercontent.com/openshift/cluster-health-analyzer/refs/heads/mcp-dev-preview/manifests/mcp/${m}.yaml"
+  done
+}
+
 set -e
 create_rhobs_s3_bucket
 default_sc="$(exec_oc get sc -o yaml |
@@ -244,3 +250,4 @@ then
   exit 0
 fi
 wait_for_lightspeed_ready
+install_cluster_health_analyzer_mcp_server

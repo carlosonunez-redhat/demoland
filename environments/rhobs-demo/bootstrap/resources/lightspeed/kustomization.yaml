@@ -34,6 +34,6 @@ patches:
               - name: Authorization
                 valueFrom:
                   type: kubernetes
-            name: acm
+            name: cluster-health
             timeout: 30
-            url: http://acm-mcp-server.openshift-mcp-servers.svc.cluster.local/mcp
+            url: http://cluster-health-mcp-server.openshift-cluster-observability-operator.svc.cluster.local:8085/mcp
