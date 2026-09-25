@@ -21,6 +21,6 @@ patches:
         path: /spec/template/spec/containers/0/command
         value:
           - --cpu
-          - 8
+          - "8"
           - --vm
-          - 4
+          - "4"
