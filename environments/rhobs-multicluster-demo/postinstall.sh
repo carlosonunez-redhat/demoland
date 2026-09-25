@@ -314,6 +314,8 @@ wait_for_lightspeed_ready() {
   done
 }
 
+# I landed up not deploying the web server since it SIGSEV's whenever the amd64
+# variant is built. Keeping the code in to possibly use in the future.
 build_and_push_test_app_images() {
   _ecr_repo() {
     cat "$(_get_file_from_shared_secret_dir "$(_aws_ecr_repository "example-apps/$1" "$EKS_CLUSTER_ENV_NAME")")"
@@ -488,7 +490,7 @@ then
 fi
 install_lightspeed
 wait_for_lightspeed_ready
-build_and_push_test_app_images
+#build_and_push_test_app_images
 deploy_acm_mcp_server_into_acm_hub
 deploy_test_apps_into_non_hub rosa
 deploy_test_apps_into_non_hub eks
