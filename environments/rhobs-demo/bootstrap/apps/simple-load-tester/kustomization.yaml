@@ -54,7 +54,7 @@ patches:
         value: example-apps
       - op: replace
         path: /data/web_server_host
-        value: web-server.apps.rhobsdemo-ntqwyzm3.sandbox582.opentlc.com
+        value: web-server.example-apps.svc.cluster.local
   - target:
       kind: ServiceAccount
       name: replace-me
