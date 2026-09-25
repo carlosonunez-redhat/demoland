@@ -10,7 +10,7 @@ patches:
     patch: |
       - op: replace
         path: /spec/template/spec/containers/0/image
-        value: 865487941564.dkr.ecr.us-east-2.amazonaws.com/rhobsmulticlusterd-mtrmzjaw/example-apps/simple-web-server:latest
+        value: 865487941564.dkr.ecr.us-east-2.amazonaws.com/rhobsmulticlusterd-mtrmzjaw/example-apps/simple-web-server:latest-amd64
   - target:
       name: simple-web-server
       kind: Deployment
@@ -18,7 +18,7 @@ patches:
     patch: |
       - op: replace
         path: /spec/template/spec/containers/0/image
-        value: 865487941564.dkr.ecr.us-east-2.amazonaws.com/rhobsmulticlusterd-mtrmzjaw/example-apps/simple-web-server:latest
+        value: 865487941564.dkr.ecr.us-east-2.amazonaws.com/rhobsmulticlusterd-mtrmzjaw/example-apps/simple-web-server:latest-amd64
   - target:
       name: simple-web-server
       kind: Deployment
@@ -26,4 +26,4 @@ patches:
     patch: |
       - op: replace
         path: /spec/template/spec/containers/0/image
-        value: 865487941564.dkr.ecr.us-east-2.amazonaws.com/rhobsmulticlusterd-mtrmzjaw/example-apps/simple-web-server:latest
+        value: 865487941564.dkr.ecr.us-east-2.amazonaws.com/rhobsmulticlusterd-mtrmzjaw/example-apps/simple-web-server:latest-amd64
