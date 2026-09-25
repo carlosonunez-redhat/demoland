@@ -1,3 +1,2 @@
 resources:
-  - ../../../apps/web-servers/k8s
   - ../../../apps/stress

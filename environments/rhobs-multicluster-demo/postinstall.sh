@@ -340,13 +340,12 @@ build_and_push_test_app_images() {
     fi
     arch=$(exec_oc_eks_cluster get node -o jsonpath='{.items[0].status.nodeInfo.architecture}')
     info "Building and pushing example app '$app' into ECR (cluster arch: $arch)"
-    platform="linux/arm64"
-    grep -Eiq 'arm' <<< "$arch" && platform="linux/amd64"
-    $CONTAINER_BIN build --platform "$platform"  -t "$(_ecr_repo "$app"):latest" "$app_ctx" &&
+    $CONTAINER_BIN build --arch "$arch"  -t "$(_ecr_repo "$app"):latest-$arch" "$app_ctx" &&
       $CONTAINER_BIN push "$(_ecr_repo "$app"):latest-$arch"
   }
   _app_pushed() {
-    repo_name="$(cat "$(_get_file_from_shared_secret_dir "$(_aws_ecr_repository "example-apps/$1")")" |
+    arch=$(exec_oc_eks_cluster get node -o jsonpath='{.items[0].status.nodeInfo.architecture}')
+    repo_name="$(cat "$(_get_file_from_shared_secret_dir "$(_aws_ecr_repository "example-apps/${1}-$arch")")" |
       sed -E 's;.*\.amazonaws\.com/;;')"
     test -n "$(2>/dev/null _exec_aws ecr list-images --repository-name "$repo_name")"
   }
@@ -481,7 +480,6 @@ then
   info "Web server app configuration updated. Please commit and push your changes, then run this step again"
   exit 0
 fi
-build_and_push_test_app_images
 patches=$(patch_lightspeed_config)
 if test "$patches" -ge 1
 then
@@ -490,4 +488,7 @@ then
 fi
 install_lightspeed
 wait_for_lightspeed_ready
+build_and_push_test_app_images
 deploy_acm_mcp_server_into_acm_hub
+deploy_test_apps_into_non_hub rosa
+deploy_test_apps_into_non_hub eks

@@ -23,6 +23,6 @@ patches:
           - --cpu
           - "8"
           - --vm
-          - "4"
+          - "8"
           - --temp-path
           - /tmp
