@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: stress
+    component: load-generator
+  name: stress
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stress
+      component: load-generator
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: stress
+        component: load-generator
+    spec:
+      containers:
+        - image: ghcr.io/colinianking/stress-ng:43163fc7ab2df7cc77445cc6713e1d08ef407b0a
+          name: app
+          command:
+            - --cpu
+            - 2
