@@ -19,7 +19,7 @@ patches:
         value: itpc-gcp-global-revenue-claude
       - op: replace
         path: /spec/llm/providers/0/googleVertexAnthropicConfig/location
-        value: us-central1
+        value: us
       - op: replace
         path: /spec/llm/providers/0/models/0/name
         value: claude-opus-4-6
