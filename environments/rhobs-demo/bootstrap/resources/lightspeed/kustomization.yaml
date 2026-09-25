@@ -1,0 +1,39 @@
+resources:
+  - ../../../../../components/openshift-lightspeed/resources/olsconfig/gcp_vertex_anthropic
+patches:
+  - target:
+      name: cluster
+      kind: OLSConfig
+    patch: |
+      - op: replace
+        path: /spec/ols/defaultModel
+        value: claude-opus-4-6
+      - op: replace
+        path: /spec/llm/providers/0/credentialsSecretRef/name
+        value: gcp-credentials
+      - op: replace
+        path: /spec/llm/providers/0/credentialKey
+        value: gcp-service-account.json
+      - op: replace
+        path: /spec/llm/providers/0/googleVertexAnthropicConfig/projectID
+        value: itpc-gcp-global-revenue-claude
+      - op: replace
+        path: /spec/llm/providers/0/googleVertexAnthropicConfig/location
+        value: us-central1
+      - op: replace
+        path: /spec/llm/providers/0/models/0/name
+        value: claude-opus-4-6
+      - op: add
+        path: /spec/featureGates
+        value:
+          - MCPServer
+      - op: add
+        path: /spec/mcpServers
+        value:
+          - headers:
+              - name: Authorization
+                valueFrom:
+                  type: kubernetes
+            name: acm
+            timeout: 30
+            url: http://acm-mcp-server.openshift-mcp-servers.svc.cluster.local/mcp

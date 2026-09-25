@@ -126,7 +126,7 @@ environments:
                     name: lightspeed-config-vertex
                     data:
                         name: google-vertex
-                        location: us-central1
+                        location: us
                         model: claude-opus-4-6
                         # encrypted
                         projectID: ENC[AES256_GCM,data:9QsWKZPstjxhTJNtZ8qxW5Y8zwItR564pwaB7Ryk,iv:jFJD/iDqrcFPOQVwrRZvimujdzbwX/7Uxo+2uQhHaXc=,tag:+FsdZxutkGETBvQgdVg78Q==,type:str]
@@ -173,13 +173,31 @@ environments:
             ignore_installconfig_check: true
         deploy:
             # environment_vars: Set within the container that provisions/destroys the environment.
-            environment_vars: []
+            environment_vars:
+                - LLM_SERVICE=vertex
             # these secrets will get mounted into a folder called /secrets within the
             # container that builds your cluster.
             secrets:
                 obs_s3_bucket:
                     name: rhobs/s3_bucket_name
                     data: 3qqaxq4w-rhobs-s3-bucket
+                lightspeed_vertex:
+                    name: lightspeed-config-vertex
+                    data:
+                        name: google-vertex
+                        location: us
+                        model: claude-opus-4-6
+                        # encrypted
+                        projectID: ENC[AES256_GCM,data:Rkuy4Lp2WT+9lP6pRNisjmLtw2q0dGaOqcH4pBxD,iv:xYDfeW9ZGqoyYiadmbySAHo6Y4v2DdCP44OwMpT/meY=,tag:E5e2OUhkmrOioVsvasgR1w==,type:str]
+                        # encrypted
+                        credentials:
+                            account: ""
+                            client_id: ENC[AES256_GCM,data:YwiNJzJE7i2emOlXTheXu39uM2WLU4WRTffP/M1H06jGu6q0TqhXtndRWo4XXB5P5X3+uMP2GUQg6FCNyuGLrRhSkrfcaAwq,iv:hi28+LMuix5mGUTGGlHW4zbBZWrc5BP70rV87D5mE+I=,tag:Kv8GzUSXLqQPZD873MCmoA==,type:str]
+                            client_secret: ENC[AES256_GCM,data:FLRBY/8p/no8j5/RQ+DVWm17yx/4DG7U,iv:Hh2cr/0J8YHZNhu3LbvFkqm+zDChcTE4LCkmSxr8oxk=,tag:gULHp+4XdhNdWiAPIFNwFw==,type:str]
+                            quota_project_id: ENC[AES256_GCM,data:NL/yDtSyj8ctXhRA0PrtNtooltZiZw==,iv:wTvEAVy/3O4QP1D1eXe/mpl1NyCyqsDtpqev367EC40=,tag:7EfinmqHBoKJaUOJiP9WNg==,type:str]
+                            refresh_token: ENC[AES256_GCM,data:iZeH++lIGFVZ7cmewN5uolj/25o9yJ9beG+bd4tFt2yvT6a4FvrLzH8vIQO/VpK68azQnGCMpq5M1L+wSQf8MZMGerEY5x4aPrbt/QTcZb/fxfSPoZlcU62xpkW/3fiq54L2Vhze3Q==,iv:DBaVheUE0bdrH5SPEnaDTu745eZHjOzTBKUvFUowT6Q=,tag:J5+Khw4xhEKiZ0URd7QWQQ==,type:str]
+                            type: ENC[AES256_GCM,data:lyivMu4yHWUwtlMR8U39,iv:Zzm4KAve4UGiOhoifzY4Got0Oi1EauXpIM1WI7rLTSk=,tag:nl6kIxwgBrORapbwI1hvNQ==,type:str]
+                            universe_domain: ENC[AES256_GCM,data:cyqpvWKwj6y+CirwL6Y=,iv:f6x5SFLL5u8HYJO5k71Kl5nxazv5rMspJ8+vG2hixrg=,tag:nZKQBJRNKptlc8vKJ9TZ/A==,type:str]
         cloud_credentials:
             aws: {}
         components: []
@@ -451,8 +469,8 @@ environments:
                     name: ecr-repositories
                     data: '- example-apps/simple-web-server'
 sops:
-    lastmodified: "2026-09-24T22:56:52Z"
-    mac: ENC[AES256_GCM,data:LCxOWFiBN6HL+PssUI3TrHwD8m5a+qPjmOkcVCVfMD4bWui4MJQg/7vfpZKWPGOPRl51oxbfIARvKlqKkCMs/8tXTU3JstPy0KFPbG6AYK5azCDP8RwjFnFgOkm377l0U4UUWUedoWvEQL17BIhtqIL6pxxUnM9H0M5k508hxI8=,iv:U8mjk8qB1HvNYucxl7PuztFnxwOlgCKSOhhPefbiazM=,tag:bew1X6A5ESYuIDAJWXrijQ==,type:str]
+    lastmodified: "2026-09-25T00:11:28Z"
+    mac: ENC[AES256_GCM,data:398PZbP7koq28CjIhJUYy0UQBvF4McJnAR7WKERhI1scf/MolORw3m62YGLwEh36v7aw3URjxE5NbtnuYP3m2SMVCIkuKECElV6vA+yV6Yj8C8G43M+7Cf3Uv+9T1Eyo5u5fNpef29yeKTCh9Ov2Ff5OhvOjL1iYadmW5RazTDg=,iv:vHFa5zLW/X9fNnDyQ7h1++5PHehtNImRndZGVyVIP5k=,tag:WQmFRwhWSZbbTTDTLsmq3g==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
