@@ -239,7 +239,7 @@ modifications="$(cat <<-EOF
     kind: ConfigMap
     name: app-config
   variables:
-    host: web-server.example-apps.svc.cluster.local
+    host: simple-web-server.example-apps.svc.cluster.local
 EOF
 )"
 patches=$(render_kustomization_patches "$modifications")

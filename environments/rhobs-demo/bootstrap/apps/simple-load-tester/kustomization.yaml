@@ -54,7 +54,7 @@ patches:
         value: example-apps
       - op: replace
         path: /data/web_server_host
-        value: web-server.example-apps.svc.cluster.local
+        value: simple-web-server.example-apps.svc.cluster.local
   - target:
       kind: ServiceAccount
       name: replace-me
