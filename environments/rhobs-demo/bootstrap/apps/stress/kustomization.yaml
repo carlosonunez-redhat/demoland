@@ -14,8 +14,8 @@ patches:
         path: /spec/template/spec/containers/0/args
         value:
           - --cpu
-          - "8"
+          - "16"
           - --vm
-          - "4"
+          - "8"
           - --temp-path
           - /tmp
