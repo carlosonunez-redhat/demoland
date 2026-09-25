@@ -1,0 +1,23 @@
+resources:
+  - ../../../../../components/advanced-cluster-management/resources/multiclusterhub
+  - ../../../../../components/advanced-cluster-management/resources/multiclusterengine
+patches:
+  - target:
+      kind: MultiClusterHub
+      name: multiclusterhub
+      namespace: openshift-cluster-management
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: advanced-cluster-management
+      - op: add
+        path: /spec/imagePullSecret
+        value: image-pull-secret
+  - target:
+      kind: MultiClusterEngine
+      name: multiclusterengine
+      namespace: openshift-cluster-management
+    patch: |-
+      - op: add
+        path: /spec/imagePullSecret
+        value: image-pull-secret

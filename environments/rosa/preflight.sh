@@ -14,6 +14,7 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 # If this environment has includes of its own, use the $ENVIRONMENT_INCLUDE_DIR environment
 # variable, like shown in the comment below.
 #
+source "$ENVIRONMENT_INCLUDE_DIR/ocm.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/rosa.sh"
 
 verify_aws_quotas() {
@@ -26,5 +27,5 @@ verify_local_environment() {
   _exec_rosa verify openshift-client
 }
 
-verify_local_environment
+verify_local_environment &&
 verify_aws_quotas

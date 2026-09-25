@@ -68,3 +68,11 @@ render_yaml_template_with_values_file() {
   ytt --data-values-file "$values_file" -f "$file"
 
 }
+
+yq_strip_null() {
+  yq "$@" | grep -Ev '^null$' | cat
+}
+
+jq_strip_null() {
+  jq "$@" | grep -Ev '^null$' | cat
+}

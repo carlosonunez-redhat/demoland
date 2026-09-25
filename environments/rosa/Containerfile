@@ -17,8 +17,18 @@ RUN \
 RUN tar -xvzf /tmp/file.tar.gz -C /tmp
 RUN chmod +x /tmp/rosa
 
+FROM curlimages/curl AS ocm_client
+ENV OCM_VERSION=1.0.17
+ENV OCM_URL="https://github.com/openshift-online/ocm-cli/releases/download/v${OCM_VERSION}/ocm-linux-amd64"
+RUN \
+  url="$OCM_URL"; \
+  uname -m | grep -Eq 'arm|aarch' && url="$(echo "$OCM_URL" | sed 's/amd64/arm64/')"; \
+  curl -vLo /tmp/ocm "$url";
+RUN chmod +x /tmp/ocm
+
 FROM fedora:41 AS final
 RUN dnf -y update
 RUN dnf -y install yq jq awscli openssh ssh-agent
 COPY --from=rosa_client /tmp/rosa /usr/bin/rosa
+COPY --from=ocm_client /tmp/ocm /usr/bin/ocm
 COPY --from=oc_client /tmp/oc /usr/bin/oc

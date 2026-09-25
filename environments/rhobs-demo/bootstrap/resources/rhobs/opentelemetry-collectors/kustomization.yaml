@@ -34,24 +34,24 @@ patches:
         value:
           brokers: [ "kafka-cluster-kafka-brokers.rhobs-messaging.svc.cluster.local:9092" ]
           protocol_version: 2.0.0
-          topic: metrics-topic
           metrics:
             encoding: otlp_json
+            topic: metrics-topic
       - op: add
         path: /spec/config/exporters/kafka~1logs
         value:
           brokers: [ "kafka-cluster-kafka-brokers.rhobs-messaging.svc.cluster.local:9092" ]
           protocol_version: 2.0.0
-          topic: logs-topic
           logs:
+            topic: logs-topic
             encoding: otlp_json
       - op: add
         path: /spec/config/exporters/kafka~1traces
         value:
           brokers: [ "kafka-cluster-kafka-brokers.rhobs-messaging.svc.cluster.local:9092" ]
           protocol_version: 2.0.0
-          topic: traces-topic
           traces:
+            topic: traces-topic
             encoding: otlp_json
       - op: add
         path: /spec/config/extensions

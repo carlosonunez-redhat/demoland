@@ -135,6 +135,77 @@ wait_for_ns() {
   return 1
 }
 
+install_lightspeed() {
+  setup_gitops rhobs-demo bootstrap/resources/lightspeed lightspeed
+}
+
+create_lightspeed_secret_gcp_vertex() {
+  secret=lightspeed-secret
+  ns=openshift-lightspeed
+  test -n "$(exec_oc get secret -n "$ns" "$secret" -o name --ignore-not-found)" &&
+    return 0
+
+  gcp_service_account_json="$(_get_secret lightspeed-config-vertex |
+    yq_strip_null -o=j -I=0 -r .credentials)"
+  if test -z "$gcp_service_account_json"
+  then
+    error "GCP Service Account not found in config"
+    return 1
+  fi
+  info "Creating Lightspeed Secret"
+  values=(
+    secret_name gcp-credentials
+    gcp_service_account_json "$(base64 -w 0 <<< "$gcp_service_account_json")"
+  )
+  secret_file="$(mktemp "/tmp/ls_XXXXXXXX")"
+  render_yaml_template lightspeed-secret-vertex "${values[@]}" | sed 's/null/""/g' > "$secret_file" || return 1
+  exec_oc apply -f "$secret_file" || return 1
+}
+
+wait_for_lightspeed_ready() {
+  ns="openshift-lightspeed"
+  attempts=0
+  pods=""
+  while test "$attempts" -lt 60
+  do
+    pods=$(exec_oc -n "$ns" get pod -o name)
+    test -n "$pods" && break
+    info "[${attempts}/60] Waiting for Lightspeed Pods to be created..."
+    sleep 0.5
+    attempts=$((attempts+1))
+  done
+  if test -z "$pods"
+  then
+    error "Observability Pods never started."
+    return 1
+  fi
+  for pod in $pods
+  do
+    info "Waiting 180 seconds for Lightspeed Pod '$pod' to become ready..."
+    &>/dev/null exec_oc wait -n "$ns" --for=condition=Ready --timeout=180s "$pod" && continue
+    error "Lightspeed Pod '$pod' failed to become ready."
+  done
+}
+
+patch_lightspeed_config() {
+  config_data=$(_get_secret "lightspeed-config-$LLM_SERVICE") || return 1
+  render_kustomization_patches "$(cat <<-EOF || return 1
+- file: ./bootstrap/resources/lightspeed/kustomization.yaml
+  variables:
+    defaultModel: "$(yq_strip_null -r '.model' <<< "$config_data")"
+    'models/0/name': "$(yq_strip_null -r '.model' <<< "$config_data")"
+    projectID: "$(yq_strip_null -r '.projectID' <<< "$config_data")"
+    location: "$(yq_strip_null -r '.location' <<< "$config_data")"
+EOF
+)"
+}
+
+install_cluster_health_analyzer_mcp_server() {
+  for m in 01_service_account 02_deployment 03_mcp_service
+  do exec_oc apply -f "https://raw.githubusercontent.com/openshift/cluster-health-analyzer/refs/heads/mcp-dev-preview/manifests/mcp/${m}.yaml"
+  done
+}
+
 set -e
 create_rhobs_s3_bucket
 default_sc="$(exec_oc get sc -o yaml |
@@ -151,6 +222,24 @@ modifications="$(cat <<-EOF
     region: "$(_aws_default_region)"
     bucket: "$(rhobs_s3_bucket)"
     endpoint: "https://s3.$(_aws_default_region).amazonaws.com"
+- file: bootstrap/apps/simple-load-tester/kustomization.yaml
+  target:
+    kind: BuildConfig
+    name: simple-web-server
+  variables:
+    ref: "$(_get_secret 'gitops/branch')"
+- file: bootstrap/apps/simple-load-tester/kustomization.yaml
+  target:
+    kind: Route
+    name: simple-web-server
+  variables:
+    host: "web-server.$(cluster_fqdn)"
+- file: bootstrap/apps/simple-load-tester/kustomization.yaml
+  target:
+    kind: ConfigMap
+    name: app-config
+  variables:
+    host: simple-web-server.example-apps.svc.cluster.local
 EOF
 )"
 patches=$(render_kustomization_patches "$modifications")
@@ -170,3 +259,13 @@ setup_gitops rhobs-demo bootstrap/resources/cluster-config cluster-config
 setup_gitops rhobs-demo bootstrap/apps cluster-apps
 wait_for_ns
 apply_secrets
+install_lightspeed
+create_lightspeed_secret_gcp_vertex
+patches=$(patch_lightspeed_config)
+if test "$patches" -ge 1
+then
+  info "Lightspeed config patched. Please commit and push your changes, then run this step again"
+  exit 0
+fi
+wait_for_lightspeed_ready
+install_cluster_health_analyzer_mcp_server

@@ -5,3 +5,4 @@ resources:
   - ../../../../components/openshift-otel/operator
   - ../../../../components/streams-for-apache-kafka/operators/amq-streams
   - ../../../../components/streams-for-apache-kafka/operators/amq-streams-console
+  - ../../../../components/openshift-lightspeed/operator
