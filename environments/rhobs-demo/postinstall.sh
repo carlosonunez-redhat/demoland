@@ -222,6 +222,12 @@ modifications="$(cat <<-EOF
     region: "$(_aws_default_region)"
     bucket: "$(rhobs_s3_bucket)"
     endpoint: "https://s3.$(_aws_default_region).amazonaws.com"
+- file: bootstrap/apps/simple-load-tester/kustomization.yaml
+  target:
+    kind: BuildConfig
+    name: simple-web-server
+  variables:
+    ref: "$(_get_secret 'gitops/branch')"
 EOF
 )"
 patches=$(render_kustomization_patches "$modifications")

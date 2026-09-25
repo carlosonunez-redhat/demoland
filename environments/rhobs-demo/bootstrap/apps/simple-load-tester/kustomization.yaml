@@ -7,10 +7,13 @@ patches:
   - target:
       kind: BuildConfig
       name: simple-web-server
-    patch: |-
+    patch: |
       - op: replace
         path: /metadata/namespace
         value: example-apps
+      - op: replace
+        path: /spec/source/git/ref
+        value: demo/multicluster-observability-acm
   - target:
       kind: ImageStream
       name: simple-web-server
