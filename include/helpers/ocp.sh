@@ -165,6 +165,12 @@ cluster_fqdn() {
     sed -E 's/^console-openshift-console.//'
 }
 
+# cluster_fqdn_base_environment: cluster_fqdn, but with a base environment
+cluster_fqdn_base_environment() {
+  exec_oc_by_environment_name "$1" get route console -n openshift-console -o jsonpath='{.status.ingress[0].host}' |
+    sed -E 's/^console-openshift-console.//'
+}
+
 # print_env_kubeconfig: Retrieves and prints a kubeconfig for a base or demo environment.
 print_env_kubeconfig() {
   kp=$(_retrieve_env_kubeconfig "$1") || return 1
