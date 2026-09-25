@@ -15,6 +15,9 @@ patches:
       name: stress
     patch: |-
       - op: replace
+        path: /metadata/namespace
+        value: really-busy-app
+      - op: replace
         path: /spec/template/spec/containers/0/command
         value:
           - --cpu
