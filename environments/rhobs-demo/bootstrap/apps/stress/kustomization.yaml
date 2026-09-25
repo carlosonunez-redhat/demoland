@@ -13,7 +13,6 @@ patches:
       - op: replace
         path: /spec/template/spec/containers/0/args
         value:
-          - stress-ng
           - --cpu
           - "8"
           - --vm
