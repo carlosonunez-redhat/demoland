@@ -367,11 +367,9 @@ deploy_test_apps_into_non_hub() {
   cmd=""
   case "${1,,}" in
     eks)
-      kpath="$ENVIRONMENT_DIR/bootstrap/apps/k8s"
       cmd=exec_oc_eks_cluster
       ;;
     rosa)
-      kpath="$ENVIRONMENT_DIR/bootstrap/apps/ocp"
       cmd=exec_oc_rosa_cluster
       ;;
     *)
@@ -382,7 +380,7 @@ deploy_test_apps_into_non_hub() {
       ;;
   esac
   info "Deploying test apps into '$1' cluster (kpath: $kpath)..."
-  "$cmd" apply -k "$kpath"
+  "$cmd" apply -k "$ENVIRONMENT_DIR/bootstrap/apps"
 }
 
 patch_k8s_web_server_test_app_kustomization() {
