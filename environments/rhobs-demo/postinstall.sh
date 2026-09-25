@@ -228,6 +228,9 @@ modifications="$(cat <<-EOF
     name: simple-web-server
   variables:
     ref: "$(_get_secret 'gitops/branch')"
+- file: bootstrap/apps/simple-load-tester/kustomization.yaml
+  variables:
+    host: "web-server.$(cluster_fqdn)"
 EOF
 )"
 patches=$(render_kustomization_patches "$modifications")

@@ -41,20 +41,20 @@ patches:
   - target:
       kind: Route
       name: simple-web-server
-    patch: |-
+    patch: |
       - op: replace
         path: /spec/host
-        value: web-server.apps.rhobsdemo.sandbox5544.opentlc.com
+        value: web-server.apps.rhobsdemo-ntqwyzm3.sandbox582.opentlc.com
   - target:
       kind: ConfigMap
       name: app-config
-    patch: |-
+    patch: |
       - op: replace
         path: /metadata/namespace
         value: example-apps
       - op: replace
         path: /data/web_server_host
-        value: simple-web-server.example-apps
+        value: web-server.apps.rhobsdemo-ntqwyzm3.sandbox582.opentlc.com
   - target:
       kind: ServiceAccount
       name: replace-me
