@@ -377,7 +377,7 @@ deploy_test_apps_into_non_hub() {
       return 1
       ;;
   esac
-  info "Deploying test app into '$1' cluster (kpath: $kpath)..."
+  info "Deploying test apps into '$1' cluster (kpath: $kpath)..."
   "$cmd" apply -k "$kpath"
 }
 
