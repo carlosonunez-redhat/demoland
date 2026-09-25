@@ -31,7 +31,7 @@ patches:
         path: /spec/mcpServers
         value:
           - headers:
-              - name: Authorization
+            - name: kubernetes-authorization
                 valueFrom:
                   type: kubernetes
             name: acm
