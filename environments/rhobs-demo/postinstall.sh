@@ -240,6 +240,9 @@ modifications="$(cat <<-EOF
     name: app-config
   variables:
     host: simple-web-server.example-apps.svc.cluster.local
+- file: bootstrap/resources/kafka/console/kustomization.yaml
+  variables:
+    hostname: "kafka-console.$(cluster_fqdn)"
 EOF
 )"
 patches=$(render_kustomization_patches "$modifications")

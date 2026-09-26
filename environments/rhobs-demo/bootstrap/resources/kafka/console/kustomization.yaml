@@ -12,13 +12,13 @@ patches:
       kind: Console
       name: rhobs-console
       namespace: replace-me
-    patch: |-
+    patch: |
       - op: replace
         path: /metadata/namespace
         value: rhobs-messaging
       - op: replace
         path: /spec/hostname
-        value: kafka-console.apps.rhobsdemo.sandbox5159.opentlc.com
+        value: kafka-console.apps.rhobsdemo-ntqwyzm3.sandbox582.opentlc.com
       - op: replace
         path: /spec/kafkaClusters/0/name
         value: kafka-cluster
