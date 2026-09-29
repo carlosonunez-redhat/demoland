@@ -16,10 +16,12 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 #
 # source "$ENVIRONMENT_INCLUDE_DIR/foo.sh"
 
+empty_thanos_s3_bucket() {
+  _exec_aws s3 rm --recursive "s3://$(_get_param_from_aws_cfn_stack thanos_s3_bucket 'BucketName')/"
+}
+
 delete_rhmco_s3_bucket() {
-  _delete_aws_resources_from_cfn_stack_with_caps thanos_s3_bucket \
-    "{}" \
-    "CAPABILITY_NAMED_IAM" \
+  _delete_aws_resources_from_cfn_stack thanos_s3_bucket \
     "Deleting Thanos S3 bucket for Multi-Cluster Observability"
 }
 
@@ -34,7 +36,7 @@ delete_example_app_images() {
       sed -E 's;.*\.amazonaws\.com/;;')"
     test -n "$(2>/dev/null _exec_aws ecr batch-delete-image \
       --repository-name "$repo_name" \
-      --image-ids imageTag=latest
+      --image-ids imageTag=latest)"
   }
   for app in simple-web-server
   do
@@ -46,4 +48,5 @@ delete_example_app_images() {
 
 set -e
 delete_example_app_images
+empty_thanos_s3_bucket
 delete_rhmco_s3_bucket
