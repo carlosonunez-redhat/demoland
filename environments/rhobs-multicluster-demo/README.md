@@ -7,9 +7,6 @@ Advanced Cluster Management and Multicluster Observability.
 
 * [Three Key Points](#three-key-points)
 * [Architecture](#architecture)
-    * [Metrics](#metrics)
-    * [Logs](#logs)
-    * [Traces](#traces)
 * [Setting Up](#setting-up)
     * [What You'll Need](#what-youll-need)
     * [Instructions](#instructions)
@@ -39,15 +36,27 @@ Advanced Cluster Management and Multicluster Observability.
 
 ![](./include/assets/img/architecture.png)
 
-The resources provided in this demo create an end-to-end observability stack for
-metrics, logs and traces across multiple OpenShift clusters viewable from ACM.
+This demo contains three clusters: a self-managed OpenShift cluster on AWS, a
+Red Hat-managed OpenShift cluster, also in AWS, and a regular Kubernetes cluster
+served by AWS EKS.
 
-### Metrics
+All of these clusters are managed by an OpenShift cluster running Red Hat
+Advanced Cluster Management. (This will be called the "multicluster hub" or just
+"the hub" throughout this demo.)
 
-### Logs
+The self-managed OpenShift cluster managed by the hub is an instance of the
+local-cluster observability demo located [here](../rhobs-demo/README.md).
 
+Timeseries metrics from each cluster are aggregated
+by a Thanos instance that is deployed and automatically configured by the
+Multicluster Observability Operator running on the hub. (ACM installs an
+instance of Prometheus on the EKS cluster to retrieve cluster metrics from it.)
 
-### Traces
+AI-driven Observability is enabled by OpenShift Lightspeed. Lightspeed
+automatically installs the OpenShift MCP Serer which, amongst other things, can
+pull observability signals from Thanos. The self-managed OpenShift cluster also
+contains an instance of Lightspeed to enable local AI-driven observability there
+as well.
 
 
 ## Setting Up
@@ -98,7 +107,79 @@ can be configured from our documentation alone.
 
 Let's take a closer look.
 
+![](./assets/img/0-acm-start.png)
+
+![](./assets/img/1-acm-mco-top-consumers-multicluster.png)
+
+![](./assets/img/2-acm-mco-overestimation.png)
+
+![](./assets/img/3-acm-mco-overestimation-zoomin-rhobs.png)
+
+![](./assets/img/4-acm-mco-dashboards-rightsizing.png)
+
+![](./assets/img/5-acm-mco-explore-with-query.png)
+
+![](./assets/img/5-acm-mco-rightsize-recommended-cpu.png)
+
+![](./assets/img/6-acm-mco-rightsize-memory.png)
+
+![](./assets/img/7-acm-mco-alerts.png)
+
+![](./assets/img/8-acm-mco-high-cpu-rhobs.png)
+
+![](./assets/img/9-acm-lightspeed-cpu-high-ask.png)
+
+![](./assets/img/9-acm-lightspeed-it-found-it.png)
+
+![](./assets/img/10-acm-lightspeed-fix-recommendations.png)
+
+![](./assets/img/11-acm-console-linkout.png)
+
+![](./assets/img/12-rhobs-pod-namespace.png)
+
+![](./assets/img/13-rhobs-lightspeed-fix-pod.png)
+
+![](./assets/img/14-rhobs-lightspeed-approve-fix.png)
+
+![](./assets/img/15-rhobs-lightspeed-detected-gitops.png)
+
+![](./assets/img/16-rhobs-app-pods.png)
+
+![](./assets/img/17-rhobs-coo-related-resources.png)
+
+![](./assets/img/18-rhobs-signal-correlation.png)
+
+![](./assets/img/19-rhobs-coo-signal-correlation-source.png)
+
+![](./assets/img/20-rhobs-coo-signal-correlation-logs.png)
+
+![](./assets/img/21-rhobs-coo-signal-correlation-metrics.png)
+
+![](./assets/img/22-rhobs-coo-tempo-traces.png)
+
+![](./assets/img/23-rhobs-lightspeed-logging-stack.png)
+
+![](./assets/img/24-rhobs-lightspeed-clf-lokistack.png)
+
+![](./assets/img/25-rhobs-lightspeed-metrics-stack-query.png)
+
+![](./assets/img/26-rhobs-lightspeed-otel-collector-found.png)
+
+![](./assets/img/27-rhobs-otel-start.png)
+
+![](./assets/img/28-rhobs-lightspeed-exporters.png)
+
+![](./assets/img/29-rhobs-lightspeed-kafka-console.png)
+
+![](./assets/img/30-streams-start.png)
+
+![](./assets/img/31-streams-logs.png)
+
+![](./assets/img/32-streams-traces.png)
+
+
 ### Visualizing cluster behavior with Grafana
+
 
 ### Viewing automated right-sizing recommendations from ACM Observability
 
