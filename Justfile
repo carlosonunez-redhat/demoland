@@ -1,4 +1,4 @@
-set shell := [ "bash", "-uc" ]
+set shell := [ "bash", "-c" ]
 set unstable := true
 set quiet := true
 
@@ -11,14 +11,13 @@ container_environment_info_vol := 'demo-environment-runner-env-info-vol'
 container_postinstall_vol := 'demo-environment-postinstall-vol'
 config_file := source_dir() + '/config.yaml'
 yq_image := 'mikefarah/yq'
-default_openshift_version := "4.19.27"
 
 [doc("Cleans temporary files and such unless another just operation is happening.")]
 clean:
   just_processes=$(ps -ef | grep just | grep -v grep | wc -l); \
   test "$just_processes" -gt 1 && exit 0; \
   just _log info "Cleaning up temp files."; \
-  rm -rf /tmp/*demoland_temp*;
+  rm -rf /tmp/demoland_temp*;
 
 
 [doc("Creates a new environment")]
@@ -55,9 +54,15 @@ precheck environment: \
 deploy environment: clean \
     (_run_stage_with_dependencies environment "_precheck" "_poweron" "_provision" "_expose" "_postinstall")
 
+[doc("Exposes Kubeconfigs for base environment clusters in a demo environment")]
+expose environment: clean \
+    (_run_stage_with_dependencies environment "_expose")
+
 [doc("Destroys an environment")]
-destroy environment: clean \
-    (_run_stage_with_dependencies environment "_destroy")
+destroy environment: clean (_run_stage_with_dependencies environment "_destroy")
+
+[doc("Rebuild deployer images.")]
+rebuild_images environment: clean (_run_stage_with_dependencies environment "_rebuild")
 
 [doc("Performs post-install steps, like installing operators and such.")]
 postinstall environment: (_run_stage_with_dependencies environment "_precheck" "_postinstall")
@@ -68,6 +73,32 @@ poweroff environment: (_run_stage_with_dependencies environment "_poweroff")
 [doc("Powers on instances.")]
 poweron environment: (_run_stage_with_dependencies environment "_poweron")
 
+[doc("Launches a shell inside of the runner container for the environment.")]
+start_shell environment:
+  USE_SHELL=1 just _execute_containerized {{ environment }};
+
+[doc("Exports the kubeconfig generated for an environment, if available.")]
+export_kubeconfig environment base_environment='':
+  EXPORT_KUBECONFIG=1 BASE_ENVIRONMENT='{{ base_environment }}' just _execute_containerized '{{ environment }}'
+
+# A word about the rebuild logic in this stage.
+#
+# Environments are deployed starting with their dependent environments. In other
+# words, given an environment `$X` which depends on environments `$A`, `$B` and `$C`,
+# deployment will happen in this order: `$A -> $B -> $C -> $X`.
+#
+# Destroys, thus, happen in the reverse order. However, this introduces an interesting
+# edge case when it comes to image rebuilds.
+#
+# OpenShift binaries like `openshift-install` are included in the `demoland-base` image.
+# These binaries take the version of OpenShift being installed into the cluster into account.
+# For our example environment `$X`, this means that the version of `openshift-install`
+# that gets installed into the base image is determined by the version information provided to
+# environments `$A`, `$B` or `$C`, in that order.
+#
+# Therefore, any environment destroys happening at the same time as an image rebuild need
+# to do an image rebuild run first in "deploy" order before destroying in "destroy" order.
+# That's what the "REBUILD" code in this stage does.
 _run_stage_with_dependencies environment +stages:\
     (_generate_toplevel_environment_info environment) \
     (_generate_container_vol environment ) \
@@ -76,8 +107,10 @@ _run_stage_with_dependencies environment +stages:\
   envs="{{ environment }}"; \
   if test -z "$SKIP_DEPENDENCIES"; \
   then \
-    if echo '{{ stages }}' | grep -q destroy; \
-    then envs="{{ environment }};$(just _get_dependent_environments {{ environment }})"; \
+    if test '{{ stages }}' == '_destroy'; \
+    then \
+      (test -n "$REBUILD" || test -n "REBUILD_IMAGES") && just rebuild_images '{{ environment }}'; \
+      envs="{{ environment }};$(just _get_dependent_environments {{ environment }})"; \
     else envs="$(just _get_dependent_environments {{ environment }});{{ environment }}"; \
     fi; \
   fi; \
@@ -101,6 +134,11 @@ _run_stage_with_dependencies environment +stages:\
     done; \
   done;
 
+_rebuild environment:
+  for stage in _rebuild_demoland_base_image _rebuild_environment_base_image; \
+  do just "$stage" "{{ environment }}"; \
+  done
+
 _precheck environment:
   set +u; \
   if test -n "$SKIP_PRECHECK"; \
@@ -108,7 +146,6 @@ _precheck environment:
     just _log info "Preflight checks skipped for environment '{{ environment }}' (alias: $ALIAS)"; \
     exit 0; \
   fi; \
-  set -u; \
   ALIAS="$ALIAS" just _execute_containerized '{{ environment }}' \
     'preflight.sh' \
     'true' \
@@ -142,10 +179,21 @@ _destroy environment:
   ALIAS="$ALIAS" just _execute_containerized '{{ environment }}' 'destroy.sh';
 
 _install_components_into_environment environment:
+  skip_component_install=$(just _get_property_from_env_config_use_alias \
+    '{{ environment }}' '.common_options.skip_component_install'); \
+  if test "${skip_component_install,,}" == "true"; \
+  then \
+    just _log info "Component install skipped for environment '{{ environment }}'"; \
+    exit 0; \
+  fi; \
   just _get_environment_components '{{ environment }}' | \
     while read -r component; \
     do \
-      for stage in _ensure_component_exists _stage_component _create_component_kustomization _install_component; \
+      for stage in _ensure_environment_kubeconfig_exists \
+                   _ensure_component_exists \
+                   _stage_component \
+                   _create_component_kustomization \
+                   _install_component; \
       do just "$stage" '{{ environment }}' "$component" || exit 1; \
       done; \
     done
@@ -174,32 +222,48 @@ _create_component_kustomization environment component:
       bash:5 -c "echo '$k_enc' | base64 -d > /vol/kustomization.yaml"
 
 _install_component environment component: (_ensure_demoland_base_image environment)
-  env=$(just _resolved_environment_name '{{ environment }}'); \
+  env="${ALIAS:-$(just _resolved_environment_name '{{ environment }}')}"; \
   just _log info "[postinstall] Installing component '{{ component }}' in environment '$env'"; \
+  set +u; \
+  test -n "$SHOW_CONTAINER_COMMANDS" && set -x; \
+  set -ue; \
   for kubeconfig in $(just _toplevel_environment_kubeconfigs '{{ environment }}'); \
   do \
     {{ container_bin }} run --rm \
       -v "$(just _container_postinstall_vol '{{ environment }}'):/vol" \
       -v "$(just _container_secrets_vol_shared):/shared/secrets" \
-      {{ demoland_base_container_image }} \
-      oc --kubeconfig "$kubeconfig" apply -k /vol; \
+      -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
+      -e KUBECONFIG="$(just _get_kubeconfig_path_for_environment '{{ environment }}')" \
+      {{ demoland_base_container_image }} oc apply -k /vol; \
   done
 
 
 _ensure_demoland_base_image environment:
-  set +u; \
-  test -z "$REBUILD_DEMOLAND_BASE_IMAGE" && \
-    {{ container_bin }} image ls | grep -q "{{ demoland_base_container_image }}" && exit 0; \
-  set -u; \
-  openshift_version=$(just _get_property_from_env_config_use_alias \
-    {{ environment }} \
-    '.deploy.cluster_config.openshift_version'); \
-  test -z "$openshift_version" && openshift_version={{ default_openshift_version }}; \
-  just _log info "building demoland environment base image [openshift version: $openshift_version]"; \
-  test -n "${REBUILD_DEMOLAND_BASE_IMAGE:-}" && \
-    just _log info "(re)building demoland environment base image [openshift version: $openshift_version]"; \
-  {{ container_bin }} image build -t "{{ demoland_base_container_image }}" \
-    --build-arg OPENSHIFT_VERSION="$openshift_version" - < "$PWD/include/containerfiles/base.Dockerfile"
+  {{ container_bin }} image ls | grep -q "{{ demoland_base_container_image }}" && exit 0; \
+  just _rebuild_demoland_base_image "{{ environment }}"; 
+
+_get_kubeconfig_path_for_environment environment:
+  env="${ALIAS:-$(just _resolved_environment_name '{{ environment }}')}"; \
+  {{ container_bin }} run --rm \
+    -v "$(just _container_postinstall_vol '{{ environment }}'):/vol" \
+    -v "$(just _container_secrets_vol_shared):/shared/secrets" \
+    -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
+    {{ demoland_base_container_image }} \
+    sh -c "name=$env; \
+      test \$(cat /environment_info/root_environment_name) == \$name && name=self; \
+      echo \$(cat /environment_info/kubeconfigs/\$(cat /environment_info/root_environment_name)/\$name)";
+
+_ensure_environment_kubeconfig_exists environment component:
+  {{ container_bin }} run --rm \
+    -v "$(just _container_postinstall_vol '{{ environment }}'):/vol" \
+    -v "$(just _container_secrets_vol_shared):/shared/secrets" \
+    -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
+    {{ demoland_base_container_image }} \
+    test -f "$(just _get_kubeconfig_path_for_environment {{ environment }})" && exit 0; \
+  just _log error "Environment '{{ environment }}' does not a Kubeconfig associated with it. \
+  If this environment depends on other base environments and isn't supposed to have one, set \
+  '.common_options.skip_component_install' to true in 'config.yaml'"; \
+  exit 1
 
 _ensure_component_exists environment component:
   test -d "$PWD/components/{{ component }}" && exit 0; \
@@ -265,13 +329,14 @@ _delete_env_from_config environment:
 _print_container_vol_name_for_environment environment vol_name:
   set +u; \
   sentinel_f=$(just _sentinel_file '{{ vol_name }}'); \
-  if test -f "$sentinel_f" ; \
+  if test -f "$sentinel_f"; \
   then \
     cat "$sentinel_f"; \
     exit 0; \
   fi; \
   set -u; \
   env=$(echo "{{ environment }}" | \
+        md5sum | awk '{print $1}' | \
         base64 -w 0 | \
         tr -d '=' | \
         head -c 8); \
@@ -299,32 +364,41 @@ _container_image environment:
   env=$(just _resolved_environment_name '{{ environment }}'); \
   echo "{{ container_image }}-$env"
 
-_execute_containerized environment file ignore_not_found='false' custom_message='none': \
+_execute_containerized environment file='empty' ignore_not_found='false' custom_message='none': \
     ( _ensure_container_image_exists environment ) \
     ( _ensure_container_secrets_vol_populated environment ) \
     ( _ensure_demoland_base_image environment )
   file=$(just _get_environment_directory_file {{ environment }} {{ file }}); \
-  if ! test -f "$file"; \
+  set +u; \
+  if test -z "$USE_SHELL" && test -z "$EXPORT_KUBECONFIG"; \
   then \
-    level=error; \
-    message="File not found in environment: {{ file }}"; \
-    test "{{ custom_message }}" != 'none' && message="{{ custom_message }}"; \
-    if test "{{ ignore_not_found }}" != 'false'; \
+    if ! test -f "$file"; \
     then \
-      level=warning; \
-      message="${message} (skipping)"; \
+      level=error; \
+      message="File not found in environment: {{ file }}"; \
+      test "{{ custom_message }}" != 'none' && message="{{ custom_message }}"; \
+      if test "{{ ignore_not_found }}" != 'false'; \
+      then \
+        level=warning; \
+        message="${message} (skipping)"; \
+      fi; \
+      just _log "$level" "$message"; \
+      test "{{ ignore_not_found }}" == 'false' && exit 1; \
     fi; \
-    just _log "$level" "$message"; \
-    test "{{ ignore_not_found }}" == 'false' && exit 1; \
-  fi; \
-  file_lines=$(grep -Ev '^#|source.*\.sh$' "$file" | grep -Ev '^$' | wc -l); \
-  if test "$file_lines" -eq 0; \
-  then \
-    just _log info "'$file' is empty. Go put some stuff into it!"; \
-    exit 0; \
+    file_lines=$(grep -Ev '^#|source.*\.sh$' "$file" | grep -Ev '^$' | wc -l); \
+    if test "$file_lines" -eq 0; \
+    then \
+      just _log info "'$file' is empty. Go put some stuff into it!"; \
+      exit 0; \
+    fi; \
   fi; \
   env_name="${ALIAS:-{{ environment }}}"; \
+  container_sock=$({{ container_bin }} context ls | grep -E '[a-z] \*| true ' | \
+    awk '{print $NF}' | \
+    sed 's;unix://;;'); \
+  test -z "$container_sock" && container_sock=/var/run/docker.sock; \
   command=({{ container_bin }} run --rm -it \
+    --privileged \
     -v "$(just _container_vol {{ environment }}):/data" \
     -v "$(just _container_environment_info_vol {{ environment }}):/environment_info" \
     -v "$(just _container_secrets_vol {{ environment }}):/secrets" \
@@ -333,19 +407,48 @@ _execute_containerized environment file ignore_not_found='false' custom_message=
     -v $PWD/include:/app/include \
     -v "$(just _get_environment_directory {{ environment }}):/app/environment" \
     -v "{{ source_dir() }}/components:/components" \
+    -v "{{ source_dir() }}/apps:/apps" \
+    -v "${container_sock}:/var/run/{{ container_bin }}.sock" \
     -e INCLUDE_DIR=/app/include \
+    -e ENVIRONMENT_DIR=/app/environment \
     -e ENVIRONMENT_INCLUDE_DIR=/app/environment/include \
     -e ENVIRONMENT_NAME="$env_name" \
+    -e CONTAINER_BIN="$(basename '{{ container_bin }}')" \
     -w /app); \
   while read var; \
   do command+=(-e "$var"); \
   done < <(just _run_yq \
-    "$(just _get_property_from_env_config {{ environment }} '.deploy.environment_vars')" \
+    "$(just _get_property_from_env_config_use_alias {{ environment }} '.deploy.environment_vars')" \
     '.[]'); \
-  command+=($(just _container_image {{ environment }}) /app/environment/{{ file }}); \
-  set +u; \
+  if test -n "$USE_SHELL"; \
+  then \
+    command+=(-it); \
+    command+=($(just _container_image {{ environment }}) bash); \
+  elif test -n "$EXPORT_KUBECONFIG"; \
+  then \
+    base_env=self; \
+    test "${BASE_ENVIRONMENT,,}" != '{{ environment }}' && base_env="$BASE_ENVIRONMENT"; \
+    path="/environment_info/kubeconfigs/{{ environment }}/$base_env"; \
+    cmd_text="\
+  if ! test -f '$path'; then \
+    prev_path=\"$(dirname $path)\"; \
+    if test -n '$base_env'; then \
+      kubeconfigs=\$(find \"\$prev_path\" -type f -exec basename {} \\; |  tr '\\n' ',' | sed -E 's/,\$//' | sed 's/,/, /'); \
+      if test -n '\$kubeconfigs'; \
+      then >&2 echo \"ERROR: Demo environment '{{ environment }}' has multiple clusters; please specify: \$kubeconfigs\"; \
+      else >&2 echo 'ERROR: Demo environment '{{ environment }}' does not have a cluster associated with it.'; \
+      fi; \
+      exit 1; \
+    else \
+      >&2 echo 'ERROR: Kubeconfig not found or exported: $path'; \
+      exit 1; \
+    fi; \
+  fi; \
+  cat \$(cat '$path')"; \
+    command+=($(just _container_image {{ environment }}) sh -c "$cmd_text"); \
+  else command+=($(just _container_image {{ environment }}) /app/environment/{{ file }}); \
+  fi; \
   test -n "$SHOW_CONTAINER_COMMANDS" && just _log info "Running containerized command: ${command[@]}"; \
-  set -u; \
   "${command[@]}"
 
 _merge_aliased_environment environment:
@@ -360,7 +463,23 @@ _merge_aliased_environment environment:
   q=$(printf '["environments"]["%s"]' "$alias"); \
   target_env_data=$(sops --decrypt --extract "$q" --output-type yaml "{{ config_file }}") || exit 1; \
   target_env_data_enc=$(base64 -w 0 <<< $target_env_data); \
-  just _do_yq_encoded_merge "$target_env_data_enc" "$env_data_enc"
+  yaml=$(just _do_yq_encoded_merge "$target_env_data_enc" "$env_data_enc"); \
+  test -z "$yaml" && exit 1; \
+  env_vars_this=$(yq -o=j -I=0 -r '.deploy.environment_vars' <<< "$env_data"); \
+  if test "$env_vars_this" == '[]' || test "$env_vars_this" == null; \
+  then \
+    echo "$yaml"; \
+    exit 0; \
+  fi; \
+  env_vars_target=$(yq -o=j -I=0 -r '.deploy.environment_vars' <<< "$target_env_data"); \
+  if test "$env_vars_target" == '[]' || test "$env_vars_target" == null; \
+  then \
+    echo "$yaml"; \
+    exit 0; \
+  fi; \
+  merged_env_vars=$(printf "[%s,%s]" "$env_vars_this" "$env_vars_target" | jq -cr flatten); \
+  yq -r ".deploy.environment_vars = $merged_env_vars" <<< "$yaml"
+
 
 _merge_cloud_creds environment:
   set +u; \
@@ -481,9 +600,23 @@ _generate_container_vol environment:
 _ensure_container_image_exists environment:
   set +u; \
   image_name="$(just _container_image {{ environment }})";  \
-  {{ container_bin }} images  | grep -q "$image_name" && \
-    test -z "$REBUILD_IMAGE" && \
-    exit 0; \
+  {{ container_bin }} images  | grep -q "$image_name" && exit 0; \
+  just _rebuild_environment_base_image "{{ environment }}";
+
+_rebuild_demoland_base_image environment:
+  openshift_version=$(just _get_property_from_env_config_use_alias \
+    {{ environment }} \
+    '.deploy.cluster_config.openshift_version'); \
+  if test -z "$openshift_version"; \
+  then \
+    just _log warning "'{{ environment }}' doesn't have an OpenShift version specified; using default"; \
+    openshift_version=$(just _get_property_from_config '.common.defaults.openshift_version'); \
+  fi; \
+  just _log info "(re)building demoland environment base image [openshift version: $openshift_version]"; \
+  {{ container_bin }} image build -t "{{ demoland_base_container_image }}" \
+    --build-arg OPENSHIFT_VERSION="$openshift_version" - < "$PWD/include/containerfiles/base.Dockerfile"
+
+_rebuild_environment_base_image environment:
   container_file=$(just _get_property_from_env_config \
     {{ environment }} \
     '.deploy.container_file'); \
@@ -503,7 +636,12 @@ _ensure_container_image_exists environment:
   openshift_version=$(just _get_property_from_env_config_use_alias \
     {{ environment }} \
     '.deploy.cluster_config.openshift_version'); \
-  test -z "$openshift_version" && openshift_version={{ default_openshift_version }}; \
+  if test -z "$openshift_version"; \
+  then \
+    just _log warning "'{{ environment }}' doesn't have an OpenShift version specified; using default"; \
+    openshift_version=$(just _get_property_from_config '.common.defaults.openshift_version'); \
+  fi; \
+  image_name="$(just _container_image {{ environment }})";  \
   just _log info "(re)building deployer image '$image_name' [openshift version: $openshift_version]"; \
   {{ container_bin }} build -t "$image_name" \
     -f "$container_file" \
@@ -536,6 +674,9 @@ _confirm_environment_directory_exists environment:
   test -f "$(just _get_environment_directory_file '{{ environment }}' 'provision.sh')" && exit 0; \
   just _log error "Environment directory doesn't exist: {{ environment }}"; \
   exit 1
+
+_get_property_from_config key:
+  sops decrypt "{{ source_dir() }}/config.yaml" | yq -r '{{ key }}';
 
 _get_property_from_env_config environment key use_alias="false":
   if test "{{ use_alias }}" == 'true'; \

@@ -1,0 +1,12 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: openshift-lightspeed-operator
+  namespace: openshift-lightspeed
+spec:
+  sourceNamespace: openshift-marketplace
+  source: redhat-operators
+  channel: stable
+  installPlanApproval: Automatic
+  name: lightspeed-operator
+  startingCSV: lightspeed-operator.v1.1.3

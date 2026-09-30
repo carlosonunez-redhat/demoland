@@ -1,13 +1,17 @@
 common:
+    defaults:
+        # common.defaults.openshift_version: Default OpenShift version to use when building demoland
+        # images. Override with '.deploy.cluster_config.openshift_version'
+        openshift_version: 4.19.27
     cloud_credentials:
         aws:
             # aws.sts: AWS credentials for assuming into another role.
             # encrypted
             sts:
-                aws_access_key_id: ENC[AES256_GCM,data:c4HRs8TSLdk+9KRYAuO9I5GXngA=,iv:7ZHpzxzF6J7naPp5XagPflAeK8z5bA3zSBwBhdozkto=,tag:qbuEOf5tu3fjx4cw24ZvMQ==,type:str]
-                aws_secret_access_key: ENC[AES256_GCM,data:CAthNhLgY2Nh12FurKNcls72NHAKa54lpiv/75fCdvpYzNQwqa/PiQ==,iv:3o0WzGMzvEhzmHNUETSbbLZNhodnKjIHAUksa9qpdwg=,tag:kkxpP5hWOCcd9cwvsdnCfA==,type:str]
+                aws_access_key_id: ENC[AES256_GCM,data:8cEA0oBMZu8SoEmJYqrA7OT/3V0=,iv:vzKW3cvg/aameL56yH3pkdX2aokRnZvCJKSE+7imRrM=,tag:5Xf2sdsIdNY9MztcXME5nA==,type:str]
+                aws_secret_access_key: ENC[AES256_GCM,data:aB1QdgOeEah/PRKcJ/mt2PqjxerdiD7d0f2n/ufBq3DdMZKN8fhK9g==,iv:goy66OGgu/iInEVSnU9w1+ASubnjKenLLwJiW/osaVk=,tag:gFXGXXFab34t272oRzKGgg==,type:str]
                 aws_default_region: ENC[AES256_GCM,data:yhbppXp4Emsv,iv:PoWpnhgYk18InCtqBcLK5yrI8vrHqTX9BDR2kQ0Kya0=,tag:7Jooayomp5o2DNnbqlvfFg==,type:str]
-                aws_role_arn: ENC[AES256_GCM,data:7YS3XkAYIQbFtbVPn0+CXhLcpQ0NaLkIBZ0jFZ08h+EbPcC+M1NpbbYQlibEB9mD,iv:LHn8j7oBIIhfxk/KvKT3YhzXYjU0ulcsRdf5fZaM8bQ=,tag:KvD+iBjeSDvct6rO2KaOiQ==,type:str]
+                aws_role_arn: ENC[AES256_GCM,data:QgxZvgX7moyy22I3CN7H/GjlYOVbLlSBgYNsJks+O9gO5uht9GGMT8cbRsb78dUA,iv:XIbcUYWdL5f5CZpic5B7d5d7jSk5pUdHtuxjGzXS3l0=,tag:SeeKJxSeJDLR3u1sU7cpAQ==,type:str]
                 aws_role_external_id: ENC[AES256_GCM,data:b52sm/9ISC/Zlp1Nzok+rYpbprY=,iv:TqyA4AEsR7VzSrlPFj9DUKIYJSYuwT6opDiiU0mu2IE=,tag:BHJ52wiQ0E9AaP30sB+oaw==,type:str]
             # aws.iam_user: AWS credentials assigned to IAM users. Must set AWS_DISABLE_STS=1 in
             # your environment variables to take effect.
@@ -24,7 +28,7 @@ common:
             service_account: {}
 environments:
     example:
-        version: 20260402
+        version: 20260919
         # alias_of: Alias of an existing environment. Keys defined here will be
         # merged with that of the aliased environment.
         alias_of: ""
@@ -41,6 +45,11 @@ environments:
             # common_options.ignore_installconfig_check: Ignores checking for an installconfig in this
             # environment.
             ignore_installconfig_check: false
+            # common_options.skip_component_install: Skips installing components through the
+            # Demoland deployment process. Useful if you want to manage your base environment
+            # cluster entirely with GitOps or the 'postinstall.sh' script or if your demo
+            # environment does not deploy its own cluster.
+            skip_component_install: false
         deploy:
             # environment_vars: Set within the container that provisions/destroys the environment.
             environment_vars:
@@ -83,6 +92,75 @@ environments:
         # - openshift-gitops
         # - advanced-developer-suite
         # ```
+        #
+        # If you prefer to use GitOps to install components instead or if your
+        # demo environment does not deploy its own cluster, set
+        # 'common_options.skip_component_install' to 'true' to skip this step
+        # during deployment.
+        components:
+            - example
+    rhobs-multicluster-demo:
+        version: 20260919
+        alias_of: ""
+        depends_on:
+            # Imported OpenShift Cluster
+            - rosa-hcp
+            # Imported EKS Cluster
+            - k8s-eks
+            # ACM hub, which will have one managed OCP cluster in AWS, takes the longest to get
+            # going
+            - ocp-aws-sno
+        common_options:
+            ignore_installconfig_check: false
+            skip_component_install: true
+        deploy:
+            environment_vars:
+                - ACM_HUB_ENV_NAME=ocp-aws-sno
+                - ROSA_CLUSTER_ENV_NAME=rosa-hcp
+                - EKS_CLUSTER_ENV_NAME=k8s-eks
+                - RHOBS_DEMO_CLUSTER_NAME=rhobsdemo
+                - RHOBS_DEMO_CLUSTER_API_FQDN=api.rhobsdemo-ntqwyzm3.sandbox582.opentlc.com
+                - LLM_SERVICE=vertex
+            secrets:
+                lightspeed_vertex:
+                    name: lightspeed-config-vertex
+                    data:
+                        name: google-vertex
+                        location: us
+                        model: claude-opus-4-6
+                        # encrypted
+                        projectID: ENC[AES256_GCM,data:9QsWKZPstjxhTJNtZ8qxW5Y8zwItR564pwaB7Ryk,iv:jFJD/iDqrcFPOQVwrRZvimujdzbwX/7Uxo+2uQhHaXc=,tag:+FsdZxutkGETBvQgdVg78Q==,type:str]
+                        # encrypted
+                        credentials:
+                            account: ""
+                            client_id: ENC[AES256_GCM,data:1/JkNw+Xcxdg15Gz/i1fNNpIPPI288GRYx01H+YAQf7Or89XwBwFyByNq+V2L2l7mpqTZUSCoGrdL9GPR9VjdDpZrlX87hz1,iv:wzmLTwWp+8TOawoglFwe0gckBfuvUc6XdRs8BdE/Wgo=,tag:vpIvZGq3dsjn5/4EU6Tsrg==,type:str]
+                            client_secret: ENC[AES256_GCM,data:09oS0HjcASS8dU/u579Aksf7Qyuxye8r,iv:mf72Bl+n87l9a9+RwvPrCO0dLeZdJlTn7/xNSXsJOC8=,tag:dWqfTFZGXYtndYzVbIe97Q==,type:str]
+                            quota_project_id: ENC[AES256_GCM,data:+JV3ZhtiohvJ30kttosPMSNKYYfPZw==,iv:RzkOdBJkyfn1lIxtpVPKS9kV4B13M5tWaGe3jnkK6yQ=,tag:zD+ZKUyq202eVLqtx4QpXA==,type:str]
+                            refresh_token: ENC[AES256_GCM,data:Lxgre5d1QwJzkpdPBJQ+B5duVsLrZ4xWtAzONYHSJ8NdNnq4sYC55zw0loATb88cf+1mJDEhNhpRyqYo91S5jpNJSbJHEo/WmTWD+YAgdGcVMjpX/of5nG7DZRDuKn4voj8dhzu8kA==,iv:vmEbkuy108WTkM+OOrVhn9tlfooSyChKnTt1LGQ+oIM=,tag:5mj9EBZMJ94RW9pStBMa2g==,type:str]
+                            type: ENC[AES256_GCM,data:5ln+f8oLag/D/WmODF+a,iv:/5buyLoWCCGj6rU51SwVWaSLUKVA8MqL3W6kRfGTP8s=,tag:IW7PA0JHwDLG3QasOiA+hQ==,type:str]
+                            universe_domain: ENC[AES256_GCM,data:DdnwEETsIkrlz7KnClg=,iv:rQ+AQONGEuh2129H0K6nwg7qvR2cz5erLzxS7xTyLGw=,tag:458VVpOKbmUefUx1GLc/RQ==,type:str]
+                obs_s3_bucket:
+                    name: rhobs/s3_bucket_name
+                    data: 3qqaxq4w-rhobs-s3-bucket
+                pull_secret:
+                    name: pull-secret
+                    # encrypted
+                    data:
+                        auths:
+                            cloud.openshift.com:
+                                auth: ENC[AES256_GCM,data:VQTPGHIobTG+zxvBSr06K7mz0aIGLVjfjsxixRiQmkS3uZWWTc785kqSfyWxQmwv51n6hCz4jdRmgW5b1yFqipQtC8l9hLTvefn5cDFceDZHD/i2YSA3uwyiBte89UXI3E0pCd9L1T1S5ODB86GQfGAe9k87htHZBJJu131ZQxXm4oo06EAX892X2AFbw0PGrcfK67KUFN5v36YI6UzSu8aW4aUARtdXU9uORZNwlDo=,iv:RJopuVc8xske41cC6n8wvi8HvG9dod//PcEx/e2iYvY=,tag:6jqXXcsIbsprkcFMtkcEGA==,type:str]
+                                email: ENC[AES256_GCM,data:mbXOBKrX963eja1xOnkdbPw=,iv:0ajaregANYv0PUpNp9PBmT6jF5Za6AoBRW+wf8WzRpg=,tag:CuKYoYfAg5gf0sGxMg3oZw==,type:str]
+                            quay.io:
+                                auth: ENC[AES256_GCM,data:Xok1mN3L5YsHBKQMje8EIfBirkha1B9F1fT9GYBhVC8S34Bc3yEZxWWb8S1kIWcZ4KsSGCG8Bsdi6rYDJgNh5aDhMNwB8oLmoOqJsMDJzrAtPcqI3q//mwiUJxi565CroeJWXGklN3KyiLOy+DQqbEUGXVVUkSbWRz5Okuc+vZVO/NP3prFkWOJK9JQ/3k9P2XVtFmZ8+7RXgSPBLNofVLhLtwDsym1ki3r8bN0oEBY=,iv:2/I/AHCTMyxVHC2cmZUSXMHGSfn0akYlSyzOdpUJSQo=,tag:DTLRM41oq6qq8GzMRQPOMg==,type:str]
+                                email: ENC[AES256_GCM,data:Q/a0cLfIEdAmooxmZyZkmoc=,iv:Ptxu6i8RXgTm+clFwRtpqYVjHlLIDlnTdKIgWjpSfug=,tag:hHk4tlu9cgvrM6uUKdetrA==,type:str]
+                            registry.connect.redhat.com:
+                                auth: ENC[AES256_GCM,data:3OhgZlrJ8+hbjdbnJjr3QD9mPvUSApSd7RKpjNivlLo37MVMQfj96lx5UqH4xxXOflhoVhGW0kgUL6dXdfdUVQ8ulTAgLC2yTzCSTV2hA9lbMWEiDbpeNN6btt7LzrowNdXpvS0yP/VTbKJLnC9Vbs3k/1D7KRA+CC4DuIkpue+JMzixxArB6k8bPdv4kyKALJXETBc8ge36S7kL/LTcjaWB3PkAUsGTnh5/fxFG+ke+rOeBSuHhUGMVpUsxK+b96WTkGX1YyXduJgDNf9lnD/itZH34hZHKYNKXDejWzmV0lxbqPF2S+U6lR7nZFCrz0O9r0Hs0WqntEdeDzabDKZl13L40xRFdZW1WAWbnjgT4l00+JvF4QQawU9HsahQHyNlgUJbJvVcFPmzN5Ir0dYPhJQPu1kBM2Db7PAHgn6+xn9g8EOlWrJhGJeM/fHyeL2ZSLYjHbOWEaLbql6iRXtsxBwS/SS3ztMlxeoksgIPj/zY1A8DAuxjw9qEC/Z2nmHuoA4+kJcLKB/atkTq8hZ1DP05gy5zmZ+oRt4/DpQPQi846HIclh4KcRFte0XP0Zr2Vvw0QRgOOeqYaJPAG88Z0I5oGck+NCmDXolEt3PwQTEWIkBzKNI7nvtNcU3r9ka9gjqEbKr6Qb1ZOrEuAL9mgHGp+xpBkKwmG9/Gq/kN4KfOdz07ycEycie4/HVAU/37urYQV3l9uIFYgQF1vLzY9jB8ANiYxmJTVcIu4DPq8K+k830+jYKpiv40MRYKqUlKc5po9k5eHHPIcZbA0a4aSABVy95NiyL5xFDYvVI5xNqe13al2P0B0RA+V7jI15B++7w76t1RyHouXlBwxnQ1c09bD1Ym2P89j/0ivGRLSYA9DJ2j5GybEtLPpl6Xmfu6+PCtY/3ksdciYofyB0eAy2ykBIFuoBM7VAqn8ll8C7AOp9j0+FNbr4EFaq+SUGiif90lf+LLOPHffWYJ7BQJ0tjV4DTRNUaY6nB6MAco+AgZOfRSe7cGy2MzjX3FArm8ysf2A5maeg/a4M/Xge8Lp1QQ1JfLP+QBK21PuevWC70KkvETJC1E1H3dGEc9jfw1clnoTsyrasVNLabsdYZOeB4smg05Ux0KeJ2Rjk+6aFOfHIrJlhQDA+Q6yzWMVWRStSh+ZFTdJ6XAAmDjjCcPpeMUlQAYUZUtzMen2iy3Q3c9k67O4wSsbrm92gMvanDngsXFSCu79p2gl6Xp9dCEzz0pPFu+Ba60CZaCEFKGitL7y1205McDx56auFv6f3p83nqL43N0XOlVv0y7nTmBLlRBieJf0OS/HYjcbNsnyqMQFNyeXa/JF8MehXOkmX2/CWQ8lSrwASY5NaiCZvWX0Uwmj2YNs5n7bcil1uhV0Uv+oopNkUa6lcMBRnVGiNGVcQf6gTNEN5sGrVEccixAL2emDNd3S,iv:ilDW5zHNtD4SKbp7uWenpdqBzUAwSE3/k1Sl+5EIbI8=,tag:eYrZboaUYHiVm14K1Mk5LQ==,type:str]
+                                email: ENC[AES256_GCM,data:+T4akcK5Lt+6/nONp4EUl5M=,iv:OSED9SEKehxb/V+Ng2Qt6UUi0MEN5QIbvA5sPMEuFqQ=,tag:IdEfnkgQIs1a1JOdei1MKA==,type:str]
+                            registry.redhat.io:
+                                auth: ENC[AES256_GCM,data:Elt7Axq+prW5a3bhPoe6xIHhDvDMBBGCxlxZhakVkPIRcIP2jXjrpJT/+HT2ZjnhfTwyTeaiQ+j1LY6Iv8F85kigJkyyY/c7OYmwmuVAxLu6kLH5A3nyeVI9s9Au6k0Wcu6MMXbVhTDerrBts7rFqln+PYBXyD1enmzWY268iowmYSnzGPObOpX+LMkbLmt7SINN1Y48YqF988RnN3PU40A7Lu6S1DFM6nYQ3vrq8lHmesRzlOSW8GH+QMjDTSbyEUEce3oW8yYiV+8QUnW5ZywXdV1y7Pcdd4juPZRUNBnX2dDjMbUSsu1vyMsKlwDzepP6gYigGQXf05zusxTxB8FgpVgRH7BnK4Cde1FxCyXZWdcpt3W69ZUoyTBD8PadDR8OVDNB2b8iC1uihIlmTHOnO8L6Q4Fv0misyo7aiY7cxL7wTIE4t5dnxjlpbDl83RmT0xfT98d4Wju/CAs+wZ9nfKlc+NgxgoKwUb87qkUDlFU9vlmAm/G2elti/GEv5PqM4tfnl3U42d0URthgp2t2xzn1N3j/b5wUfX7aCa68qvHN5RyWBUPUy1nrTjXoNa3FIyLJ5iH/meiWPItiVfV+p1T9lWdNpikyh6S0Wys/9TOWje3ynFO50ywLonNh1P7xOF0Vkp8GXV8ZKprXK6EA3fx5o3jldCNwkm+K+V8aWdsO562pfPi3J4djEcXlfjoHVyw5K1iLsbzoqCsS3iOw2PEoTSBJd7T3170qikUT0M5V2pcjRJsQ2hvOt5E0MEt/wLuARsA9ISJlQXfY9jmBdEHFW5FtwrjPfFaD5xVpL8/iBJqsO5gCBfjemZITJJw+M+pQP3VahC4qn9JDIa4OmvDe5y8EBrcGvRAFLSbnPD2oXGDBLFmRC7Kzl9uxo9qd7kC1PqvRHVVUaHLhnuhbESpjAEb2KHvOcdjKbXpybPuE+dzFKDGfYg6GTkuv2ckz4btUTuVHOolohHMEkVlqO0jZoR8dkE60YmEJdKjpMzc1wt0XMPck30wp3bJoyxJ2U3Afe8HQUWTA4JSS1iwb9EyeBavInv6ob69JCTPn0wlzlpmbMjf0oBKhJSArqfkApl8y8sZZEC1uelKpX/PAMDV7hQhjCG1bZGk832UykQpKCqickOkXr9RouMi0RAoCULKBq9AesB+WbWkcs0uGUzQcgJrcDhmVuRPNGqFH2TIWjQO1hiv9q4tUHQ92z9iYLOJOhMedL5cGbpzcIRSbuXTDTYLRFz2ODZNONqJyJ+kjpVmxmVqExKM3wQcteKYh/D8TwYEeoLZoNDfBVWCuTuMP2+rKHsSPHnDUPyg0mSmdm5MnGo3R4oIJey7zGSA4Cq4k6oxZjalYB9+pLtcxVM30QSiGQy1UwYsqdu1HOqrBVmwq05IU8a0L20mpyXhr7dA2MtROmUtUsiegYfCzVo0Z7UPb,iv:ljbm+H0T+JBTbvD94kJcbexDvYt8jNhbPC/C0p8SeGk=,tag:yw8tvwUET+WXnE7vpzbehA==,type:str]
+                                email: ENC[AES256_GCM,data:Qpxa2O9X3YvTVo9KzSfyO0M=,iv:eSjOR/Fbm8VO1ssoFYx/BPgor+xxv1B2a/yS5gToKX8=,tag:s8/7b0p+hCl3ABUw3kj3ZA==,type:str]
+        cloud_credentials:
+            aws: {}
         components:
             - example
     rhobs-demo:
@@ -95,16 +173,44 @@ environments:
             ignore_installconfig_check: true
         deploy:
             # environment_vars: Set within the container that provisions/destroys the environment.
-            environment_vars: []
+            environment_vars:
+                - LLM_SERVICE=vertex
             # these secrets will get mounted into a folder called /secrets within the
             # container that builds your cluster.
             secrets:
                 obs_s3_bucket:
                     name: rhobs/s3_bucket_name
                     data: 3qqaxq4w-rhobs-s3-bucket
+                lightspeed_vertex:
+                    name: lightspeed-config-vertex
+                    data:
+                        name: google-vertex
+                        location: us
+                        model: claude-opus-4-6
+                        # encrypted
+                        projectID: ENC[AES256_GCM,data:Rkuy4Lp2WT+9lP6pRNisjmLtw2q0dGaOqcH4pBxD,iv:xYDfeW9ZGqoyYiadmbySAHo6Y4v2DdCP44OwMpT/meY=,tag:E5e2OUhkmrOioVsvasgR1w==,type:str]
+                        # encrypted
+                        credentials:
+                            account: ""
+                            client_id: ENC[AES256_GCM,data:YwiNJzJE7i2emOlXTheXu39uM2WLU4WRTffP/M1H06jGu6q0TqhXtndRWo4XXB5P5X3+uMP2GUQg6FCNyuGLrRhSkrfcaAwq,iv:hi28+LMuix5mGUTGGlHW4zbBZWrc5BP70rV87D5mE+I=,tag:Kv8GzUSXLqQPZD873MCmoA==,type:str]
+                            client_secret: ENC[AES256_GCM,data:FLRBY/8p/no8j5/RQ+DVWm17yx/4DG7U,iv:Hh2cr/0J8YHZNhu3LbvFkqm+zDChcTE4LCkmSxr8oxk=,tag:gULHp+4XdhNdWiAPIFNwFw==,type:str]
+                            quota_project_id: ENC[AES256_GCM,data:NL/yDtSyj8ctXhRA0PrtNtooltZiZw==,iv:wTvEAVy/3O4QP1D1eXe/mpl1NyCyqsDtpqev367EC40=,tag:7EfinmqHBoKJaUOJiP9WNg==,type:str]
+                            refresh_token: ENC[AES256_GCM,data:iZeH++lIGFVZ7cmewN5uolj/25o9yJ9beG+bd4tFt2yvT6a4FvrLzH8vIQO/VpK68azQnGCMpq5M1L+wSQf8MZMGerEY5x4aPrbt/QTcZb/fxfSPoZlcU62xpkW/3fiq54L2Vhze3Q==,iv:DBaVheUE0bdrH5SPEnaDTu745eZHjOzTBKUvFUowT6Q=,tag:J5+Khw4xhEKiZ0URd7QWQQ==,type:str]
+                            type: ENC[AES256_GCM,data:lyivMu4yHWUwtlMR8U39,iv:Zzm4KAve4UGiOhoifzY4Got0Oi1EauXpIM1WI7rLTSk=,tag:nl6kIxwgBrORapbwI1hvNQ==,type:str]
+                            universe_domain: ENC[AES256_GCM,data:cyqpvWKwj6y+CirwL6Y=,iv:f6x5SFLL5u8HYJO5k71Kl5nxazv5rMspJ8+vG2hixrg=,tag:nZKQBJRNKptlc8vKJ9TZ/A==,type:str]
         cloud_credentials:
             aws: {}
         components: []
+    rosa-hcp:
+        version: 20260124
+        alias_of: rosa
+        common_options:
+            # common_options.ignore_installconfig_check: Ignores checking for an installconfig in this
+            # environment.
+            ignore_installconfig_check: true
+        deploy:
+            environment_vars:
+                - ROSA_DISABLE_CLUSTER_TYPE_CLASSIC=1
     rosa:
         version: 20260124
         common_options:
@@ -115,10 +221,10 @@ environments:
             aws:
                 # encrypted
                 iam_user:
-                    aws_access_key_id: ENC[AES256_GCM,data:U//gO/gpwsymBv8+5hgsXcBXCEI=,iv:Gh+O0clDQmfJoKIAvEimr8WA+aGyIIABTJMzY5++e7k=,tag:43o0R+MTxmrky1CZzS6ZVw==,type:str]
-                    aws_secret_access_key: ENC[AES256_GCM,data:Tvzq73IigFiKTb1LVu5yBQep/Rl/HJ9566+oSFMe8zID0p/nMeSqoA==,iv:KiXhAUuGLoJgvcovN98DX1DnSC9MN+SS5e1SWgADL6g=,tag:dVKXyAaGpflBw4GHy4vtnw==,type:str]
+                    aws_access_key_id: ENC[AES256_GCM,data:qvFb/CYyZF9IKZjQkyjUwpYzXGw=,iv:u4zFMBAu21DdrkhqvoxY+rZiW+mGFuE0C6UtCuad59Y=,tag:wZtTGm5TMFkqJwlSoNFh3A==,type:str]
+                    aws_secret_access_key: ENC[AES256_GCM,data:UhJjKwguHWM6R3fq7dhFnHmrBXCeGxNFjTkXZL1Giqu878+LQYuJnw==,iv:YVjGuGGfIyVkJ18SWooZy4HnC7HacR+0EodKAgfeQ9I=,tag:R9acqow9mKw9ZG8pOU7qMw==,type:str]
                     aws_default_region: ENC[AES256_GCM,data:lpeXPB0tymh6,iv:0jWk/hreDKLYSQHLLtMdD4IfrV3bKWLgbQihecUfUJA=,tag:XMCzYl4/swkA50596OvwdA==,type:str]
-                    aws_role_arn: ENC[AES256_GCM,data:1iDFNRbGcrcknP8jbr3T1mAAV+JZb+nuhEu8FlXXIs71AATf8g8geDij8q9vaWfC,iv:xMBbJWH/EpgykB/o+j5Kyp5NZf8Jv8VWvhrdF+Bn5e4=,tag:QH0wqJlABvhEwa0WR4A6RA==,type:str]
+                    aws_role_arn: ENC[AES256_GCM,data:8Mmz5g60JWTjXy+wEDYVj2JFdWmq3hLp5luVbv0mdKV6FJx7FnNkYPlh1EjyU0k+,iv:kLZsJyPWr94Jocy8fBnzAhwg5uK0cs3nbEoKeMw6fq4=,tag:z7UWsLVA9NM0+tzlV7GHVw==,type:str]
                     aws_role_external_id: ENC[AES256_GCM,data:82Pqnnd0NrTDp9hDChzvq5INspI=,iv:Mbhexv+qsQOVdP0ESTof4CysMV+g4bbgwVNXlXUopCU=,tag:QJPJwj5FeOJUp+aj+cvlGA==,type:str]
         deploy:
             environment_vars:
@@ -166,6 +272,16 @@ environments:
                         cidr_block:
                             classic: 172.0.0.0/16
                             hcp: 10.0.0.0/16
+            secrets:
+                redhat_ocm_organization:
+                    name: ocm-org
+                    # encrypted
+                    data: ENC[AES256_GCM,data:yBm8/yPLoFA3WyGigTIf6L35UV1hZr1mMRaJ,iv:onEpwO/Q80aMNr5uQ/jUInwtP2+byabbTYOwt8rVCEA=,tag:D6yJyGw34Yk6oWfPmIsHag==,type:str]
+                # Generate a new OCM token here: https://console.redhat.com/openshift/token/show
+                ocm_token:
+                    name: ocm-token
+                    # encrypted
+                    data: ENC[AES256_GCM,data:aetg4tZDNxnL3JPJBdF8LpVysTuQ5qPq3VrfaPfVdNSTpjg8PjW9FCUH8p4gm7y5gDhYFPyKoBYLOux8zWjxBR8o7FYo43stMkfZYVw4W9xYjEx1NpYKQyqTlXg2NZj+EWjt0fsSKXeI4ztyGBovclKXqG0Yda8BAOqZ4Kv/Nj9UgqPsmlOYtytlk4fTdCdJyFGjQOqvQ2erX+0NukX5AkIBsHgLuPqziv6MIi+WfVWEU43l7k+gGbv1eFThFXw9e7xMdaGlxKPyVb7b/tXvnpmMREOnQovobp01hs1y3EOyCp1f5OOOggMWC5eQhtscSZsPpH5V9KMV3bw2zlVzWJDP+QFNQicCw8m95GwsA0uDeipMmLRliIf6grhU29WqvAcX4QMuTWxSdwDnlauJJXlhj+BqLocBTnUCsIHTSx+NoPefyPhEEsjwYDaxLAaWdjV+gkrrPuI4aGbRc2ofeChcF3PNL034I+CU1FaSzD82/a6b52x3NEas6knl/NQ6pB75WllyrviHdTRUc57u8yKjtHcpJCfYx1tXLLEhsZCqW5onQUbWfE3hbPnDU4mTYgmCAsBuaj71AJRDxYGCcLVl7mISvTTB1hJSwBTOTL5s9FSw95LPQmBe3KbKZixpMRezXd5c2p4x/ADutv/6B4jfXCIyspdt4LvRWeek40xQQxGA/jT+foLEPkTwWU1YJQYEktiSBlFgHBfZq9VzdYNFRfgihmwCA52X5CpzVChSfYZ1vdBpC+K0YJ1Sc+r/7rrdxI4NSGx1a4Wq518oXOiIuVHW9kYdVMOrnJnjICg7TC1eFgYq2I+pXs5iULD1odu0dM/TURlU+J/E0LOE1Lh9UFpEXqz+k8uXWVVeRszy9+kJmeHO8Si3ZwuB/3m64LowffryKH8Yqfpf3IkG5bwuvmER9O2+Z3VEzMfF0E97IOjW0z9FhXhZsVpT/WZEFWrJ0G7/sFsatqK6btuSaxj/GJK4u2f/YR8n7acYH33LyBv1eM9c/qeRVaIMQrWdIT4HhyAC5veWgw+xBZJCDaeOYt+x,iv:/5knT74q3rdIpGzsmTIQhJSPag5/a4+PX5ulM9RY3gs=,tag:d2S5eEz9wqXo2n2mRBUYrg==,type:str]
     ocp-aws-sno-rhobs:
         alias_of: ocp-aws-upi
         deploy:
@@ -272,7 +388,7 @@ environments:
                 aws:
                     networking:
                         dns:
-                            domain_name: sandbox5159.opentlc.com
+                            domain_name: sandbox582.opentlc.com
                         cidr_block: 10.0.0.0/16
                         region: us-east-2
                         availability_zones:
@@ -311,14 +427,50 @@ environments:
                     data: ssh://git@github.com:22/carlosonunez-redhat/demoland
                 gitops_branch:
                     name: gitops/branch
-                    data: main
+                    data: demo/multicluster-observability-acm
                 gitops_repo_key:
                     name: gitops/key
                     # encrypted
                     data: ENC[AES256_GCM,data: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,iv:HHjtH16Z0WCYc8fcQMlhgfFatunmKOYHQ/YkzZ04Fjc=,tag:cnN3kcQjpaiLvJ5yer/n2Q==,type:str]
+    k8s-eks:
+        version: 20260402
+        components: []
+        deploy:
+            cluster_config:
+                eks_version: 1.30.1
+            cloud_config:
+                aws:
+                    networking:
+                        dns:
+                            domain_name: sandbox582.opentlc.com
+                        cidr_block: 10.0.0.0/16
+                        region: us-east-2
+                        availability_zones:
+                            bootstrap:
+                                - us-east-2a
+                            control_plane:
+                                - us-east-2a
+                                - us-east-2b
+                                - us-east-2c
+                            workers:
+                                - us-east-2a
+                                - us-east-2b
+            node_config:
+                workers:
+                    quantity_per_zone: 1
+                    instance_type: c8i.2xlarge
+                    spot: false
+            secrets:
+                ssh_key:
+                    name: ocp-aws-ssh-key
+                    # encrypted
+                    data: ENC[AES256_GCM,data:7Hg7z5FD+H1tuLSTAwDVLj/YN86emHUQlHcpKf3WNQwwrqe0WPbKgFLq9fecw82TqNNAd3ZT4pBLlpvPvuyyApoZ7QHkuqaNazqKEH5BHTK/IJpBUn9nwtIRfMIJ92ek1Xsy8NQ00L/k6rKKFqldea73taIhWJvRDkjF0qEz8eeft59dt1WOR7MYgpVKGgEXwN4AA7zGCV7WF+NBRjlcLJPeQHgTSrGCEDNiO8pBcC97ZTTk2SEU71ztyfTywe/TXaXgUe56vZ1um8kZXkeFn3Oy5h2plaG45KJCDjosjOD7a9hCCKEW8h6HO2kWr3swiC0F65LBY8wlI2zjmKZgRq6Vg750cMHZgK/a4tAUPAhe2KjJgZBiVY/zHgEDeauGUvaPzWUhscR3gc2/RVxyncOv4nQsnQYV3rkSj66RYpXhnl+UxbwhzObaTDHmmXJ+C4WfGS2MfWXbvbcmk13K4YF83bkksmihrPULFy7KO2h2TsXCzxSOwpf+LVkjY7yZGVZQvXyTLmPE22RG2FjJ7hUk2eNS+ERpLzs=,iv:w9Ji4EG4CgU98IbRSSKZvRcDlhAshE4NshABz3dAXFE=,tag:u/oIYWl6k44nMsGTNqOfNQ==,type:str]
+                extra_repositories:
+                    name: ecr-repositories
+                    data: '- example-apps/simple-web-server'
 sops:
-    lastmodified: "2026-05-31T18:45:29Z"
-    mac: ENC[AES256_GCM,data:pTqldf3EItlgTRQ8Q93IvStHEI/EUjvrwxvTLRAIxW60g1CXq7SNwVgpsuO9xZogi3o32V76d0QTSWz4Jk4KoEZuWpfBiGzbGTIlqpu5UvcWu6xc2/Yw2NQdW1kAPxH4Q4B5XK5IRiPGB6mcFfwCWrcva3Yqc8OSUEYfp132irg=,iv:axzJA0BNLivDCBvYXdQofiOCZSDFwckJRBlMGJYog2w=,tag:fwKdDcF7QO7UrmIScYQboA==,type:str]
+    lastmodified: "2026-09-25T00:11:28Z"
+    mac: ENC[AES256_GCM,data:398PZbP7koq28CjIhJUYy0UQBvF4McJnAR7WKERhI1scf/MolORw3m62YGLwEh36v7aw3URjxE5NbtnuYP3m2SMVCIkuKECElV6vA+yV6Yj8C8G43M+7Cf3Uv+9T1Eyo5u5fNpef29yeKTCh9Ov2Ff5OhvOjL1iYadmW5RazTDg=,iv:vHFa5zLW/X9fNnDyQ7h1++5PHehtNImRndZGVyVIP5k=,tag:WQmFRwhWSZbbTTDTLsmq3g==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-

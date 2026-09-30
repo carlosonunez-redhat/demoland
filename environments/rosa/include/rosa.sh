@@ -3,9 +3,10 @@ export OCM_CONFIG="$(_get_file_from_secrets_dir 'ocm/ocm.json')"
 _rosa() {
   # There's no way to change the logging level that's shown.
   # https://github.com/openshift/rosa/blob/master/pkg/reporter/reporter.go#L114
+  debug "Running ROSA command: 'rosa $*'"
   result=$(2>&1 rosa "$@")
   rc="$?"
-  echo "$result"| grep -Ev '^WARN:|^INFO: Logged in as.*' | cat
+  echo "$result"| grep -Ev '^WARN: The current version.*|^INFO: Logged in as.*|.*It is recommended.*' | cat
   return "$rc"
 }
 
@@ -13,7 +14,14 @@ _exec_rosa() {
   export $(log_into_aws)
   if test -n "$ROSA_CLIENT_ID" && test -n "$ROSA_CLIENT_SECRET"
   then >&2 _rosa login --client-id="$ROSA_CLIENT_ID" --client-secret="$ROSA_CLIENT_SECRET" || return 1
-  else >&2 _rosa login --token="$(_get_from_config '.deploy.rosa_config.auth.token')" || return 1
+  else
+    token=$(_get_from_config '.deploy.rosa_config.auth.token')
+    if test -z "$token"
+    then
+      >&2 echo "ERROR: ROSA token not found in config."
+      return 1
+    fi
+    >&2 _rosa login --token="$(_get_from_config '.deploy.rosa_config.auth.token')" || return 1
   fi
   _rosa "$@"
 }
@@ -28,11 +36,15 @@ _rosa_cluster_name() {
 }
 
 _rosa_cluster_api_url() {
+  _rosa_cluster_type_disabled "$1" && return 0
+
   _exec_rosa describe cluster -c "$(_rosa_cluster_name)-$1" -o json |
     jq -r '.api.url'
 }
 
 _rosa_cluster_console_url() {
+  _rosa_cluster_type_disabled "$1" && return 0
+
   _exec_rosa describe cluster -c "$(_rosa_cluster_name)-$1" -o json |
     jq -r '.console.url'
 }

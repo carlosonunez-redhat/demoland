@@ -1,12 +1,20 @@
-# Manual Demo Setup
+## Prerequisites
 
-This guide walks through the resources deployed by the GitOps Kustomizations
-accompanying this demo. Useful for workshops on observability.
+- An AWS Account with an Access and Secret Key Pair
+- The AWS CLI
+- An OpenShift Cluster (tested with v4.20)
+- Access to a shell, like `bash`, `zsh` or `fish`
 
+> 📝 **NOTE**
+>
+> You have several options if you don't have an OpenShift cluster handy:
+>
+> - [OpenShift Local](https://developers.redhat.com/products/openshift-local) or
+> - Stand up a Single-Node OpenShift cluster in about 45 minutes
+>   with [Carlos's Demoland](https://github.com/carlosonunez-redhat/demoland).
 
 <!-- vim-markdown-toc GFM -->
 
-* [Prerequisites](#prerequisites)
 * [Instructions](#instructions)
     * [Install Operators](#install-operators)
     * [Enable Cluster Platform Monitoring](#enable-cluster-platform-monitoring)
@@ -26,22 +34,6 @@ accompanying this demo. Useful for workshops on observability.
     * [Install Cluster Observability UI Plugins](#install-cluster-observability-ui-plugins)
 
 <!-- vim-markdown-toc -->
-
-## Prerequisites
-
-- An AWS Account with an Access and Secret Key Pair
-- The AWS CLI
-- An OpenShift Cluster (tested with v4.20)
-- Access to a shell, like `bash`, `zsh` or `fish`
-
-> 📝 **NOTE**
->
-> You have several options if you don't have an OpenShift cluster handy:
->
-> - [OpenShift Local](https://developers.redhat.com/products/openshift-local) or
-> - Stand up a Single-Node OpenShift cluster in about 45 minutes
->   with [Carlos's Demoland](https://github.com/carlosonunez-redhat/demoland).
-
 ## Instructions
 
 ### Install Operators
@@ -472,22 +464,22 @@ spec:
         brokers:
         - kafka-cluster-kafka-brokers.rhobs-messaging.svc.cluster.local:9092
         protocol_version: 2.00
-        topic: metrics-topic
         metrics:
+          topic: metrics-topic
           encoding: otlp_json
       kafka/logs:
         brokers:
         - kafka-cluster-kafka-brokers.rhobs-messaging.svc.cluster.local:9092
         protocol_version: 2.00
-        topic: logs-topic
         logs:
+          topic: logs-topic
           encoding: otlp_json
       kafka/traces:
         brokers:
         - kafka-cluster-kafka-brokers.rhobs-messaging.svc.cluster.local:9092
         protocol_version: 2.00
-        topic: traces-topic
         traces:
+          topic: traces-topic
           encoding: otlp_json
     service:
       extensions:

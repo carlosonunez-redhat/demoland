@@ -1,0 +1,10 @@
+resources:
+  - ../../../../../components/advanced-cluster-management/resources/managed-cluster-set
+patches:
+  - target:
+      kind: ManagedClusterSet
+      name: clusters
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: imported-clusters

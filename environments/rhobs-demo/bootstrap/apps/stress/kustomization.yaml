@@ -1,0 +1,21 @@
+namespace: example-apps
+resources:
+  - ../../../../../components/k8s-namespace
+  - ../../../../../apps/stress-ng
+patches:
+  - target:
+      kind: Deployment
+      name: stress
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: example-apps
+      - op: replace
+        path: /spec/template/spec/containers/0/args
+        value:
+          - --cpu
+          - "16"
+          - --vm
+          - "8"
+          - --temp-path
+          - /tmp

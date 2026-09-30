@@ -1,0 +1,30 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: simple-web-server
+    component: web-server
+  name: simple-web-server
+  namespace: replace-me
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: simple-web-server
+      component: web-server
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: simple-web-server
+        component: web-server
+    spec:
+      containers:
+        - image: replace-me
+          name: app
+          ports:
+          - containerPort: 8000
+          resources: {}
+status: {}
+

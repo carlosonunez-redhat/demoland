@@ -16,4 +16,5 @@ spec:
       # enables mapping alerts to components
     clusterHealthAnalyzer:
       enabled: true
-
+    incidents:
+      enabled: true

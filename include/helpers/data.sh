@@ -37,6 +37,16 @@ _get_file_from_shared_secret_dir() {
   echo "/shared/secrets/$1" | sed 's;//;/;g'
 }
 
+_write_file_to_shared_secret_dir() {
+  local file content
+  file="$(_get_file_from_shared_secret_dir "$1")"
+  content="$2"
+  dirname="$(dirname "$file")"
+  test -d "$dirname" || mkdir -p "$dirname"
+  info "Creating shared secret '$file'"
+  echo "$content"  > "$file"
+}
+
 _get_top_level_environment_name() {
   cat "/environment_info/root_environment_name"
 }

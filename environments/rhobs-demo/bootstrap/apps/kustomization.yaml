@@ -1,2 +1,3 @@
 resources:
   - ./simple-load-tester
+  - ./stress

@@ -9,6 +9,7 @@ source "$INCLUDE_DIR/helpers/data.sh"
 source "$INCLUDE_DIR/helpers/errors.sh"
 source "$INCLUDE_DIR/helpers/logging.sh"
 source "$INCLUDE_DIR/helpers/install_config.sh"
+source "$INCLUDE_DIR/helpers/ocp.sh"
 source "$INCLUDE_DIR/helpers/yaml.sh"
 
 # If this environment has includes of its own, use the $ENVIRONMENT_INCLUDE_DIR environment
@@ -17,6 +18,8 @@ source "$INCLUDE_DIR/helpers/yaml.sh"
 # source "$ENVIRONMENT_INCLUDE_DIR/foo.sh"
 source "$ENVIRONMENT_INCLUDE_DIR/rosa.sh"
 generate_kubeconfig() {
+  _rosa_cluster_type_disabled "$1" && return 0
+
   cluster_name="$(_rosa_cluster_name)-$1"
   temp_password="Temp$(date +%s)$(tr -dc '[:alnum:]' < /dev/urandom | head -c 16)"
 
@@ -26,13 +29,18 @@ generate_kubeconfig() {
   }
 
   _create_temp_admin_user() {
+    local attempts
+    attempts=0
+    max_attempts=120
     _exec_rosa list idp -c "$cluster_name" | grep -q cluster-admin && _delete_temp_admin_user
     while test "$attempts" -ne "$max_attempts"
     do
       _exec_rosa create admin -c "$cluster_name" -p "$temp_password" && return 0
-      info "Waiting for cluster-admin to be deleted in cluster '$cluster_name' (attempt $attempts of $max_attempts)"
+      info "Waiting for cluster-admin to be created in cluster '$cluster_name' (attempt $attempts of $max_attempts)"
+      attempts=$((attempts+1))
       sleep 1
     done
+    return 1
   }
 
   _login() {
@@ -43,7 +51,7 @@ generate_kubeconfig() {
       oc login "$(_rosa_cluster_api_url "$1")" \
         --username cluster-admin \
         --password "$temp_password" && return 0
-      info "Waiting for cluster-admin to become available on cluster '$cluster_name' (attempt $attempts of $max_attempts)"
+      info "[${attempts}/${max_attempts}] Waiting for cluster-admin to become available on cluster '$cluster_name'"
       sleep 1
       attempts=$((attempts+1))
     done
@@ -51,12 +59,12 @@ generate_kubeconfig() {
   }
 
   _save_kubeconfig() {
-    cat $HOME/.kube/config > "$(_get_file_from_shared_secret_dir "kubeconfigs/$(_rosa_cluster_name "$1").kubeconfig")"
+    expose_kubeconfig "$(cat "$HOME/.kube/config")"
   }
+
   _create_temp_admin_user "$1" &&
     _login "$1" &&
-    _save_kubeconfig "$1" &&
-    _delete_temp_admin_user "$1"
+    _save_kubeconfig "$1"
 }
 
 yay_success() {

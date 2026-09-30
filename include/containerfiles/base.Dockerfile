@@ -12,7 +12,7 @@ RUN tar -xvzf /tmp/file.tar.gz -C /tmp
 FROM fedora:43 AS final
 COPY --from=oc_client /tmp/oc /usr/local/bin/oc
 RUN ln -s /usr/local/bin/oc /oc
-RUN dnf -y install yq jq openssh ssh-agent htpasswd bsdtar
+RUN dnf -y install yq jq openssh ssh-agent htpasswd bsdtar docker podman helm
 RUN arch=amd64; uname -m | grep -Eiq 'arm|aarch' && arch=arm64; \
     curl -Lo /usr/bin/ytt "https://github.com/carvel-dev/ytt/releases/download/v0.52.0/ytt-linux-$arch"
 RUN chmod +x /usr/bin/ytt

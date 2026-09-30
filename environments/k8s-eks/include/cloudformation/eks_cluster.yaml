@@ -1,0 +1,95 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Template for EKS Cluster
+
+Parameters:
+  InfrastructureName:
+    AllowedPattern: ^([a-zA-Z][a-zA-Z0-9\-]{0,26})$
+    MaxLength: 27
+    MinLength: 1
+    ConstraintDescription: Infrastructure name must be alphanumeric, start with a letter, and have a maximum of 27 characters.
+    Description: A short, unique cluster ID used to tag cloud resources and identify items owned or used by the cluster.
+    Type: String
+  EksVersion:
+    Default: "1.30"
+    Description: Kubernetes version for the EKS cluster.
+    Type: String
+  ClusterRoleArn:
+    Description: ARN of the IAM role for the EKS cluster service.
+    Type: String
+  SubnetIds:
+    Description: Comma-separated list of subnet IDs for the EKS cluster (public and private).
+    Type: List<AWS::EC2::Subnet::Id>
+  ClusterSecurityGroupId:
+    Description: Security group ID for the EKS cluster control plane.
+    Type: AWS::EC2::SecurityGroup::Id
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: "Cluster Information"
+      Parameters:
+      - InfrastructureName
+      - EksVersion
+    - Label:
+        default: "IAM Configuration"
+      Parameters:
+      - ClusterRoleArn
+    - Label:
+        default: "Network Configuration"
+      Parameters:
+      - SubnetIds
+      - ClusterSecurityGroupId
+    ParameterLabels:
+      InfrastructureName:
+        default: "Infrastructure Name"
+      EksVersion:
+        default: "Kubernetes Version"
+      ClusterRoleArn:
+        default: "Cluster IAM Role ARN"
+      SubnetIds:
+        default: "Subnet IDs"
+      ClusterSecurityGroupId:
+        default: "Cluster Security Group ID"
+
+Resources:
+  EksCluster:
+    Type: AWS::EKS::Cluster
+    Properties:
+      Name: !Ref InfrastructureName
+      Version: !Ref EksVersion
+      RoleArn: !Ref ClusterRoleArn
+      ResourcesVpcConfig:
+        SecurityGroupIds:
+        - !Ref ClusterSecurityGroupId
+        SubnetIds: !Ref SubnetIds
+        EndpointPublicAccess: true
+        EndpointPrivateAccess: true
+      Logging:
+        ClusterLogging:
+          EnabledTypes:
+          - Type: api
+          - Type: audit
+          - Type: authenticator
+          - Type: controllerManager
+          - Type: scheduler
+      Tags:
+      - Key: Name
+        Value: !Ref InfrastructureName
+
+Outputs:
+  ClusterName:
+    Description: Name of the EKS cluster.
+    Value: !Ref EksCluster
+  ClusterEndpoint:
+    Description: API server endpoint for the EKS cluster.
+    Value: !GetAtt EksCluster.Endpoint
+  ClusterCertificateAuthority:
+    Description: Base64-encoded certificate authority data for the cluster.
+    Value: !GetAtt EksCluster.CertificateAuthorityData
+  ClusterSecurityGroupId:
+    Description: The cluster security group created by EKS.
+    Value: !GetAtt EksCluster.ClusterSecurityGroupId
+  OIDCIssuerUrl:
+    Description: The OIDC issuer URL for the cluster (for IRSA).
+    Value: !GetAtt EksCluster.OpenIdConnectIssuerUrl

@@ -1,0 +1,63 @@
+resources:
+  - ../../../../components/advanced-cluster-management/operators/acm
+  - ../../../../components/advanced-cluster-management/operators/multiclusterengine
+  - ../../../../components/openshift-lightspeed/operator
+patches:
+  - target:
+      kind: Namespace
+      name: acm
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: advanced-cluster-management
+  - target:
+      kind: OperatorGroup
+      name: rhacm-og
+      namespace: acm
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: advanced-cluster-management
+      - op: replace
+        path: /spec/targetNamespaces/0
+        value: advanced-cluster-management
+  - target:
+      kind: Subscription
+      name: acm-operator-subscription
+      namespace: acm
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: advanced-cluster-management
+      - op: replace
+        path: /spec/channel
+        value: release-2.16
+  - target:
+      kind: Namespace
+      name: openshift-multicluster-engine
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: advanced-cluster-management-mce
+  - target:
+      kind: OperatorGroup
+      name: rhmce-eg
+      namespace: openshift-multicluster-engine
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: advanced-cluster-management-mce
+      - op: replace
+        path: /spec/targetNamespaces/0
+        value: advanced-cluster-management-mce
+  - target:
+      kind: Subscription
+      name: acm-mce-operator-subscription
+      namespace: openshift-multicluster-engine
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: advanced-cluster-management-mce
+      - op: replace
+        path: /spec/channel
+        value: stable-2.11
