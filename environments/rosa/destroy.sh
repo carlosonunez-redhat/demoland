@@ -28,7 +28,7 @@ destroy_network_hcp() {
   _destroy_network hcp
 }
 destroy_account_roles() {
-  roles=$(aws iam list-roles | grep "$(_rosa_cluster_name)" | cat)
+  roles=$(_exec_aws iam list-roles | grep "$(_rosa_cluster_name)" | cat)
   test "$(wc -l <<< "$roles")" -le 1 && return 0
 
   info "Deleting ROSA account roles"
