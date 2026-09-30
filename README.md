@@ -1,3 +1,31 @@
+![](./assets/img/demoland.png)
+
+Create end-to-end OpenShift demos on fresh OpenShift and Kubernetes clusters that you own.
+
+
+<!-- vim-markdown-toc GFM -->
+
+* [Why](#why)
+* [How it works](#how-it-works)
+    * [Base Infrastructure](#base-infrastructure)
+    * [GitOps Considerations](#gitops-considerations)
+* [Quick Start](#quick-start)
+    * [Install prerequisites](#install-prerequisites)
+    * [Clone Demoland](#clone-demoland)
+    * [Creating an encrypted config file](#creating-an-encrypted-config-file)
+    * [Deploy the demo environment](#deploy-the-demo-environment)
+    * [Use the demo environment](#use-the-demo-environment)
+    * [Destroy the demo environment](#destroy-the-demo-environment)
+* [Demolands](#demolands)
+    * [Base Environments](#base-environments)
+        * [`ocp-aws-upi`](#ocp-aws-upi)
+    * [Demos](#demos)
+        * [Local cluster observability with the Red Hat Observability Stack](#local-cluster-observability-with-the-red-hat-observability-stack)
+        * [AI-Powered Multicluster Observability with Advanced Cluster Management and OpenShift Lightspeed](#ai-powered-multicluster-observability-with-advanced-cluster-management-and-openshift-lightspeed)
+* [Components](#components)
+
+<!-- vim-markdown-toc -->
+
 ## Why
 
 ## How it works
