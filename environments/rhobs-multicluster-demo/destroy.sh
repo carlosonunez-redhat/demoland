@@ -46,7 +46,6 @@ delete_example_app_images() {
   done
 }
 
-set -e
 delete_example_app_images
-empty_thanos_s3_bucket
-delete_rhmco_s3_bucket
+empty_thanos_s3_bucket || true
+delete_rhmco_s3_bucket || true

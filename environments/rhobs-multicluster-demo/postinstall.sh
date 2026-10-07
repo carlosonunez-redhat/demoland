@@ -461,9 +461,9 @@ install_rhmco
 wait_for_rhmco_ns
 create_rhmco_thanos_secret
 create_rhmco_pull_secret
-create_lightspeed_secret_gcp_vertex
 wait_for_rhmco_ready
 wait_for_rhmco_ready_eks
+create_lightspeed_secret_gcp_vertex
 patches=$(patch_lightspeed_config)
 if test "$patches" -ge 1
 then
