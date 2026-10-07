@@ -8,10 +8,10 @@ common:
             # aws.sts: AWS credentials for assuming into another role.
             # encrypted
             sts:
-                aws_access_key_id: ENC[AES256_GCM,data:8cEA0oBMZu8SoEmJYqrA7OT/3V0=,iv:vzKW3cvg/aameL56yH3pkdX2aokRnZvCJKSE+7imRrM=,tag:5Xf2sdsIdNY9MztcXME5nA==,type:str]
-                aws_secret_access_key: ENC[AES256_GCM,data:aB1QdgOeEah/PRKcJ/mt2PqjxerdiD7d0f2n/ufBq3DdMZKN8fhK9g==,iv:goy66OGgu/iInEVSnU9w1+ASubnjKenLLwJiW/osaVk=,tag:gFXGXXFab34t272oRzKGgg==,type:str]
+                aws_access_key_id: ENC[AES256_GCM,data:kPvn43+tOjKF783zmPy+ARsDDrc=,iv:pDV0ObpOpQ0LNwaDWwWO6hdwaHR6NnGJMj6VttdUHyI=,tag:Y8y/iJ7jdHLuRZEbInpB6Q==,type:str]
+                aws_secret_access_key: ENC[AES256_GCM,data:1HFS8FqQbJYg/YZTzE/cQKwUBZ/a5Wr0lmJkIdHNjHbVdPpQL8+pqQ==,iv:ZjU0EGohoqY37Qg3BI3pMpFGRvYdA6wHO8Y5te0A10Y=,tag:uh1G8EYjULv34RFpI8NoVw==,type:str]
                 aws_default_region: ENC[AES256_GCM,data:yhbppXp4Emsv,iv:PoWpnhgYk18InCtqBcLK5yrI8vrHqTX9BDR2kQ0Kya0=,tag:7Jooayomp5o2DNnbqlvfFg==,type:str]
-                aws_role_arn: ENC[AES256_GCM,data:QgxZvgX7moyy22I3CN7H/GjlYOVbLlSBgYNsJks+O9gO5uht9GGMT8cbRsb78dUA,iv:XIbcUYWdL5f5CZpic5B7d5d7jSk5pUdHtuxjGzXS3l0=,tag:SeeKJxSeJDLR3u1sU7cpAQ==,type:str]
+                aws_role_arn: ENC[AES256_GCM,data:wBR5y25a9j4mQO45woCPQbe46nCwNLHDHVp9XSt8NsKBbTFk+/naxk1UgkNaEYh/,iv:xcrwJi7x3DrlxpLdVSV+TQXoHEnE6RSvfA0gcVcuEIg=,tag:OsBIXL2MxHTfzqrDZM8mig==,type:str]
                 aws_role_external_id: ENC[AES256_GCM,data:b52sm/9ISC/Zlp1Nzok+rYpbprY=,iv:TqyA4AEsR7VzSrlPFj9DUKIYJSYuwT6opDiiU0mu2IE=,tag:BHJ52wiQ0E9AaP30sB+oaw==,type:str]
             # aws.iam_user: AWS credentials assigned to IAM users. Must set AWS_DISABLE_STS=1 in
             # your environment variables to take effect.
@@ -119,7 +119,7 @@ environments:
                 - ROSA_CLUSTER_ENV_NAME=rosa-hcp
                 - EKS_CLUSTER_ENV_NAME=k8s-eks
                 - RHOBS_DEMO_CLUSTER_NAME=rhobsdemo
-                - RHOBS_DEMO_CLUSTER_API_FQDN=api.rhobsdemo-ntqwyzm3.sandbox582.opentlc.com
+                - RHOBS_DEMO_CLUSTER_API_FQDN=api.rhobsdemo-ntqwyzm3.sandbox2744.opentlc.com
                 - LLM_SERVICE=vertex
             secrets:
                 lightspeed_vertex:
@@ -221,10 +221,10 @@ environments:
             aws:
                 # encrypted
                 iam_user:
-                    aws_access_key_id: ENC[AES256_GCM,data:qvFb/CYyZF9IKZjQkyjUwpYzXGw=,iv:u4zFMBAu21DdrkhqvoxY+rZiW+mGFuE0C6UtCuad59Y=,tag:wZtTGm5TMFkqJwlSoNFh3A==,type:str]
-                    aws_secret_access_key: ENC[AES256_GCM,data:UhJjKwguHWM6R3fq7dhFnHmrBXCeGxNFjTkXZL1Giqu878+LQYuJnw==,iv:YVjGuGGfIyVkJ18SWooZy4HnC7HacR+0EodKAgfeQ9I=,tag:R9acqow9mKw9ZG8pOU7qMw==,type:str]
+                    aws_access_key_id: ENC[AES256_GCM,data:jPNFcXlruPLFhK3vYjyQ2v1WE68=,iv:lnUllw9l3WdbqikYgDfSWIZrbv176ceIfZ01JEy1+rw=,tag:VHQuOsNNEud1Ys95n6xhgg==,type:str]
+                    aws_secret_access_key: ENC[AES256_GCM,data:XThLfD6ZqoXi2iOZoY13UMH24Z7poFozZ8/Xk0gX6NoarkVIUYIsCQ==,iv:WlIqQR/0f5kbZwV6f3NZurHd7gJCODz0aA8NnsHU9uo=,tag:ON2i8eVwv/ZvHwk7Tjfafw==,type:str]
                     aws_default_region: ENC[AES256_GCM,data:lpeXPB0tymh6,iv:0jWk/hreDKLYSQHLLtMdD4IfrV3bKWLgbQihecUfUJA=,tag:XMCzYl4/swkA50596OvwdA==,type:str]
-                    aws_role_arn: ENC[AES256_GCM,data:8Mmz5g60JWTjXy+wEDYVj2JFdWmq3hLp5luVbv0mdKV6FJx7FnNkYPlh1EjyU0k+,iv:kLZsJyPWr94Jocy8fBnzAhwg5uK0cs3nbEoKeMw6fq4=,tag:z7UWsLVA9NM0+tzlV7GHVw==,type:str]
+                    aws_role_arn: ENC[AES256_GCM,data:pDmX3wea4F70VYJPYtWYg4juRm+iPgsARCQiWCrjpo0g0EeV/wWeuQHcrh7kTLzz,iv:KOqh2YhYHxi2SRyan5g5qcHWvela6Ih5awPgvSSCMec=,tag:CIbHQ6GQih+AMSEu9GdgTQ==,type:str]
                     aws_role_external_id: ENC[AES256_GCM,data:82Pqnnd0NrTDp9hDChzvq5INspI=,iv:Mbhexv+qsQOVdP0ESTof4CysMV+g4bbgwVNXlXUopCU=,tag:QJPJwj5FeOJUp+aj+cvlGA==,type:str]
         deploy:
             environment_vars:
@@ -388,7 +388,7 @@ environments:
                 aws:
                     networking:
                         dns:
-                            domain_name: sandbox582.opentlc.com
+                            domain_name: sandbox2744.opentlc.com
                         cidr_block: 10.0.0.0/16
                         region: us-east-2
                         availability_zones:
@@ -442,7 +442,7 @@ environments:
                 aws:
                     networking:
                         dns:
-                            domain_name: sandbox582.opentlc.com
+                            domain_name: sandbox2744.opentlc.com
                         cidr_block: 10.0.0.0/16
                         region: us-east-2
                         availability_zones:
@@ -469,8 +469,8 @@ environments:
                     name: ecr-repositories
                     data: '- example-apps/simple-web-server'
 sops:
-    lastmodified: "2026-09-25T00:11:28Z"
-    mac: ENC[AES256_GCM,data:398PZbP7koq28CjIhJUYy0UQBvF4McJnAR7WKERhI1scf/MolORw3m62YGLwEh36v7aw3URjxE5NbtnuYP3m2SMVCIkuKECElV6vA+yV6Yj8C8G43M+7Cf3Uv+9T1Eyo5u5fNpef29yeKTCh9Ov2Ff5OhvOjL1iYadmW5RazTDg=,iv:vHFa5zLW/X9fNnDyQ7h1++5PHehtNImRndZGVyVIP5k=,tag:WQmFRwhWSZbbTTDTLsmq3g==,type:str]
+    lastmodified: "2026-10-07T14:51:31Z"
+    mac: ENC[AES256_GCM,data:A4eB+kpwRlbXxE5LuDmy15g5+ItzE93EWn7H79M31QCZ3SIw4lN8i2v7yVq1zsKPiLx9b809/VW5l7KU1lCmffPLeQBjtvUWKBTTsfM/gLGJLrS+FVjeD6RBbmNZ4LUfKiw2/8M767LiN9d5084oRZyLPvY0FIAZpgD4CReNDqw=,iv:zO6A3xflElQDemVaGwiYO//0UZSaG5k/BxpT/2kz0QI=,tag:rf/96sbOpMDcZV7uNSiBLg==,type:str]
     pgp:
         - created_at: "2025-08-21T19:30:47Z"
           enc: |-
