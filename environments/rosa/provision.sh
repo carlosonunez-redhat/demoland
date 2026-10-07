@@ -38,6 +38,14 @@ create_account_roles() {
     --yes
 }
 
+create_ocm_account_role() {
+  roles=$(_exec_rosa list ocm-role -o json | jq_strip_null -r '.[].RoleName' | grep "$(_rosa_cluster_name)" | cat)
+  test "$(wc -l <<< "$roles")" -gt 1 && return 0
+
+  info "Creating ROSA OCM role and linking to AWS account"
+  _exec_rosa create ocm-role --mode auto --yes --prefix "$(_rosa_cluster_name)"
+}
+
 create_oidc_configuration() {
   _oidc_config_created && return 0
 
@@ -108,6 +116,7 @@ create_cluster_hcp() {
       return 1
     fi
     billing_account=$(_exec_aws sts get-caller-identity | jq -r .Account)
+    set +e
     response=$(_exec_rosa create cluster \
       --yes \
       --hosted-cp \
@@ -122,7 +131,9 @@ create_cluster_hcp() {
     )
     rc="$?"
     test "$rc" -eq 0 && return 0
+    set -e
     error "Failed to create the cluster: $response"
+    return 1
   fi
 
   _wait_for_cluster_created hcp
@@ -218,12 +229,13 @@ set -e
 deploy_network_classic
 deploy_network_hcp
 create_account_roles
+create_ocm_account_role
 create_oidc_configuration
 create_operator_roles_classic
 create_operator_roles_hcp
 create_cluster_classic
 wait_for_cluster_ready classic
-wait_for_cluster_ready hcp
 set_up_google_idp classic
 create_cluster_hcp
+wait_for_cluster_ready hcp
 set_up_google_idp hcp

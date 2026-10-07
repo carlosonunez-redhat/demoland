@@ -50,6 +50,15 @@ destroy_oidc_configuration() {
     --yes
 }
 
+delete_ocm_account_role() {
+  role_arn=$(_exec_rosa list ocm-role -o json |
+    jq_strip_null --arg prefix "$(_rosa_cluster_name)" -r '.[] | select(.RoleARN | contains($prefix)) | .RoleARN')
+  test -z "$role_arn" && return 0
+
+  info "Deleting ROSA OCM role and linking to AWS account"
+  _exec_rosa create ocm-role --mode auto --yes --prefix "$(_rosa_cluster_name)"
+}
+
 destroy_operator_roles_classic() {
   _rosa_cluster_type_disabled classic && return 0
 
@@ -101,6 +110,7 @@ destroy_cluster_classic
 destroy_operator_roles_hcp
 destroy_operator_roles_classic
 destroy_oidc_configuration
+delete_ocm_account_role
 destroy_account_roles
 destroy_network_hcp
 destroy_network_classic
