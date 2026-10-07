@@ -109,7 +109,6 @@ _run_stage_with_dependencies environment +stages:\
   then \
     if test '{{ stages }}' == '_destroy'; \
     then \
-      set -x; \
       (test -n "$REBUILD" || test -n "$REBUILD_IMAGES") && just rebuild_images '{{ environment }}'; \
       envs="{{ environment }};$(just _get_dependent_environments {{ environment }})"; \
     else envs="$(just _get_dependent_environments {{ environment }});{{ environment }}"; \
