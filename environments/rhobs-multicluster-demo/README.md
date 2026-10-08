@@ -33,12 +33,19 @@ Advanced Cluster Management and Multicluster Observability.
             * [Manually](#manually-2)
         * [Finish Multi-Cluster Observability Installation](#finish-multi-cluster-observability-installation)
         * [Install OpenShift Lightspeed](#install-openshift-lightspeed)
+        * [(Optional) Install the ACM MCP Server](#optional-install-the-acm-mcp-server)
         * [Install test apps](#install-test-apps)
 * [Demo](#demo)
-    * [Visualizing cluster behavior with Grafana](#visualizing-cluster-behavior-with-grafana)
-    * [Viewing automated right-sizing recommendations from ACM Observability](#viewing-automated-right-sizing-recommendations-from-acm-observability)
-    * [Chatting with your infrastructure with OpenShift Lightspeed](#chatting-with-your-infrastructure-with-openshift-lightspeed)
+    * [ACM: A One-Stop Shop for Organization-Wide Fleet Management](#acm-a-one-stop-shop-for-organization-wide-fleet-management)
+    * [MCO: Multicluster Metrics and Dashboards In Five Clicks](#mco-multicluster-metrics-and-dashboards-in-five-clicks)
+    * [Capacity Planning and Resource Optimization with Right-Sizing Recommendations](#capacity-planning-and-resource-optimization-with-right-sizing-recommendations)
+    * [Troubleshoot and Root Cause Faster with OpenShift Lightspeed](#troubleshoot-and-root-cause-faster-with-openshift-lightspeed)
 * [Next Steps](#next-steps)
+    * [Try the local cluster observability demo](#try-the-local-cluster-observability-demo)
+    * [Explore Developer Lightspeed](#explore-developer-lightspeed)
+* [Appendix](#appendix)
+    * [Metrics and Dashboards](#metrics-and-dashboards)
+    * [Cluster Right-Sizing](#cluster-right-sizing)
 
 <!-- vim-markdown-toc -->
 
@@ -89,6 +96,7 @@ as well.
 #### Tools
 
 - A shell, like `bash`, `zsh` or `fish`
+- (Optional) Helm for installing the ACM MCP Server
 
 #### OpenShift Clusters
 
@@ -554,6 +562,22 @@ be fully-operational:
 watch -n 0.5 oc_acm get pods -n openshift-lightspeed
 ```
 
+#### (Optional) Install the ACM MCP Server
+
+The ACM MCP server helps OpenShift Lightspeed quickly understand and navigate
+through ACM resources.
+
+Run the command below to install it with Helm:
+
+```sh
+helm install acm-mcp-server \
+  "https://raw.githubusercontent.com/stolostron/search-mcp-server/refs/heads/main/charts/acm-mcp-server-0.1.0.tgz" \
+  --upgrade \
+  -n advanced-cluster-management \
+  --kubeconfig /tmp/acm.kubeconfig
+```
+
+
 #### Install test apps
 
 Finally, install the test apps used within this demo into your clusters.
@@ -571,11 +595,11 @@ interact with each other across and between these clusters is important.
 
 While your organization has many products to help achieve this (Datadog, Splunk,
 maybe even New Relic still), the bill for maintaining these services is only
-getting more expensive.
+getting costlier.
 
-There is an increasing appetite to roll a homegrown observability platform.
+There is an increasing desire to roll a homegrown observability platform.
 However, the thought of architecting, configuring and supporting all of the
-tools you'll need to get this done --- Grafana, Prometheus, Thanos, Loki, OTel,
+services you'll need to get this done --- Grafana, Prometheus, Thanos, Loki, OTel,
 etc. --- is daunting, and that's before considering approvals from the
 architecture review board or enterprise support options.
 
@@ -587,81 +611,190 @@ can be configured from our documentation alone.
 
 Let's take a closer look.
 
-![](./assets/img/0-acm-start.png)
+### ACM: A One-Stop Shop for Organization-Wide Fleet Management
 
-![](./assets/img/1-acm-mco-top-consumers-multicluster.png)
+![](./include/assets/img/0-acm-start.png)
 
-![](./assets/img/2-acm-mco-overestimation.png)
+Red Hat Advanced Cluster Management (ACM) makes managing groups of Kubernetes clusters
+trivial. From that small vanilla Kubernetes cluster in your sandbox to your
+company's biggest OpenShift and cloud-managed Kubernetes clusters in production,
+ACM is the single place for your platform engineers to configure, secure and
+govern your clusters no matter where or how big they are.
 
-![](./assets/img/3-acm-mco-overestimation-zoomin-rhobs.png)
+The Fleet Management console is the "home button" your platorm engineers will
+use to see OpenShift and Kubernetes clusters across your organization. Here, we
+can see that our environment has three clusters: a self-managed OpenShift
+cluster running in AWS, another OpenShift cluster running in AWS managed by the
+Red Hat OpenShift Service on AWS, or ROSA, and an EKS cluster managed by AWS.
 
-![](./assets/img/4-acm-mco-dashboards-rightsizing.png)
+Going back to our scenario: our platform engineer is here because they want to
+see how their clusters are doing. We can also see a link-out to Grafana near the
+upper right-hand corner of the console. We want to see health dashboards, so
+that's exactly where we want to go.
 
-![](./assets/img/5-acm-mco-explore-with-query.png)
+### MCO: Multicluster Metrics and Dashboards In Five Clicks
 
-![](./assets/img/5-acm-mco-rightsize-recommended-cpu.png)
+![](./include/assets/img/1-acm-mco-top-consumers-multicluster.png)
 
-![](./assets/img/6-acm-mco-rightsize-memory.png)
+We can see that we get a LOT of information about our clusters right out the
+gate.
 
-![](./assets/img/7-acm-mco-alerts.png)
+All of this is configured by the **Multicluster Observability Operator**.
+Installing the Operator is easy. Everything we'll see in this demo can be
+deployed with less than five clicks through the OpenShift console: no messy
+YAML/TOML files, huge Helm chart values files or tough-to-crack ConfigMaps.
 
-![](./assets/img/8-acm-mco-high-cpu-rhobs.png)
+Back to the dashboards. Our platform engineer can quickly see where the busy or
+hungry workloads are across their entire fleet. Specifically, we can see right
+away that the `rhobs` cluster is using quite a lot of its cores. If we scroll
+down a bit...
 
-![](./assets/img/9-acm-lightspeed-cpu-high-ask.png)
+![](./include/assets/img/2-acm-mco-overestimation.png)
 
-![](./assets/img/9-acm-lightspeed-it-found-it.png)
+...we see some datapoints about "overestimation". This metric is exposed by
+MCO's "right-sizing recommendations" feature, a useful capability that'll make
+more sense once I click on this oven of a cluster.
 
-![](./assets/img/10-acm-lightspeed-fix-recommendations.png)
+### Capacity Planning and Resource Optimization with Right-Sizing Recommendations
 
-![](./assets/img/11-acm-console-linkout.png)
+![](./include/assets/img/3-acm-mco-overestimation-zoomin-rhobs.png)
 
-![](./assets/img/12-rhobs-pod-namespace.png)
+The right-sizing feature combines cluster node resources, workload
+configurations and Prometheus metrics from the OpenShift clusters in your fleet
+to tell you how over- or under-utilized your clusters are.
 
-![](./assets/img/13-rhobs-lightspeed-fix-pod.png)
+This negative CPU overestimation is a perfect example to explain the concept
+with. What this metric is telling us is that our CPU capacity is ~15%
+overallocated for the workloads running on this cluster...specifically this one
+workload that caused overall CPU consumption in our cluster to spike.
 
-![](./assets/img/14-rhobs-lightspeed-approve-fix.png)
+Switching to our less-utilized EKS cluster is a good example of the opposite scenario.
+Given the workloads running here, we're actually 15% _under_ utilized.
 
-![](./assets/img/15-rhobs-lightspeed-detected-gitops.png)
+Knowing this is very useful for capacity planning, especially given the
+quickly-increasing price of CPU and RAM. OpenShift is also a great
+virtualization platform; knowing which hosts you can pack more VMs into is
+extremely helpful, especially for those considering cost-optimizing their VMware
+portfolios.
 
-![](./assets/img/16-rhobs-app-pods.png)
+### Troubleshoot and Root Cause Faster with OpenShift Lightspeed
 
-![](./assets/img/17-rhobs-coo-related-resources.png)
+![](./include/assets/img/8-acm-mco-high-cpu-rhobs.png)
 
-![](./assets/img/18-rhobs-signal-correlation.png)
+Let's go back to the problem at hand: we have a cluster that's burning a lot of
+CPU and we don't know quite why.
 
-![](./assets/img/19-rhobs-coo-signal-correlation-source.png)
+Senior platform engineers could lean on their years of experience
+troubleshooting distributed systems to surface and tame the workload...unless
+online banking is slow in production and we need a fix yesterday. Or more junior
+engineers who are just getting started with Kubernetes and are trying to make do
+while their lead is out of the office.
 
-![](./assets/img/20-rhobs-coo-signal-correlation-logs.png)
+Firing up Claude or Copilot to get to the bottom of things is easy
+enough...except these models will have to work a lot harder (and spend way more
+tokens) to infer the state of your managed cluster and its workloads from a
+Kubeconfig alone. Your AI platform team can build killer prompts or build their
+own MCP servers to work around these gaps, but now they're taking time away from
+doing what's best for the platform and maintaining general-purpose applications.
 
-![](./assets/img/21-rhobs-coo-signal-correlation-metrics.png)
+OpenShift Lightspeed solves this challenge. Lightspeed blends battle-tested
+starter prompts for chatting with and troubleshooting your clusters with the
+OpenShift MCP server to help your models navigate through your clusters more
+quickly and get to root cause more cost-effectively.
 
-![](./assets/img/22-rhobs-coo-tempo-traces.png)
+Let's click on the Lightspeed icon to see that in action here.
 
-![](./assets/img/23-rhobs-lightspeed-logging-stack.png)
+![](./include/assets/img/9-acm-lightspeed-cpu-high-ask.png)
 
-![](./assets/img/24-rhobs-lightspeed-clf-lokistack.png)
+I'm going to ask it about this `example-apps` namespace that's churning CPU.
 
-![](./assets/img/25-rhobs-lightspeed-metrics-stack-query.png)
+_types query_
 
-![](./assets/img/26-rhobs-lightspeed-otel-collector-found.png)
+I didn't make any customizations in the backend. This is a straightforward query
+that I'd make to Claude, which is the model that Lightspeed is connected to
+behind the scenes.
 
-![](./assets/img/27-rhobs-otel-start.png)
+Let's hit ENTER and see what I'm able to get from this straight-forward query.
 
-![](./assets/img/28-rhobs-lightspeed-exporters.png)
+![](./include/assets/img/9-acm-lightspeed-it-found-it.png)
 
-![](./assets/img/29-rhobs-lightspeed-kafka-console.png)
+![](./include/assets/img/10-acm-lightspeed-fix-recommendations.png)
 
-![](./assets/img/30-streams-start.png)
+...and it found it! It found the workload in the cluster that the namespace is
+running in and identified that some troublemaker decided to run `stress-ng` to
+watch the world burn.
 
-![](./assets/img/31-streams-logs.png)
+I want to log into the affected cluster to remediate. Let me ask Lightspeed for
+the console URL:
 
-![](./assets/img/32-streams-traces.png)
+![](./include/assets/img/11-acm-console-linkout.png)
 
+Just like that, Lightspeed and Claude worked together to give me the URL to that
+cluster's OpenShift console. Let's go there and throw this workload in the
+rubbish where it belongs!
 
-### Visualizing cluster behavior with Grafana
+![](./include/assets/img/12-rhobs-pod-namespace.png)
 
-### Viewing automated right-sizing recommendations from ACM Observability
+Now we're in the affected cluster. Lightspeed is available here as well. Instead
+of hunting through the console like we'd traditionally do, let's see if
+Lightspeed can just fix this for us:
 
-### Chatting with your infrastructure with OpenShift Lightspeed
+![](./include/assets/img/13-rhobs-lightspeed-fix-pod.png)
+
+![](./include/assets/img/14-rhobs-lightspeed-approve-fix.png)
+
+And, just like that, Lightspeed, again, found the Deployment, identified that it is,
+indeed, suggesting to apply a CPU limit onto it to keep the workload running,
+but just a little more conservatively.
+
+Once we approve it, we can see from the metrics dashboard on this cluster that
+CPU usage is already trending way downwards. It will take a few minutes for it to
+reflect back in ACM, but we'll be able to see the outcome of this fix there as
+well.
 
 ## Next Steps
+
+### Try the local cluster observability demo
+
+If you haven't already went through it, the local OpenShift Cluster
+Observability demo goes deeper into the observing and triaging we were doing in
+the troublesome cluser. This demo highlights how the Cluster Observability and
+Cluster Logging operators work together to give platform engineers a clear
+picture of how an OpenShift cluster is doing.
+
+See the demo [here](https://github.com/redhat-na-ssa/demo-cluster-observability-rhobs).
+
+### Explore Developer Lightspeed
+
+As we saw, OpenShift Lightspeed helps platform engineers troubleshoot faster and
+navigate large fleets of clusters quickly. Similarly, developers can use
+Developer LightSpeed to modernize applications into cloud-native stacks as well
+as test and deploy applications into OpenShift more quickly.
+
+Check out Developer Lightspeed
+[here](https://www.redhat.com/en/products/developer-lightspeed).
+
+## Appendix
+
+### Metrics and Dashboards
+
+![](./include/assets/img/7-acm-mco-alerts.png)
+
+MCO also aggregates cluster alerts from your managed clusters. This is another
+quick way for platform engineers to triage cluster operations.
+
+### Cluster Right-Sizing
+
+![](./include/assets/img/4-acm-mco-dashboards-rightsizing.png)
+
+You can view more information about right-sizing recommendations in the "ACM
+Right Sizing Namespace" dashboard.
+
+![](./include/assets/img/5-acm-mco-rightsize-recommended-cpu.png)
+
+This dashboard better explains the overestimation metrics by showing resource
+requests against resource utilization.
+
+![](./include/assets/img/6-acm-mco-rightsize-memory.png)
+
+Right-sizing works with memory as well!
